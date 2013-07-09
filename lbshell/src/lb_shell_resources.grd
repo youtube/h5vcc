@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2012 Google Inc. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<grit latest_public_release="0" current_release="1">
+  <outputs>
+    <output filename="grit/lb_shell_resources.h" type="rc_header">
+      <emit emit_type='prepend'></emit>
+    </output>
+    <output filename="lb_shell_resources.pak" type="data_package" />
+  </outputs>
+  <release seq="1">
+    <includes>
+      <include name="IDR_BROKENIMAGE_TESTSHELL" file="../resources/missingImage.gif" type="BINDATA" />
+      <include name="IDR_TEXTAREA_RESIZER_TESTSHELL" file="../resources/textAreaResizeCorner.png" type="BINDATA" />
+    </includes>
+  </release>
+</grit>

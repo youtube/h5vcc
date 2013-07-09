@@ -1,0 +1,2 @@
+module QtWebKit
+plugin qmlwebkitplugin

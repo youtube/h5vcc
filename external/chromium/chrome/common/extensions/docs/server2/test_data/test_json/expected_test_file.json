@@ -1,0 +1,186 @@
+{
+  "functions": [
+    {
+      "name": "get",
+      "parent_name": null,
+      "callback": {
+        "simple_type": {
+          "simple_type": "function"
+        },
+        "name": "callback",
+        "parameters": [
+          {
+            "functions": [],
+            "parameters": [],
+            "returns": null,
+            "last": true,
+            "name": "results",
+            "parent_name": "callback",
+            "id": "property-callback-results",
+            "array": {
+              "functions": [],
+              "parameters": [],
+              "returns": null,
+              "name": "resultsElement",
+              "parent_name": "results",
+              "id": "property-results-resultsElement",
+              "link": {
+                "text": "TypeA",
+                "href": "tester.html#type-TypeA",
+                "name": "TypeA"
+              },
+              "optional": false,
+              "properties": [],
+              "description": null
+            },
+            "optional": false,
+            "properties": [],
+            "description": null
+          }
+        ],
+        "optional": false,
+        "description": null
+      },
+      "returns": null,
+      "parameters": [
+        {
+          "functions": [],
+          "parameters": [],
+          "returns": null,
+          "last": true,
+          "name": "a",
+          "parent_name": "get",
+          "id": "property-get-a",
+          "choices": [
+            {
+              "functions": [],
+              "parameters": [],
+              "returns": null,
+              "simple_type": "string",
+              "name": "a",
+              "parent_name": "a",
+              "id": "property-a-a",
+              "optional": true,
+              "properties": [],
+              "description": null
+            },
+            {
+              "functions": [],
+              "parameters": [],
+              "returns": null,
+              "last": true,
+              "name": "a",
+              "parent_name": "a",
+              "id": "property-a-a",
+              "array": {
+                "functions": [],
+                "parameters": [],
+                "returns": null,
+                "simple_type": "string",
+                "name": "aElement",
+                "parent_name": "a",
+                "id": "property-a-aElement",
+                "optional": false,
+                "properties": [],
+                "description": null
+              },
+              "optional": true,
+              "properties": [],
+              "description": null
+            }
+          ],
+          "optional": false,
+          "properties": [],
+          "description": "a param"
+        }
+      ],
+      "id": "method-get",
+      "description": "Gets stuff."
+    }
+  ],
+  "properties": [],
+  "name": "tester",
+  "types": [
+    {
+      "properties": [
+        {
+          "functions": [],
+          "parameters": [],
+          "returns": null,
+          "name": "b",
+          "parent_name": "TypeA",
+          "id": "property-TypeA-b",
+          "array": {
+            "functions": [],
+            "parameters": [],
+            "returns": null,
+            "name": "bElement",
+            "parent_name": "b",
+            "id": "property-b-bElement",
+            "link": {
+              "text": "TypeA",
+              "href": "tester.html#type-TypeA",
+              "name": "TypeA"
+            },
+            "optional": false,
+            "properties": [],
+            "description": null
+          },
+          "optional": true,
+          "properties": [],
+          "description": "List of TypeA."
+        }
+      ],
+      "name": "TypeA",
+      "simple_type": "object",
+      "functions": [],
+      "events": [],
+      "id": "type-TypeA",
+      "description": "A cool thing."
+    }
+  ],
+  "events": [
+    {
+      "parent_name": null,
+      "callback": null,
+      "name": "EventA",
+      "parameters": [
+        {
+          "functions": [],
+          "parameters": [],
+          "returns": null,
+          "simple_type": "string",
+          "name": "id",
+          "parent_name": "EventA",
+          "id": "property-EventA-id",
+          "optional": false,
+          "properties": [],
+          "description": null
+        },
+        {
+          "functions": [],
+          "parameters": [],
+          "returns": null,
+          "last": true,
+          "name": "bookmark",
+          "parent_name": "EventA",
+          "id": "property-EventA-bookmark",
+          "link": {
+            "text": "TypeA",
+            "href": "tester.html#type-TypeA",
+            "name": "TypeA"
+          },
+          "optional": false,
+          "properties": [],
+          "description": null
+        }
+      ],
+      "supportsRules": false,
+      "filters": [],
+      "conditions": [],
+      "id": "event-EventA",
+      "actions": [],
+      "description": "A cool event."
+    }
+  ]
+}

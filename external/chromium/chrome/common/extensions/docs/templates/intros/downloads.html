@@ -1,0 +1,33 @@
+<p>The downloads API allows you to programmatically initiate, monitor,
+manipulate, and search for downloads.</p>
+
+<h2 id='manifest'>Manifest</h2>
+
+<p> You must declare the 'downloads' permission in the <a
+href='manifest.html'>extension manifest</a> to use this API, along with <a
+href='manifest.html#permissions'>host permissions</a> for any hosts that you
+may pass to $ref:downloads.download.</p>
+
+<pre>{
+  'name': 'My extension',
+  ...
+<b>  'permissions': [
+    'downloads',
+    '*://*.google.com'
+  ]</b>,
+  ...
+}</pre>
+
+<p>If the URL's hostname is not specified in the permissions, then 
+$ref:downloads.download will call its callback with a null
+<code>downloadId</code> and set the 
+$ref:runtime.lastError
+object to indicate that the extension does not have permission to access that
+hostname.</p>
+
+<h2 id='examples'>Examples</h2>
+
+<p>You can find simple examples of using the downloads module in the <a
+href='http://src.chromium.org/viewvc/chrome/trunk/src/chrome/common/extensions/docs/examples/api/downloads/'>examples/api/downloads</a>
+directory. For other examples and for help in viewing the source code, see <a
+href='samples.html'>Samples</a>.</p>

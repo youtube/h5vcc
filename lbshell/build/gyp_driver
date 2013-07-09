@@ -1,0 +1,237 @@
+#!/usr/bin/python
+# Copyright 2012 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import subprocess
+import sys
+
+import gyp_driver_utils
+
+# Always build Visual Studio 2008 projects.
+os.environ['GYP_MSVS_VERSION'] = '2008'
+
+# set up some other basic paths
+script_dir = os.path.abspath(os.path.dirname(__file__))
+toplevel_dir = os.path.dirname(os.path.dirname(script_dir))
+gyp_dir = os.path.join(toplevel_dir, 'external', 'tools', 'gyp')
+
+sys.path.insert(0, os.path.join(gyp_dir, 'pylib'))
+sys.path.insert(0, os.path.join(gyp_dir, 'tools'))
+sys.path.insert(0, os.path.join(toplevel_dir, \
+  'external', 'chromium', 'tools', 'grit'))
+sys.path.insert(0, '') # cwd
+
+import gyp
+
+def main(input_args):
+  valid_configs = ['Debug', 'Devel', 'QA', 'Gold', 'all']
+  valid_projects = ['lb_shell', 'jsc_tests']
+  valid_platforms = ['ps3', 'linux', 'wiiu']
+  default_format = 'ninja'
+
+  debug_deps = '--debug-deps' in input_args
+  if debug_deps:
+    input_args = [ x for x in input_args if x != '--debug-deps' ]
+
+  # check arguments
+  if len(input_args) < 2 or len(input_args) > 4 or '--help' in input_args:
+    print >> sys.stderr, \
+      'Usage: gyp_driver [--debug-deps] <project> <platform> [<config>] [<format>]'
+    print >> sys.stderr, 'projects: %s' % valid_projects
+    print >> sys.stderr, 'platforms: %s' % valid_platforms
+    print >> sys.stderr, 'configs: %s' % valid_configs
+    print >> sys.stderr, 'Default format is %s' % default_format
+    print >> sys.stderr, 'Default is to build all configs.'
+    sys.exit(1)
+
+  # make sure working directory is script_dir
+  os.chdir(script_dir)
+  gyp_includes = []
+  gyp_vars = {}
+
+  if sys.platform == 'win32' or sys.platform == 'cygwin':
+    gyp_driver_utils.check_ninja()
+
+  # load project settings
+  project = input_args[0]
+  os.chdir('projects')
+  try:
+    imported = __import__(project)
+    project_suffix = imported.project_suffix
+    gyp_includes.extend([ os.path.abspath(x) for x in imported.gyp_includes ])
+    gyp_vars.update(imported.gyp_vars)
+  except:
+    print >> sys.stderr, 'Unable to load settings for project "%s"' % project
+    print >> sys.stderr, 'Valid projects are: %s' % valid_projects
+    print >> sys.stderr, sys.exc_info()
+    sys.exit(1)
+  os.chdir('..')
+
+  # load platform settings
+  target_platform = input_args[1]
+  os.chdir('platforms')
+  try:
+    imported = __import__(target_platform)
+    env_settings = imported.env_settings
+    supported_formats = imported.supported_formats
+    flavor = imported.flavor
+    gyp_includes.extend([ os.path.abspath(x) for x in imported.gyp_includes ])
+    gyp_vars.update(imported.gyp_vars)
+  except:
+    print >> sys.stderr, \
+      'Unable to load settings for target platform "%s"' % target_platform
+    print >> sys.stderr, sys.exc_info()
+    print >> sys.stderr, 'cwd=%s' % os.getcwd()
+    print >> sys.stderr, 'sys.path =', sys.path
+    sys.exit(1)
+  os.chdir('..')
+
+  # If a config is specified, just generate that one.
+  # If none is specified, generate them all.
+  configs_to_build = []
+  if len(input_args) >= 3:
+    config = input_args[2].lower()
+    found_config = False
+    for c in valid_configs:
+      if c.lower() == config:
+        config = c
+        found_config = True
+
+    if not found_config:
+      print >> sys.stderr, 'Invalid config %s. Valid configs are %s' % \
+        (config, valid_configs)
+      sys.exit(1)
+    if config == 'all':
+      configs_to_build = valid_configs
+    else:
+      configs_to_build.append(config)
+  else:
+    configs_to_build = valid_configs
+
+  if 'all' in configs_to_build: configs_to_build.remove('all')
+
+  # does the user want to specify a format?
+  # if so, validate that against supported formats for the target platform.
+  if len(input_args) >= 4:
+    build_format = input_args[3]
+    if build_format not in supported_formats:
+      print >> sys.stderr, '%s is not a supported format.' % build_format
+      sys.exit(1)
+  elif len(supported_formats) == 1:
+    # if there's only one valid format, use that one.
+    build_format = supported_formats[0]
+  else:
+    build_format = default_format
+
+  config_specific_args = {}
+  config_specific_args['Debug'] = ['-Dlbshell_gold=0',]
+  config_specific_args['Devel'] = ['-Dlbshell_gold=0',]
+  config_specific_args['QA'] = ['-Dlbshell_gold=0',]
+  config_specific_args['Gold'] = [
+    '-Denable_inspector=0',
+    '-Denable_javascript_debugger=0',
+    '-Dlbshell_gold=1',
+  ]
+
+  git_hash = gyp_driver_utils.git_hash()
+
+  common_args = []
+
+  # first comes the file argument
+  common_args.append('projects/%s.gyp' % project)
+
+  # set the suffix to append to all generated files, so we can tell them from
+  # the still version-controlled .vcproj files that live all over our repo
+  suffix = '.%s%s' % (project_suffix, target_platform)
+  common_args.append('--suffix=%s' % suffix)
+
+  # set the top-level dir to keep the project tree close to the file tree
+  common_args.append('--toplevel-dir=%s' % toplevel_dir)
+
+  # set the output format
+  common_args.append('--format=%s-%s' % (build_format, flavor))
+
+   # set the top-level directory
+  common_args.append('-DTOPLEVEL_DIR=%s' % toplevel_dir)
+
+  # set output folder name, affects all generators but MSVS
+  common_args.append('-Goutput_dir=out/%s' % project)
+  # set top-level project,
+  # used by MSVS configurations to compute output folder
+  common_args.append('-DTOPLEVEL_PROJECT=%s' % project)
+
+  # turn off -Werror because harmless warnings appear when features are nixed
+  common_args.append('-Dwerror=')
+
+  # Define OS to lb_shell to avoid any confusion with defaults.
+  common_args.append('-DOS=lb_shell')
+
+  common_args.append('-Dlb_shell_sha1=%s' % git_hash)
+
+  # set the depth argument to the chromium root directory
+  common_args.append('--depth=%s' % \
+    os.path.join(toplevel_dir, 'external', 'chromium'))
+
+  # always include project- and platform-specific build settings
+  for x in gyp_includes:
+    common_args.append('-I%s' % x)
+  for k, v in gyp_vars.iteritems():
+    common_args.append('-D%s=%s' % (k, v))
+
+  # pass environment variables to gyp for things like cross-compilation
+  for k in env_settings:
+    os.environ[k] = env_settings[k]
+
+
+  platform_prefix = {'linux' : 'Linux', 'ps3' : 'PS3_PPU', 'wiiu' : 'WIIU'}
+  for config in configs_to_build:
+    platform_config = '%s_%s' % (platform_prefix[target_platform], config)
+
+    # we build up the arguments to gyp
+    args = common_args
+
+    # set the build configuration
+    args.append('-Gconfig=%s' % platform_config)
+
+    for arg in config_specific_args[config]:
+      args.append(arg)
+
+    if debug_deps:
+      # turn on dependency reporting in gyp so we can get a python dict of
+      # the dependencies printed to stdout
+      args.append('--debug=dependencies')
+
+      # since gyp will print our dictionary to stdout we temporarily redirect
+      # stdout to the depends_dict.py file
+      dep_file = open('depends_dict.py', 'w')
+      sys.stdout = dep_file
+
+    # launch gyp
+    gyp_return = gyp.main(args)
+
+    if debug_deps:
+      # set stdout back to what it was on entry to this script
+      sys.stdout = sys.__stdout__
+      dep_file.close()
+
+    if gyp_return:
+      print >> sys.stderr, 'Gyp failed with error code %d.' % gyp_return
+      sys.exit(gyp_return)
+
+
+if __name__ == '__main__':
+  args = sys.argv[1:]
+  main(args)
+

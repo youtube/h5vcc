@@ -1,0 +1,299 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+
+  <metamodule id="webkitefl-testing-dependencies">
+    <dependencies>
+      <dep package="cairo"/>
+      <dep package="fonts"/>
+      <dep package="fontconfig"/>
+      <dep package="freetype6"/>
+      <dep package="harfbuzz"/>
+      <dep package="glib"/>
+      <dep package="glib-networking"/>
+      <dep package="libsoup"/>
+      <dep package="edje"/>
+      <dep package="e_dbus"/>
+      <dep package="eeze"/>
+      <dep package="efreet"/>
+      <dep package="elementary"/>
+      <dep package="libxml2"/>
+    </dependencies>
+  </metamodule>
+
+  <repository type="tarball" name="github.com"
+      href="https://github.com"/>
+  <repository type="tarball" name="sourceware.org"
+      href="ftp://sourceware.org"/>
+  <repository type="tarball" name="gnupg.org"
+      href="ftp://ftp.gnupg.org"/>
+  <repository type="tarball" name="p11-glue.freedesktop.org"
+      href="http://p11-glue.freedesktop.org"/>
+  <repository type="tarball" name="ftp.gnome.org"
+      href="http://ftp.gnome.org"/>
+  <repository type="git" name="git.gnome.org"
+      href="git://git.gnome.org/"/>
+  <repository type="tarball" name="cairographics.org"
+      href="http://cairographics.org"/>
+  <repository type="tarball" name="freedesktop.org"
+      href="http://www.freedesktop.org"/>
+  <repository type="tarball" name="enlightenment.fr"
+      href="http://git.enlightenment.fr/cgit.cgi/svn/"/>
+  <repository type="tarball" name="xmlsoft.org"
+      href="ftp://xmlsoft.org"/> 
+  <repository type="tarball" name="download.enlightenment.org"
+      href="http://download.enlightenment.org"/>
+
+  <autotools id="cairo" autogen-sh="configure">
+    <dependencies>
+      <dep package="fontconfig"/>
+      <dep package="pixman"/>
+    </dependencies>
+    <branch module="releases/cairo-1.12.4.tar.xz" version="1.12.4"
+            repo="cairographics.org"
+            hash="sha256:a467b2e1f04bfd3f848370ce5e82cfe0a7f712bac05a04d133bc34c94f677a28"
+            md5sum="a64bb8774a1e476e5cdd69e635794dfb">
+    </branch>
+  </autotools>
+
+  <autotools id="pixman" autogen-sh="configure"
+             autogenargs="--enable-gtk=no">
+    <branch module="releases/pixman-0.24.0.tar.gz" version="0.24.0"
+            repo="cairographics.org"
+            hash="sha256:a5647c7158f103eedff5fba799018f4169f6b26b573ab7685812ebc9a1c5d2e4"
+            md5sum="a2d0b120509bdccb10aa7f4bec3730e4">
+    </branch>
+  </autotools>
+
+  <autotools id="fonts"
+             skip-autogen="true">
+    <branch module="downloads/mrobinson/webkitgtk-test-fonts/webkitgtk-test-fonts-0.0.3.tar.gz" version="0.0.3"
+            repo="github.com"
+            hash="sha256:4a0a01f00855997cdcc7201f164b33a4e4144e8eadf40a5e542a1c448e035de5"
+            md5sum="10e74de1a8ba961d9037994d427b1dd2" size="16981642">
+    </branch>
+  </autotools>
+
+  <autotools id="libffi" autogen-sh="configure">
+    <branch module="/pub/libffi/libffi-3.0.11.tar.gz" version="3.0.11"
+             repo="sourceware.org"
+             hash="sha256:70bfb01356360089aa97d3e71e3edf05d195599fd822e922e50d46a0055a6283"
+             md5sum="f69b9693227d976835b4857b1ba7d0e3"/>
+  </autotools>
+
+  <tarball id="freetype6">
+    <source href="download.savannah.gnu.org/releases/freetype/freetype-2.4.2.tar.bz2" version="2.4.2"
+            hash="sha256:9a987aef8c50d9bcfdfdc9f012f8bd0de6095cc1a5524e62c1a037deb8dacbfe"
+            md5sum="647ee8ed266f9a4117c8d0a4855b3d3e"/>
+  </tarball>
+
+  <autotools id="p11-kit">
+    <branch module="/releases/p11-kit-0.12.tar.gz" version="0.12"
+             repo="p11-glue.freedesktop.org"
+             hash="sha256:4db792def545a3c8ae12e7e4ef166d7620cb445c00a5a984ab7c4a3b35f0be00"
+             md5sum="029aa2a3a103e7eb81b4aa731b93539e"/>
+  </autotools>
+
+  <autotools id="libgpg-error" autogen-sh="configure">
+    <branch module="/gcrypt/libgpg-error/libgpg-error-1.10.tar.bz2" version="1.10"
+             repo="gnupg.org"
+             hash="sha256:520629b4568b5c29b1991c8ffc267c8bdee5f223c7333c42a651b56f9b1c5431"
+             md5sum="736a03daa9dc5873047d4eb4a9c22a16"/>
+  </autotools>
+
+  <autotools id="libgcrypt" autogen-sh="./autogen.sh; configure">
+    <dependencies>
+      <dep package="libgpg-error"/>
+    </dependencies>
+    <branch module="/gcrypt/libgcrypt/libgcrypt-1.5.0.tar.bz2" version="1.5.0"
+             repo="gnupg.org"
+             hash="sha256:4b62fc516004940a0571025401a0581d49199f1a76dfb5ce6fd63f50db8173fa"
+             md5sum="693f9c64d50c908bc4d6e01da3ff76d8"/>
+  </autotools>
+
+  <autotools id="glib"
+             autogenargs="--disable-dtrace">
+    <dependencies>
+      <dep package="libffi"/>
+    </dependencies>
+    <branch module="/pub/GNOME/sources/glib/2.33/glib-2.33.2.tar.xz" version="2.33.2"
+            repo="ftp.gnome.org"
+            hash="sha256:b7163e9f159775d13ecfb433d67c3f0883e0e518e85b2e970d4ad9773d7cd0b4"
+            md5sum="06ef0099fed22afcf34ade39ddff9a5b"/>
+  </autotools>
+
+  <autotools id="glib-networking">
+    <dependencies>
+      <dep package="glib"/>
+    </dependencies>
+    <branch module="/pub/GNOME/sources/glib-networking/2.33/glib-networking-2.33.2.tar.xz" version="2.33.2"
+            repo="ftp.gnome.org"
+            hash="e298cff3935eb752be290bbf734e457f1870bdb5370ee292606e6040a82074e7"
+            md5sum="5abb364f2a0babe2ec1e3a6d59f69043"/>
+  </autotools>
+
+  <autotools id="libsoup"
+             autogenargs="--without-gnome --disable-introspection">
+    <dependencies>
+      <dep package="glib-networking"/>
+    </dependencies>
+    <branch module="/pub/gnome/sources/libsoup/2.40/libsoup-2.40.0.tar.xz" version="2.40.0"
+            repo="ftp.gnome.org"
+            hash="sha256:ef65eb6d48e9525ad0fb82f964d3001e86921330317b51082d3dd0afc41d2ea9"
+            md5sum="4d66366e08271e22aef164ec4d74e5f0"/>
+  </autotools>
+
+  <autotools id="fontconfig" autogen-sh="configure">
+    <branch module="software/fontconfig/release/fontconfig-2.8.0.tar.gz" version="2.8.0"
+            repo="freedesktop.org"
+            hash="sha256:fa2a1c6eea654d9fce7a4b1220f10c99cdec848dccaf1625c01f076b31382335"
+            md5sum="77e15a92006ddc2adbb06f840d591c0e">
+    </branch>
+  </autotools>
+
+ <autotools id="harfbuzz" autogen-sh="configure">
+   <branch module="software/harfbuzz/release/harfbuzz-0.9.6.tar.bz2" version="0.9.6"
+           checkoutdir="harfbuzz-0.9.6"
+           repo="freedesktop.org"
+           hash="sha256:394a849d6061993018754b0cc04110891ad215e3df3f6953b75dcc55a11f9d9b"
+           md5sum="f3a100a0512c185b211a0deb4790c34c">
+     <patch file="harfbuzz-icu-detection-fix.patch" strip="1" />
+   </branch>
+ </autotools>
+
+  <autotools id="eina">
+    <branch module="releases/eina-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="eina-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:af0b316734ba72d92fa7716005efd380f28677c76f0e0b6a3c5a9b524575a6ce"
+            md5sum="552c5e9042d9cb3dbdebbc0e211ef30b">
+    </branch>
+  </autotools>
+
+  <autotools id="embryo">
+    <branch module="releases/embryo-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="embryo-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:043563b8c1a66de117cfaaf76a4d9736e111007ce5c0cdcf2b1d83dd8b4df575"
+            md5sum="d66a0e91dfc37eeb4c362b2c46bd91ab">
+    </branch>
+    <dependencies>
+      <dep package="eina"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="evas">
+    <branch module="releases/evas-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="evas-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:57966a16fdb20e94deefe83ec0f990607413f7952f9755ed23ce81aea49b670c"
+            md5sum="e33c1d270b16e45c2337424aa2faaaa0">
+    </branch>
+  </autotools>
+
+  <autotools id="ecore">
+    <branch module="releases/ecore-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="ecore-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:fb5f547a0a6556b5f0e274b65cfbe42f4eb8371f20d00005cd4f5a78a6b6a5d8"
+            md5sum="94fd264e478323a1100b3cfff833d28d">
+    </branch>
+    <dependencies>
+      <dep package="eina"/>
+      <dep package="evas"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="eet">
+    <branch module="releases/eet-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="eet-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:3e5679c06792f0a1c4b5b158468afbcec3b510c60345055d5964fdbe2abba3eb"
+            md5sum="2974f892e2be5e2fa08296714e97c407">
+    </branch>
+    <dependencies>
+      <dep package="libgcrypt"/>
+      <dep package="eina"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="edje">
+    <branch module="releases/edje-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="edje-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:d924d7ade92055a5c83d3c43171982b7f006db9f5c923fb39e0523405ec4534c"
+            md5sum="766747bc1b8a1755952e275b6058cf30">
+    </branch>
+    <dependencies>
+      <dep package="eet"/>
+      <dep package="ecore"/>
+      <dep package="evas"/>
+      <dep package="embryo"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="e_dbus">
+    <branch module="releases/e_dbus-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="e_dbus-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:d3a3e0b81f6bb69d2fc3886c9885dad27ebf14b60c4a0bbd5a2a510b5a5ff2d1"
+            md5sum="3fa25de2880c2ff9d78d070d4792f570">
+    </branch>
+    <dependencies>
+      <dep package="ecore"/>
+      <dep package="eina"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="eeze">
+    <branch module="releases/eeze-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="eeze-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:6a696e2fe1ad14983ca7555eed2c50dd39f9a084e04475f0d25fd31d32e3cd58"
+            md5sum="0e9d008a9ae17de2aea82a34ee62691e">
+    </branch>
+    <dependencies>
+      <dep package="ecore"/>
+      <dep package="eina"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="efreet">
+    <branch module="releases/efreet-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="efreet-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:c844ed545f1c9438c73af4e4d037401a653babaab0a4e4b69377a2de49431eea"
+            md5sum="0fc2b3bf93dc3a9f293c348339163ba3">
+    </branch>
+    <dependencies>
+        <deb package="ecore"/>
+        <deb package="eina"/>
+        <deb package="eet"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="elementary"
+             autogenargs="--disable-emap --disable-ethumb --disable-eweather --disable-web">
+    <branch module="releases/elementary-1.7.1.tar.bz2" version="1.7.1"
+            checkoutdir="elementary-1.7.1"
+            repo="download.enlightenment.org"
+            hash="sha256:54dd82ca156f024de91e375ae9f7ad9579cb0d8fb0bcbf9b16e5b4165d5ac483"
+            md5sum="9f43658594d8e837773c8b6573b654dd">
+    </branch>
+    <dependencies>
+        <deb package="edje"/>
+        <deb package="eina"/>
+        <deb package="eet"/>
+        <deb package="ecore"/>
+    </dependencies>
+  </autotools>
+
+  <autotools id="libxml2">
+    <branch module="/libxml2/libxml2-2.8.0.tar.gz" version="2.8.0"
+            repo="xmlsoft.org"
+            hash="sha256:f2e2d0e322685193d1affec83b21dc05d599e17a7306d7b90de95bb5b9ac622a"
+            md5sum="c62106f02ee00b6437f0fb9d370c1093"/>
+  </autotools> 
+
+</moduleset>

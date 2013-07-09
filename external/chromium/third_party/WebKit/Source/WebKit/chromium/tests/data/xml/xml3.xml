@@ -1,0 +1,16 @@
+<!-- A simple test xml with test_target nodes -->
+<node name="with_test_target">
+  <type>XML</type>
+  <content>Simple test</content>
+  <level1>
+    <level2>
+      <level3>
+        <level4>
+          <test_target/>
+          <test_target/>
+        </level4>
+      </level3>
+      <level3/>
+    </level2>
+  </level1>
+</node>

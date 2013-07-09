@@ -1,0 +1,10 @@
+include_rules = [
+  "-android_webview",
+  "+android_webview/common",
+  "+android_webview/renderer",
+
+  "+content/public/renderer",
+ 
+  "+third_party/WebKit/Source/WebKit/chromium/public",
+  "+third_party/WebKit/Source/Platform/chromium/public",
+]

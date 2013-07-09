@@ -1,0 +1,5 @@
+<!-- A very simple test xml -->
+<node>
+  <type>XML</type>
+  <content>Simple test</content>
+</node>

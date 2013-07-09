@@ -1,0 +1,26 @@
+# This should match chrome/browser/extensions/OWNERS
+aa@chromium.org
+asargent@chromium.org
+benwells@chromium.org
+erikkay@chromium.org
+finnur@chromium.org
+jeremya@chromium.org
+kalman@chromium.org
+koz@chromium.org
+mihaip@chromium.org
+miket@chromium.org
+mpcomplete@chromium.org
+yoz@chromium.org
+
+# For API documentation
+mkearney@chromium.org
+kathyw@chromium.org
+
+# For security review of IPC message files.
+per-file *_messages.h=set noparent
+per-file *_messages.h=cdn@chromium.org
+per-file *_messages.h=cevans@chromium.org
+per-file *_messages.h=inferno@chromium.org
+per-file *_messages.h=jschuh@chromium.org
+per-file *_messages.h=palmer@chromium.org
+per-file *_messages.h=tsepez@chromium.org

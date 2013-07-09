@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A simple test xml with version, encoding and doc type -->
+<!DOCTYPE node>
+<node>
+  <type>XML</type>
+  <content>Simple test</content>
+</node>

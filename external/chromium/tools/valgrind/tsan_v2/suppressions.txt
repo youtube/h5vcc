@@ -1,0 +1,26 @@
+# Intentional race in ToolsSanityTest.DataRace in base_unittests.
+race:base/tools_sanity_unittest.cc
+
+# Data race on WatchdogCounter [test-only]
+race:base/threading/watchdog_unittest.cc
+
+# Races in libevent, http://crbug.com/23244
+race:libevent.c
+
+# http://crbug.com/120808
+race:base/threading/watchdog.cc
+
+# http://crbug.com/157586
+race:third_party/libvpx/source/libvpx/vp8/decoder/threading.c
+
+# http://crbug.com/158718
+race:third_party/ffmpeg/libavcodec/pthread.c
+race:third_party/ffmpeg/libavcodec/vp8.c
+race:third_party/ffmpeg/libavutil/mem.c
+race:*HashFrameForTesting
+race:third_party/ffmpeg/libavcodec/h264pred.c
+race:media::ReleaseData
+
+# http://crbug.com/158922
+race:third_party/libvpx/source/libvpx/vp8/encoder/*
+

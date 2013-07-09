@@ -1,0 +1,146 @@
+#!/usr/bin/env python
+#
+# Copyright (C) 2012 Google Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+#         * Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#         * Redistributions in binary form must reproduce the above
+# copyright notice, this list of conditions and the following disclaimer
+# in the documentation and/or other materials provided with the
+# distribution.
+#         * Neither the name of Google Inc. nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+"""
+This script takes all of the files in a given directory (and all of its
+subdirectories) and concatenates them for access at byte arrays in a c++
+header file.
+
+The directory to check is specified as the first argument, and the output
+header is specified as the second argument.
+
+The utility function GenerateMap() is also generated to populate a std::map
+that maps between filenames and the embedded file.
+
+All generated symbols will be placed under the user-provided namespace.
+"""
+
+import mimetypes
+import os
+import sys
+
+def get_variable_name_from_path(file_path):
+  # Get rid of non-variable name friendly characters
+  return file_path.replace('.', '_').replace('/','_')
+
+def write_file_data_to_header(input_file, output_file):
+  """Concatenates a single file into the output file."""
+  with file(input_file) as f:
+    # Treat all files as binary arrays
+    output_file.write('{')
+
+    current_length = 0
+    c = f.read(1)
+    if (c):
+      while True:
+        output_file.write('0x%02x' % ord(c))
+        current_length = current_length + 1
+
+        c = f.read(1)
+        if (not c):
+          break
+        else:
+          output_file.write(', ')
+
+        # wrap lines
+        if (current_length > 200):
+          current_length = 0
+          output_file.write('\n')
+
+      output_file.write('};\n\n')
+
+def get_files_to_concatenate(input_directory):
+  """Returns a list of all files that we would like to concatenate relative
+  to the input directory."""
+  file_list = []
+  for dirpath, dirname, files in os.walk(input_directory):
+    for input_file in files:
+      file_list.append(
+        os.path.relpath(
+          os.path.join(dirpath, input_file),
+          input_directory))
+  return file_list
+
+def write_all_files_to_header(input_directory, files, output_file):
+  """Writes the content of all passed in files to the header file."""
+  for path in files:
+    input_file_variable_name = get_variable_name_from_path(path)
+    output_file.write('const char %s[] =\n' % input_file_variable_name)
+
+    write_file_data_to_header(os.path.join(input_directory, path), output_file)
+
+def generate_map_function(files, output_file):
+  """Generates a c++ function that populates a map (mapping filenames to the
+  embedded contents."""
+
+  # create struct and typedef used in function
+  output_file.write(
+      "inline void GenerateMap(GeneratedResourceMap &out_map) {\n")
+
+  # os.walk gets dirpath, dirnames, filenames; we want just filenames, so [2]
+  for path in files:
+    # The lookup key will be the file path relative to the input directory
+    input_file_variable_name = get_variable_name_from_path(path)
+    output_file.write('  out_map["%s"] = FileContents(%s, sizeof(%s));\n' % (
+      path, input_file_variable_name, input_file_variable_name)
+    )
+
+  output_file.write('}\n\n')
+
+
+def main(namespace, input_directory, output_file_name):
+  output_file = open(output_file_name, 'w')
+  include_guard = "_LB_GENERATED_" + namespace.upper() + "_H_"
+  output_file.write("// Copyright (c) Google Inc. 2012\n"
+                    "// All rights reserved.\n"
+                    "// This file is generated. Do not edit!\n"
+                    "#ifndef " + include_guard + "\n"
+                    "#define " + include_guard + "\n\n"
+                    "#include \"lb_generated_resources_types.h\"\n\n"
+                    "namespace " + namespace +" {\n")
+
+  files_to_concatenate = get_files_to_concatenate(input_directory)
+  write_all_files_to_header(input_directory,
+                            files_to_concatenate,
+                            output_file)
+  generate_map_function(files_to_concatenate, output_file)
+
+  output_file.write("} // namespace " + namespace + "\n\n"
+                    "#endif // " + include_guard + "\n")
+
+
+if __name__ == '__main__':
+  if (len(sys.argv) != 4):
+    print ("usage:\n %s <namespace> <input directory> <output filepath>" % __file__)
+    print __doc__
+    sys.exit(1)
+  main(sys.argv[1], sys.argv[2], sys.argv[3])
+

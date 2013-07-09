@@ -1,0 +1,44 @@
+<p id="classSummary">
+The <code>chrome.extension</code> module
+has utilities that can be used by any extension page.
+It includes support for exchanging messages
+between an extension and its content scripts
+or between extensions,
+as described in detail in
+<a href="messaging.html">Message Passing</a>.
+</p>
+
+<h2 id="content scripts">Support for content scripts</h2>
+<p>
+Unlike the other chrome.* APIs,
+parts of <code>chrome.extension</code>
+can be used by content scripts:
+</p>
+
+<dl>
+  <dt>
+    $ref:extension.sendMessage and
+    $ref:extension.onMessage
+  </dt>
+  <dd>
+    Simple communication with extension pages
+  </dd>
+  <dt>
+    $ref:extension.connect and
+    $ref:extension.onConnect
+  </dt>
+  <dd>
+    Extended communication with extension pages
+  </dd>
+  <dt>
+    $ref:extension.getURL
+  </dt>
+  <dd>
+    Access to extension resources such as image files
+  </dd>
+</dl>
+
+<p>
+For details, see
+<a href="content_scripts.html">Content Scripts</a>.
+</p>

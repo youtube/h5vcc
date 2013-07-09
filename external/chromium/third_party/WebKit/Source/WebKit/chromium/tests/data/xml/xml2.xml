@@ -1,0 +1,7 @@
+<!-- A test xml with multiple content elements -->
+<node name="multiple_content">
+  <type  attribute1="1" attribute2="2">XML</type>
+  <content>content1</content>
+  <content>content2</content>
+  <content>content3</content>
+</node>
