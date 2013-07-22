@@ -36,22 +36,29 @@ def which(file):
 
 
 def check_ninja():
-  ninja_path = which('ninja')
+  if sys.platform in ['win32', 'cygwin']:
+    exe_name = 'ninja.exe'
+    source_exe = 'ninja-win.exe'
+  else:
+    exe_name = 'ninja'
+    source_exe = 'ninja-linux'
+
+  ninja_path = which(exe_name)
   if not ninja_path:
-    print >> sys.stderr, \
-      'ninja not found in PATH.'
+    sys.stderr.write('ninja not found in PATH.\n')
     raise Exception('ninja not found')
 
-  proc = subprocess.Popen([ninja_path, '--version'], stdout=subprocess.PIPE)
-  out, err = proc.communicate()
-  found_version = out.rstrip()
-  expected_version = '1.1.0.steel'
-  expected_path = os.path.join('lbshell', 'build', 'ninja', 'ninja.exe')
-  if found_version != expected_version:
-    print >> sys.stderr, \
-      '\n%s version is %s.\nWin32 builds must use version %s (%s)\n' % \
-      (ninja_path, found_version, expected_version, expected_path)
-    raise Exception('ninja version error')
+  source_path = os.path.join(os.path.dirname(__file__), 'ninja', source_exe)
+  (found_version, found_version_val) = compute_version(ninja_path)
+  (expected_version, expected_version_val) = compute_version(source_path)
+
+  if (found_version_val < expected_version_val or
+      found_version.find('steel') == -1):
+    sys.stderr.write(
+        '\n%s version is %s. Expected %s.\n'
+        'Please replace with %s\n' %
+      (ninja_path, found_version, expected_version, source_path))
+    sys.exit(1)
 
 
 def git_hash():

@@ -1,2 +1,5 @@
-This version of ninja built with MSVC 2010
-https://github.com/rjogrady/ninja/commit/053736a6c7ac80f258ba9dd457cb58ac91ad1876
+ninja-win.exe built with MSVC 2012
+ninja-linux built with gcc
+from
+https://github.com/rjogrady/ninja/commit/09b170036fa094c3c4acd6aaf65471cd4280020d
+

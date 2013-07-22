@@ -78,19 +78,29 @@ class LBResourceLoaderBridge {
   static webkit_glue::ResourceLoaderBridge* Create(
     const webkit_glue::ResourceLoaderBridge::RequestInfo& request_info);
 
-  // Steel has it's own set of rules on what URL should be allowed and what not.
-  // Do this check here, and return true if everything is ok and the URL should
-  // be loaded.
-  static bool DoesHttpResponsePassSecurityCheck(
-      const GURL& url, const webkit_glue::ResourceResponseInfo& info);
+  static void OutputError(const std::string& message);
 
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-  // Enabled/Disable error message output when perimeter checking fails.
-  static void SetPerimeterCheckLogging(bool enabled);
+#if !defined(__LB_SHELL__FOR_RELEASE__)
+  // Enable/Disable error message output when perimeter checking fails.
+  static void SetPerimeterCheckLogging(bool enabled) {
+    perimeter_log_enabled_ = enabled;
+  }
 
-  // Enabled/Disable perimeter checking. When disabled, the checks still occur
-  // to allow  for logging of perimeter violations, but the request will not fail.
-  static void SetPerimeterCheckEnabled(bool enabled);
+  // Enable/Disable perimeter checking. When disabled, the checks still occur
+  // to allow for logging of perimeter violations,
+  // but the request will not fail.
+  static void SetPerimeterCheckEnabled(bool enabled) {
+    perimeter_check_enabled_ = enabled;
+  }
+
+  static bool PerimeterLogEnabled() { return perimeter_log_enabled_; }
+  static bool PerimeterCheckEnabled() { return perimeter_check_enabled_; }
+#endif
+
+private:
+#if !defined(__LB_SHELL__FOR_RELEASE__)
+  static bool perimeter_log_enabled_;
+  static bool perimeter_check_enabled_;
 #endif
 };
 

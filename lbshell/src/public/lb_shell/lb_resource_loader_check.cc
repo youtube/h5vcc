@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "lb_resource_loader_check.h"
 
-#ifndef _LB_RESOURCE_LOADER_CHECK_H_
-#define _LB_RESOURCE_LOADER_CHECK_H_
-
+#include "external/chromium/net/http/http_request_headers.h"
+#include "external/chromium/net/http/http_response_headers.h"
 #include "external/chromium/net/url_request/url_request.h"
 #include "external/chromium/webkit/glue/resource_loader_bridge.h"
-#include "external/chromium/webkit/glue/webkit_glue.h"
 
-// Steel has its own set of rules on what URL should be allowed and what not.
-// Do this check here, and return true if everything is ok and the URL should
-// be loaded.
 bool DoesHttpResponsePassSecurityCheck(
-    const GURL& url,
-    const webkit_glue::ResourceResponseInfo& info);
+    const GURL& url, const webkit_glue::ResourceResponseInfo& info) {
+  return true;
+}
 
-void HandleSSLCertificateError(net::URLRequest* request);
-#endif  // _LB_RESOURCE_LOADER_CHECK_H_
+void HandleSSLCertificateError(net::URLRequest* request) {
+  // Treat all certificate errors as fatal.
+  request->Cancel();
+}
+

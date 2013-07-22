@@ -81,6 +81,7 @@
         '../../src/steel_version.h',
         '../../src/tcp_client_socket_shell.cc',
         '../../src/tcp_client_socket_shell.h',
+        '<!@(if [ -d ../../src/private ] ; then find ../../src/private -type f ; else find ../../src/public -type f ; fi)',
       ],
       'include_dirs': [
         '../../../', # for our explicit external/ inclusion of headers

@@ -38,6 +38,8 @@
 #include "external/chromium/testing/gmock/include/gmock/gmock.h"
 #include "external/chromium/testing/gtest/include/gtest/gtest.h"
 
+#include "lb_resource_loader_check.h"
+
 using namespace webkit_glue;
 
 using ::testing::_;
@@ -90,8 +92,10 @@ struct ResourceLoaderTestParam {
 class ResourceLoaderCheckTest :
     public ::testing::TestWithParam<ResourceLoaderTestParam> {
   virtual void SetUp() OVERRIDE {
+#if !defined(__LB_SHELL__FOR_RELEASE__)
     LBResourceLoaderBridge::SetPerimeterCheckLogging(false);
     LBResourceLoaderBridge::SetPerimeterCheckEnabled(true);
+#endif
   }
 };
 
@@ -106,7 +110,7 @@ TEST_P(ResourceLoaderCheckTest, Behaves) {
   info.content_length = instance.content_length;
 
   EXPECT_EQ(instance.expected_result,
-            LBResourceLoaderBridge::DoesHttpResponsePassSecurityCheck(
+            DoesHttpResponsePassSecurityCheck(
                 GURL(instance.url), info));
 }
 

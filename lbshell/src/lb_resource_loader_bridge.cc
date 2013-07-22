@@ -96,62 +96,12 @@ using webkit_glue::ResourceResponseInfo;
 using net::StaticCookiePolicy;
 using net::HttpResponseHeaders;
 
-namespace {
-
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-static bool g_perimeter_log_enabled = true;
-static bool g_perimeter_check_enabled = true;
-#endif
-
-void output_error(const std::string& error) {
 #if !defined(__LB_SHELL__FOR_RELEASE__)
-  // QA builds don't print log warnings.
-  // Either of these lines could have saved me _FIVE HOURS_ debugging today:
-  printf("%s\n", error.c_str());
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-  LBWebViewHost *view_host = LBWebViewHost::Get();
-  if (view_host)
-    view_host->output_popup(error);
+bool LBResourceLoaderBridge::perimeter_log_enabled_ = true;
+bool LBResourceLoaderBridge::perimeter_check_enabled_ = true;
 #endif
-#endif
-  DLOG(WARNING) << error;
-}
 
-void output_whitelist_error(const std::string& error) {
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-  if (g_perimeter_log_enabled) {
-    output_error(error);
-  }
-#else
-  output_error(error);
-#endif
-}
-
-bool ends_with(const std::string& haystack, const std::string& needle) {
-  size_t pos = haystack.find(needle);
-  return (pos != std::string::npos) && (pos + needle.size() == haystack.size());
-}
-
-bool is_204(const ResourceResponseInfo& response) {
-  return (response.headers->response_code() == 204);
-}
-
-bool whitelisted(const GURL& url, const ResourceResponseInfo& response) {
-  if (MatchDomainWhiteList(url.host())) {
-    return true;
-  }
-
-  std::string error = base::StringPrintf("Whitelist Error: "
-                                         "URL %s has failed the whitelist!",
-                                         url.spec().c_str());
-  output_whitelist_error(error);
-  return false;
-}
-
-bool NeedsSSL(const std::string& mime_type) {
-  return !MatchMIMEWhiteList(mime_type);  // Not whitelisted
-}
-
+namespace {
 struct LBRequestContextParams {
   LBRequestContextParams(
       net::CookieMonster::PersistentCookieStore *in_persistent_cookie_store,
@@ -626,12 +576,11 @@ class RequestProxy : public net::URLRequest::Delegate,
       // If encountering error when requesting the file, cancel the request.
       if (ConvertResponseInfoForFileOverHTTPIfNeeded(request, &info) &&
           failed_file_request_status_.get()) {
-        output_error(base::StringPrintf(
+        LBResourceLoaderBridge::OutputError(base::StringPrintf(
             "File request status failed for URL %s!\n", url.spec().c_str()));
         error = true;
       } else {
-        error = !LBResourceLoaderBridge::DoesHttpResponsePassSecurityCheck(
-            url, info);
+        error = !DoesHttpResponsePassSecurityCheck(url, info);
       }
       if (error) {
         AsyncCancel();
@@ -647,15 +596,7 @@ class RequestProxy : public net::URLRequest::Delegate,
   virtual void OnSSLCertificateError(net::URLRequest* request,
                                      const net::SSLInfo& ssl_info,
                                      bool fatal) OVERRIDE {
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    output_whitelist_error("Whitelist Error: SSL certificate error.");
-    if (!g_perimeter_check_enabled) {
-      request->ContinueDespiteLastError();
-      return;
-    }
-#endif
-    // Treat all certificate errors as fatal.
-    request->Cancel();
+    HandleSSLCertificateError(request);
   }
 
   virtual void OnReadCompleted(net::URLRequest* request,
@@ -1252,63 +1193,16 @@ void LBResourceLoaderBridge::ChangeLanguage(const std::string& lang) {
   }
 }
 
-// static
-bool LBResourceLoaderBridge::DoesHttpResponsePassSecurityCheck(
-    const GURL& url, const ResourceResponseInfo& info) {
-  // Perform the following checks one by one.
-
-  // Allow local URLs through.
-  if (url.SchemeIs("local")) return true;
-
-  // Allow 204 responses that are empty through.
-  if (is_204(info) && info.content_length == 0) return true;
-
-  // All other requests must pass the whitelist.
-  if (!whitelisted(url, info)) {
+void LBResourceLoaderBridge::OutputError(const std::string& error) {
+#if !defined(__LB_SHELL__FOR_RELEASE__)
+  // QA builds don't print log warnings.
+  // Either of these lines could have saved me _FIVE HOURS_ debugging today:
+  printf("%s\n", error.c_str());
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    return !g_perimeter_check_enabled;
-#else
-    return false;
+  LBWebViewHost *view_host = LBWebViewHost::Get();
+  if (view_host)
+    view_host->output_popup(error);
 #endif
-  }
-
-  // If the response was a 204, but had some body, then fail.
-  if (is_204(info)) {
-    DCHECK_NE(0, info.content_length);
-    output_whitelist_error(base::StringPrintf(
-        "Whitelist Error: "
-        "URL %s is a 204 with data attached!", url.spec().c_str()));
-    return false;
-  }
-
-  // Check if we need SSL for the mime type. If yes, we must be on https.
-  if (NeedsSSL(info.mime_type) && !url.SchemeIsSecure()) {
-    // SSL requirement failed.
-    output_whitelist_error(base::StringPrintf(
-        "Whitelist Error: "
-        "SSL requirement failed for URL %s,"
-        " HTTP status is %d, mime type is %s!",
-        url.spec().c_str(), info.headers->response_code(),
-        info.mime_type.c_str()));
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    return !g_perimeter_check_enabled;
-#else
-    return false;
 #endif
-  }
-
-  // We are pure.
-  return true;
+  DLOG(WARNING) << error;
 }
-
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-// static
-void LBResourceLoaderBridge::SetPerimeterCheckLogging(bool enabled) {
-  g_perimeter_log_enabled = enabled;
-}
-
-// static
-void LBResourceLoaderBridge::SetPerimeterCheckEnabled(bool enabled) {
-  g_perimeter_check_enabled = enabled;
-}
-#endif
