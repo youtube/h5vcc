@@ -119,7 +119,7 @@ void InitLogging() {
   }
 #endif
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
   // On Android we expect the log to appear in logcat.
   base::InitAndroidTestLogging();
 #else

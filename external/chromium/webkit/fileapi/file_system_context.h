@@ -17,6 +17,20 @@
 #include "webkit/fileapi/task_runner_bound_observer_list.h"
 #include "webkit/storage/webkit_storage_export.h"
 
+#if defined(__LB_SHELL__)
+
+// lbshell doesn't support the FileSystem API so we are going to mock
+// this interface to declare just enough to make sure that code still compiles
+namespace fileapi {
+
+class FileSystemContext
+    : public base::RefCounted<FileSystemContext> {
+};
+
+}  // namespace fileapi
+
+#else
+
 class FilePath;
 
 namespace quota {
@@ -216,4 +230,5 @@ struct DefaultContextDeleter {
 
 }  // namespace fileapi
 
+#endif  // defined(__LB_SHELL__)
 #endif  // WEBKIT_FILEAPI_FILE_SYSTEM_CONTEXT_H_

@@ -5,6 +5,14 @@
 {
   'variables': {
     'nacl_win64_target': 0,
+    'conditions': [
+      ['OS != "lb_shell"', {
+        'angle_dir': '../third_party/angle',
+      },
+      {
+        'angle_dir': '<(DEPTH)/../angle',
+      }],
+    ],
   },
   'includes': [
     'gpu_common.gypi',
@@ -26,6 +34,13 @@
       ],
       'sources': [
         '<@(gles2_implementation_source_files)',
+      ],
+      'conditions': [
+        ['OS=="lb_shell"', {
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+          ],
+        }],
       ],
     },
     {
@@ -84,6 +99,13 @@
       'sources': [
         '<@(gles2_c_lib_source_files)',
       ],
+      'conditions': [
+        ['OS=="lb_shell"', {
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+          ],
+        }],
+      ],
     },
     {
       # Same as gles2_c_lib except with no parameter checking. Required for
@@ -113,7 +135,7 @@
         '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
         '../testing/gmock.gyp:gmock',
         '../testing/gtest.gyp:gtest',
-        '../third_party/angle/src/build_angle.gyp:translator_glsl',
+        '<(angle_dir)/src/build_angle.gyp:translator_glsl',
         '../ui/gl/gl.gyp:gl',
         '../ui/ui.gyp:ui',
         'command_buffer/command_buffer.gyp:gles2_utils',
@@ -215,7 +237,7 @@
         '../base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
         '../testing/gmock.gyp:gmock',
         '../testing/gtest.gyp:gtest',
-        '../third_party/angle/src/build_angle.gyp:translator_glsl',
+        '<(angle_dir)/src/build_angle.gyp:translator_glsl',
         '../ui/ui.gyp:ui',
         'command_buffer/command_buffer.gyp:gles2_utils',
         'command_buffer_client',
@@ -356,7 +378,6 @@
             'command_buffer_common.gypi',
             'command_buffer_service.gypi',
             'gles2_cmd_helper.gypi',
-            'gpu_ipc.gypi',
           ],
           'defines': [
             'GPU_IMPLEMENTATION',
@@ -367,6 +388,17 @@
           'dependencies': [
             '../base/base.gyp:base',
             'command_buffer/command_buffer.gyp:gles2_utils',
+          ],
+          'conditions': [
+            ['OS=="lb_shell"', {
+              'dependencies': [
+                '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+              ],
+            }, {
+              'includes': [
+                'gpu_ipc.gypi',
+              ],
+            }],
           ],
         },
         {

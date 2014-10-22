@@ -105,7 +105,7 @@ bool GLRenderer::initialize()
     else
         m_capabilities.usingAcceleratedPainting = false;
 
-#if defined (__LB_SHELL__)
+#if defined(__LB_DISABLE_SKIA_GPU__)
     // No GPU accelerated Skia yet.
     m_capabilities.usingAcceleratedPainting = false;
 #endif
@@ -261,6 +261,19 @@ void GLRenderer::doNoOp()
     GLC(m_context, m_context->flush());
 }
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+namespace {
+bool ShouldTargetLargeScreen(WebKit::H5VCCTargetScreen target_screen) {
+    return target_screen == WebKit::ScreenLarge ||
+           target_screen == WebKit::ScreenAll;
+}
+bool ShouldTargetSmallScreen(WebKit::H5VCCTargetScreen target_screen) {
+    return target_screen == WebKit::ScreenSmall ||
+           target_screen == WebKit::ScreenAll;
+}
+}
+#endif
+
 void GLRenderer::drawQuad(DrawingFrame& frame, const DrawQuad* quad)
 {
     DCHECK(quad->rect.Contains(quad->visible_rect));
@@ -325,7 +338,11 @@ void GLRenderer::drawCheckerboardQuad(const DrawingFrame& frame, const Checkerbo
     GLC(context(), context()->uniform1f(program->fragmentShader().frequencyLocation(), frequency));
 
     setShaderOpacity(quad->opacity(), program->fragmentShader().alphaLocation());
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation(), quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation());
+#endif
 }
 
 void GLRenderer::drawDebugBorderQuad(const DrawingFrame& frame, const DebugBorderDrawQuad* quad)
@@ -684,7 +701,12 @@ void GLRenderer::drawRenderPassQuad(DrawingFrame& frame, const RenderPassDrawQua
 
     setShaderOpacity(quad->opacity(), shaderAlphaLocation);
     setShaderQuadF(surfaceQuad, shaderQuadLocation);
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, shaderMatrixLocation, quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, shaderMatrixLocation);
+#endif
 
     // Flush the compositor context before the filter bitmap goes out of
     // scope, so the draw gets processed before the filter texture gets deleted.
@@ -703,7 +725,11 @@ void GLRenderer::drawSolidColorQuad(const DrawingFrame& frame, const SolidColorD
 
     GLC(context(), context()->uniform4f(program->fragmentShader().colorLocation(), (SkColorGetR(color) / 255.0) * alpha, (SkColorGetG(color) / 255.0) * alpha, (SkColorGetB(color) / 255.0) * alpha, alpha));
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation(), quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation());
+#endif
 }
 
 struct TileProgramUniforms {
@@ -912,7 +938,12 @@ void GLRenderer::drawTileQuad(const DrawingFrame& frame, const TileDrawQuad* qua
     // quad passed in via uniform is the actual geometry that gets used to draw
     // it. This is why this centered rect is used and not the original quadRect.
     gfx::RectF centeredRect(gfx::PointF(-0.5 * tileRect.width(), -0.5 * tileRect.height()), tileRect.size());
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), centeredRect, uniforms.matrixLocation, quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), centeredRect, uniforms.matrixLocation);
+#endif
 }
 
 void GLRenderer::drawYUVVideoQuad(const DrawingFrame& frame, const YUVVideoDrawQuad* quad)
@@ -961,7 +992,11 @@ void GLRenderer::drawYUVVideoQuad(const DrawingFrame& frame, const YUVVideoDrawQ
     GLC(context(), context()->uniform3fv(program->fragmentShader().yuvAdjLocation(), 1, yuvAdjust));
 
     setShaderOpacity(quad->opacity(), program->fragmentShader().alphaLocation());
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation(), quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation());
+#endif
 
     // Reset active texture back to texture 0.
     GLC(context(), context()->activeTexture(GL_TEXTURE0));
@@ -984,7 +1019,11 @@ void GLRenderer::drawStreamVideoQuad(const DrawingFrame& frame, const StreamVide
     GLC(context(), context()->uniform1i(program->fragmentShader().samplerLocation(), 0));
 
     setShaderOpacity(quad->opacity(), program->fragmentShader().alphaLocation());
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation(), quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, program->vertexShader().matrixLocation());
+#endif
 }
 
 struct TextureProgramBinding {
@@ -1056,7 +1095,18 @@ void GLRenderer::flushTextureQuadCache()
     GLC(m_context, m_context->uniform1fv(static_cast<int>(m_drawCache.vertex_opacity_location), static_cast<int>(m_drawCache.vertex_opacity_data.size()), static_cast<float*>(&m_drawCache.vertex_opacity_data.front())));
 
     // Draw the quads!
+#if defined(__LB_WIIU__) && defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    if (ShouldTargetLargeScreen(m_drawCache.target_screen)) {
+        GLC(context(), context()->setOutputSurfaceLBSHELL(1));
+        GLC(m_context, m_context->drawElements(GL_TRIANGLES, 6 * m_drawCache.matrix_data.size(), GL_UNSIGNED_SHORT, 0));
+        GLC(context(), context()->setOutputSurfaceLBSHELL(0));
+    }
+    if (ShouldTargetSmallScreen(m_drawCache.target_screen)) {
+        GLC(m_context, m_context->drawElements(GL_TRIANGLES, 6 * m_drawCache.matrix_data.size(), GL_UNSIGNED_SHORT, 0));
+    }
+#else
     GLC(m_context, m_context->drawElements(GL_TRIANGLES, 6 * m_drawCache.matrix_data.size(), GL_UNSIGNED_SHORT, 0));
+#endif
 
     // Clean up after ourselves (reset state set above).
      if (!m_drawCache.use_premultiplied_alpha)
@@ -1084,6 +1134,9 @@ void GLRenderer::enqueueTextureQuad(const DrawingFrame& frame, const TextureDraw
         m_drawCache.resource_id != resourceID ||
         m_drawCache.use_premultiplied_alpha != quad->premultiplied_alpha ||
         m_drawCache.needs_blending != quad->ShouldDrawWithBlending() ||
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+        m_drawCache.target_screen != quad->shared_quad_state->h5vcc_target_screen ||
+#endif
         m_drawCache.matrix_data.size() >= 8) {
         flushTextureQuadCache();
         m_drawCache.program_id = binding.programId;
@@ -1095,6 +1148,9 @@ void GLRenderer::enqueueTextureQuad(const DrawingFrame& frame, const TextureDraw
         m_drawCache.vertex_opacity_location = binding.vertexOpacityLocation;
         m_drawCache.matrix_location = binding.matrixLocation;
         m_drawCache.sampler_location = binding.samplerLocation;
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+        m_drawCache.target_screen = quad->shared_quad_state->h5vcc_target_screen;
+#endif
     }
 
     // Generate the uv-transform
@@ -1147,7 +1203,11 @@ void GLRenderer::drawTextureQuad(const DrawingFrame& frame, const TextureDrawQua
         GLC(context(), context()->blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE));
     }
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, binding.matrixLocation, quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, binding.matrixLocation);
+#endif
 
     if (!quad->premultiplied_alpha)
         GLC(m_context, m_context->blendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
@@ -1170,7 +1230,11 @@ void GLRenderer::drawIOSurfaceQuad(const DrawingFrame& frame, const IOSurfaceDra
 
     GLC(context(), context()->bindTexture(GL_TEXTURE_RECTANGLE_ARB, quad->io_surface_texture_id));
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    drawQuadGeometry(frame, quad->quadTransform(), quad->rect, binding.matrixLocation, quad->shared_quad_state->h5vcc_target_screen);
+#else
     drawQuadGeometry(frame, quad->quadTransform(), quad->rect, binding.matrixLocation);
+#endif
 
     GLC(context(), context()->bindTexture(GL_TEXTURE_RECTANGLE_ARB, 0));
 }
@@ -1269,6 +1333,23 @@ void GLRenderer::setUseProgram(unsigned program)
     GLC(m_context, m_context->useProgram(program));
     m_programShadow = program;
 }
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+void GLRenderer::drawQuadGeometry(const DrawingFrame& frame, const gfx::Transform& drawTransform, const gfx::RectF& quadRect, int matrixLocation, WebKit::H5VCCTargetScreen target_screen) {
+#if defined(__LB_WIIU__)
+    if (ShouldTargetLargeScreen(target_screen)) {
+        GLC(context(), context()->setOutputSurfaceLBSHELL(1));
+        drawQuadGeometry(frame, drawTransform, quadRect, matrixLocation);
+        GLC(context(), context()->setOutputSurfaceLBSHELL(0));
+    }
+    if (ShouldTargetSmallScreen(target_screen)) {
+        drawQuadGeometry(frame, drawTransform, quadRect, matrixLocation);
+    }
+#else
+    drawQuadGeometry(frame, drawTransform, quadRect, matrixLocation);
+#endif
+}
+#endif
 
 void GLRenderer::drawQuadGeometry(const DrawingFrame& frame, const gfx::Transform& drawTransform, const gfx::RectF& quadRect, int matrixLocation)
 {

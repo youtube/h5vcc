@@ -52,11 +52,27 @@
       '../',
       '../..',
       '../Modules/battery',
-      '../Modules/dial',
       '../Modules/filesystem',
       '../Modules/filesystem/chromium',
       '../Modules/gamepad',
       '../Modules/geolocation',
+      '../Modules/h5vcc/accountInfo',
+      '../Modules/h5vcc/accountManager',
+      '../Modules/h5vcc/audioConfig',
+      '../Modules/h5vcc/closedCaptionsSettings',
+      '../Modules/h5vcc/common',
+      '../Modules/h5vcc/dial',
+      '../Modules/h5vcc/dvr',
+      '../Modules/h5vcc/events',
+      '../Modules/h5vcc/home',
+      '../Modules/h5vcc/input',
+      '../Modules/h5vcc/log',
+      '../Modules/h5vcc/remote',
+      '../Modules/h5vcc/search',
+      '../Modules/h5vcc/speech',
+      '../Modules/h5vcc/sso',
+      '../Modules/h5vcc/storage',
+      '../Modules/h5vcc/system',
       '../Modules/intents',
       '../Modules/indexeddb',
       '../Modules/mediasource',
@@ -71,14 +87,6 @@
       '../Modules/websockets',
       '../accessibility',
       '../accessibility/chromium',
-      '../bindings',
-      '../bindings/generic',
-      '../bindings/js',
-      '../bridge',
-      '../bridge/jni',
-      '../bridge/jni/jsc',
-      '../bridge/jsc',
-      '../bridge/c',
       '../css',
       '../dom',
       '../dom/default',
@@ -160,19 +168,8 @@
       '../xml/parser',
       '../../WTF/wtf',
 
-      '../../JavaScriptCore',
-      '../../JavaScriptCore/runtime',
-      '../../JavaScriptCore/interpreter',
-      '../../JavaScriptCore/parser',
-      '../../JavaScriptCore/profiler',
-      '../../JavaScriptCore/runtime',
-      '../../JavaScriptCore/heap',
-      '../../JavaScriptCore/jit',
-      '../../JavaScriptCore/bytecode',
-      '../../JavaScriptCore/assembler',
-      '../../JavaScriptCore/API',
-      '../../JavaScriptCore/disassembler',
-      '../../JavaScriptCore/llint',
+      '<(SHARED_INTERMEDIATE_DIR)',
+      '<(SHARED_INTERMEDIATE_DIR)/namespace_bindings',
     ],
 
     'bindings_idl_files': [
@@ -277,34 +274,103 @@
         'derived_sources_aggregate_files': [
           '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSourcesAll.cpp',
         ],
-      },{
+      }],
+      ['OS!="lb_shell"', {
         'derived_sources_aggregate_files': [
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources01.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources02.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources03.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources04.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources05.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources06.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources07.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources08.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources09.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources10.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources11.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources12.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources13.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources14.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources15.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources16.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources17.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources18.cpp',
-          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources19.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources01.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources02.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources03.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources04.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources05.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources06.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources07.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources08.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources09.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources10.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources11.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources12.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources13.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources14.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources15.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources16.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources17.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources18.cpp',
+          '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSources19.cpp',
         ],
       }],
       ['OS=="lb_shell"', {
         'webcore_include_dirs': [
           '../platform/image-decoders/shell',
-        ]}
-      ]
+        ],
+        'conditions': [
+          ['js_engine == "jsc"', {
+            'js_engine_affix': 'js',
+            'js_engine_affix_c': 'JS',
+            'wrapper_factory_suffix': '',
+            'webcore_include_dirs': [
+              '../bindings',
+              '../bindings/generic',
+              '../bindings/js',
+              '../bridge',
+              '../bridge/jsc',
+              '../bridge/c',
+
+              '../../JavaScriptCore',
+              '../../JavaScriptCore/runtime',
+              '../../JavaScriptCore/interpreter',
+              '../../JavaScriptCore/parser',
+              '../../JavaScriptCore/profiler',
+              '../../JavaScriptCore/runtime',
+              '../../JavaScriptCore/heap',
+              '../../JavaScriptCore/jit',
+              '../../JavaScriptCore/bytecode',
+              '../../JavaScriptCore/assembler',
+              '../../JavaScriptCore/API',
+              '../../JavaScriptCore/disassembler',
+              '../../JavaScriptCore/llint',
+            ],
+            'derived_sources_aggregate_files': [
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources01.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources02.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources03.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources04.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources05.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources06.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources07.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources08.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources09.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources10.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources11.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources12.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources13.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources14.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources15.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources16.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources17.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources18.cpp',
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JSDerivedSources19.cpp',
+            ],
+          }],
+          ['js_engine == "v8"', {
+            'js_engine_affix': 'v8',
+            'js_engine_affix_c': 'V8',
+            'wrapper_factory_suffix': 'V8',
+            'webcore_include_dirs': [
+              '../bindings',
+              '../bindings/generic',
+              '../bindings/v8',
+              '../bindings/v8/custom',
+              '../bridge',
+              '../bridge/c',
+
+              '../../JavaScriptCore/runtime',
+            ],
+            'derived_sources_aggregate_files': [
+              '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8DerivedSourcesAll.cpp',
+            ],
+          }],
+        ],
+      }],
     ],
   },  # variables
 
@@ -567,7 +633,7 @@
             'idl_files_list': '<|(idl_files_list.tmp <@(bindings_idl_files))',
           },
           'inputs': [
-            '../bindings/scripts/preprocess-idls.pl',
+            '../bindings/scripts/preprocess-idls-<(js_engine).pl',
             '../bindings/scripts/IDLParser.pm',
             '../bindings/scripts/IDLAttributes.txt',
             '<!@(cat <(idl_files_list))',
@@ -580,15 +646,17 @@
             '<(perl_exe)',
             '-w',
             '-I../bindings/scripts',
-            '../bindings/scripts/preprocess-idls.pl',
+            '../bindings/scripts/preprocess-idls-<(js_engine).pl',
             '--defines',
-            '<(feature_defines) LANGUAGE_JAVASCRIPT JS_BINDING',
+            '<(feature_defines) LANGUAGE_JAVASCRIPT <(js_engine_affix_c)_BINDING',
             '--idlFilesList',
             '<(idl_files_list)',
             '--supplementalDependencyFile',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
             '--idlAttributesFile',
             '../bindings/scripts/IDLAttributes.txt',
+            '--namespaceBindingsPath',
+            '<(SHARED_INTERMEDIATE_DIR)/namespace_bindings',
             '<@(preprocessor)',
           ],
           'message': 'Resolving [Supplemental=XXX] dependencies in all IDL files',
@@ -752,8 +820,8 @@
             '<(SHARED_INTERMEDIATE_DIR)/webkit/HTMLNames.cpp',
             '<(SHARED_INTERMEDIATE_DIR)/webkit/HTMLNames.h',
             '<(SHARED_INTERMEDIATE_DIR)/webkit/HTMLElementFactory.cpp',
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/JSHTMLElementWrapperFactory.cpp',
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/JSHTMLElementWrapperFactory.h',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/<(js_engine_affix_c)HTMLElementWrapperFactory.cpp',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/<(js_engine_affix_c)HTMLElementWrapperFactory.h',
           ],
           'action': [
             'python',
@@ -763,7 +831,7 @@
             '<@(_inputs)',
             '--',
             '--factory',
-            '--wrapperFactory',
+            '--wrapperFactory<(wrapper_factory_suffix)',
             '--extraDefines', '<(feature_defines)'
           ],
         },
@@ -1108,6 +1176,7 @@
             'python',
             'scripts/action_derivedsourcesallinone.py',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
+            '<(js_engine)',
             '--',
             '<@(derived_sources_aggregate_files)',
           ],
@@ -1174,7 +1243,7 @@
             '<(gperf_exe)',
           ],
         },
-        # Rule to build generated JavaScript (JS) bindings from .idl source.
+        # Rule to build generated JavaScript bindings from .idl source.
         {
           'rule_name': 'binding',
           'extension': 'idl',
@@ -1182,7 +1251,7 @@
           'inputs': [
             '../bindings/scripts/generate-bindings.pl',
             '../bindings/scripts/CodeGenerator.pm',
-            '../bindings/scripts/CodeGeneratorJS.pm',
+            '../bindings/scripts/CodeGenerator<(js_engine_affix_c).pm',
             '../bindings/scripts/IDLParser.pm',
             '../bindings/scripts/preprocessor.pm',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
@@ -1191,8 +1260,8 @@
           'outputs': [
             # FIXME:  The .cpp file should be in webkit/bindings once
             # we coax GYP into supporting it (see 'action' below).
-            '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/JS<(RULE_INPUT_ROOT).cpp',
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/JS<(RULE_INPUT_ROOT).h',
+            '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/<(js_engine_affix_c)<(RULE_INPUT_ROOT).cpp',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/<(js_engine_affix_c)<(RULE_INPUT_ROOT).h',
           ],
           'variables': {
             'generator_include_dirs': [
@@ -1234,9 +1303,9 @@
             '--outputDir',
             '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings',
             '--defines',
-            '<(feature_defines) LANGUAGE_JAVASCRIPT JS_BINDING',
+            '<(feature_defines) LANGUAGE_JAVASCRIPT <(js_engine_affix_c)_BINDING',
             '--generator',
-            'JS',
+            '<(js_engine_affix_c)',
             '<@(generator_include_dirs)',
             '--supplementalDependencyFile',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
@@ -1252,6 +1321,7 @@
     {
       'target_name': 'webcore_bindings',
       'type': 'static_library',
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'hard_dependency': 1,
       'dependencies': [
         'webcore_bindings_sources',
@@ -1267,8 +1337,8 @@
         '<(chromium_src_dir)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
         '<(chromium_src_dir)/third_party/libpng/libpng.gyp:libpng',
         '<(chromium_src_dir)/third_party/libxml/libxml.gyp:libxml',
-        '<(chromium_src_dir)/third_party/libxslt/libxslt.gyp:libxslt',
         '<(chromium_src_dir)/third_party/libwebp/libwebp.gyp:libwebp',
+        '<(chromium_src_dir)/third_party/libxslt/libxslt.gyp:libxslt',
         '<(chromium_src_dir)/third_party/npapi/npapi.gyp:npapi',
         '<(chromium_src_dir)/third_party/qcms/qcms.gyp:qcms',
         '<(chromium_src_dir)/third_party/sqlite/sqlite.gyp:sqlite',
@@ -1315,7 +1385,7 @@
         '<(SHARED_INTERMEDIATE_DIR)/webkit/ExceptionCodeDescription.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/PickerCommon.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/UserAgentStyleSheetsData.cpp',
-        '<(SHARED_INTERMEDIATE_DIR)/webkit/JSHTMLElementWrapperFactory.cpp',
+        '<(SHARED_INTERMEDIATE_DIR)/webkit/<(js_engine_affix_c)HTMLElementWrapperFactory.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/XLinkNames.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/XMLNSNames.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/XMLNames.cpp',
@@ -1337,6 +1407,11 @@
         '<(SHARED_INTERMEDIATE_DIR)/webcore/InspectorTypeBuilder.cpp',
       ],
       'conditions': [
+        ['js_engine == "v8"', {
+          'include_dirs': [
+            '<(chromium_src_dir)/v8/include',
+          ],
+        }],
         ['inside_chromium_build==1 and OS=="win" and component=="shared_library"', {
           'defines': [
             'USING_V8_SHARED',
@@ -1346,8 +1421,19 @@
         ['enable_svg!=0', {
           'sources': [
             '<(SHARED_INTERMEDIATE_DIR)/webkit/SVGElementFactory.cpp',
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/JSSVGElementWrapperFactory.cpp',
-         ],
+          ],
+          'conditions': [
+            ['js_engine == "jsc"', {
+              'sources': [
+                '<(SHARED_INTERMEDIATE_DIR)/webkit/JSSVGElementWrapperFactory.cpp',
+              ],
+            }],
+            ['js_engine == "v8"', {
+              'sources': [
+                '<(SHARED_INTERMEDIATE_DIR)/webkit/V8SVGElementWrapperFactory.cpp',
+              ],
+            }],
+          ],
         }],
         ['OS=="mac"', {
           'include_dirs': [
@@ -1406,9 +1492,9 @@
         '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
         '<(chromium_src_dir)/skia/skia.gyp:skia',
         '<(chromium_src_dir)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
-        '<(chromium_src_dir)/third_party/libwebp/libwebp.gyp:libwebp',
         '<(chromium_src_dir)/third_party/libpng/libpng.gyp:libpng',
         '<(chromium_src_dir)/third_party/libxml/libxml.gyp:libxml',
+        '<(chromium_src_dir)/third_party/libwebp/libwebp.gyp:libwebp',
         '<(chromium_src_dir)/third_party/libxslt/libxslt.gyp:libxslt',
         '<(chromium_src_dir)/third_party/npapi/npapi.gyp:npapi',
         '<(chromium_src_dir)/third_party/ots/ots.gyp:ots',
@@ -1423,9 +1509,9 @@
         '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
         '<(chromium_src_dir)/skia/skia.gyp:skia',
         '<(chromium_src_dir)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
-        '<(chromium_src_dir)/third_party/libwebp/libwebp.gyp:libwebp',
         '<(chromium_src_dir)/third_party/libpng/libpng.gyp:libpng',
         '<(chromium_src_dir)/third_party/libxml/libxml.gyp:libxml',
+        '<(chromium_src_dir)/third_party/libwebp/libwebp.gyp:libwebp',
         '<(chromium_src_dir)/third_party/libxslt/libxslt.gyp:libxslt',
         '<(chromium_src_dir)/third_party/npapi/npapi.gyp:npapi',
         '<(chromium_src_dir)/third_party/ots/ots.gyp:ots',
@@ -1439,7 +1525,6 @@
       'hard_dependency': 1,
       'direct_dependent_settings': {
         'defines': [
-          'WEBCORE_NAVIGATOR_VENDOR="Google Inc."',
           'WEBKIT_IMPLEMENTATION=1',
         ],
         'include_dirs': [
@@ -1463,6 +1548,14 @@
         },
       },
       'conditions': [
+        ['OS =="lb_shell" and js_engine == "v8"', {
+          'dependencies': [
+            '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
+          ],
+          'export_dependent_settings': [
+            '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
+          ],
+        }],
         ['OS !="lb_shell"', {
           'dependencies': [
             '<(chromium_src_dir)/third_party/angle/src/build_angle.gyp:translator_glsl',
@@ -1633,6 +1726,7 @@
       'dependencies': [
         'webcore_prerequisites',
       ],
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'sources': [
         '<@(webcore_dom_files)',
       ],
@@ -1654,6 +1748,13 @@
 
         ['exclude', 'AllInOne\\.cpp$'],
       ],
+      'conditions': [
+        ['js_engine == "v8"', {
+          'sources/': [
+            ['exclude', 'JSC'],
+          ],
+        }],
+      ],
     },
     {
       'target_name': 'webcore_html',
@@ -1664,6 +1765,7 @@
       'sources': [
         '<@(webcore_html_files)',
       ],
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'include_dirs': [
         '<(SHARED_INTERMEDIATE_DIR)/webcore',
         '<(SHARED_INTERMEDIATE_DIR)/webkit',
@@ -1679,11 +1781,17 @@
             ['exclude', 'Android\\.cpp$'],
           ],
         }],
+        ['js_engine == "v8"', {
+          'include_dirs': [
+            '<(chromium_src_dir)/v8/include',
+          ],
+        }],
       ],
     },
     {
       'target_name': 'webcore_svg',
       'type': 'static_library',
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'dependencies': [
         'webcore_prerequisites',
       ],
@@ -1697,6 +1805,7 @@
     {
       'target_name': 'webcore_platform',
       'type': 'static_library',
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'dependencies': [
         'webcore_prerequisites',
       ],
@@ -1739,6 +1848,11 @@
         ['exclude', 'platform/text/TextEncodingDetectorNone\\.cpp$'],
       ],
       'conditions': [
+        ['js_engine == "v8"', {
+          'sources/': [
+            ['exclude', 'JSC'],
+          ],
+        }],
         ['inside_chromium_build==1', {
             'conditions': [
                 ['component=="shared_library"', {
@@ -1747,6 +1861,12 @@
                     ],
                 }],
             ],
+        }],
+        # Re-include this, to get around the 'exclude .*' exclusion above.
+        ['(OS == "win" or (OS == "lb_shell" and target_arch in ["xb1", "xb360"])) and chromium_win_pch==1', {
+          'sources/': [
+            ['include', '<(win_pch_dir)/WinPrecompile\\.(cpp|h)$'],
+          ],
         }],
         ['use_default_render_theme==1', {
           'sources/': [
@@ -1998,6 +2118,7 @@
             ['exclude', 'platform/graphics/gpu/qt/'],
             ['include', 'platform/graphics/shell/'],
             ['exclude', 'platform/chromium/Clipboard'],
+            ['exclude', 'platform/FileIconLoader'],
             ['exclude', 'FileChooser'],
             ['exclude', 'Gesture'],
 
@@ -2057,7 +2178,9 @@
             ['exclude', 'platform/chromium/ContextMenuItemChromium.cpp'],
             ['exclude', 'platform/chromium/ChromiumDataObject.cpp'],
             ['exclude', 'platform/chromium/DragDataChromium.cpp'],
+            ['exclude', 'platform/chromium/FileSystemChromiumLinux.cpp'],
             ['exclude', 'platform/chromium/PasteboardChromium.cpp'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumDefault.cpp'],
             ['exclude', 'platform/DragData.cpp'],
           ],
           'defines': [
@@ -2088,6 +2211,7 @@
     {
       'target_name': 'webcore_platform_geometry',
       'type': 'static_library',
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'dependencies': [
         'webcore_prerequisites',
       ],
@@ -2128,6 +2252,7 @@
     {
       'target_name': 'webcore_rendering',
       'type': 'static_library',
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'dependencies': [
         'webcore_prerequisites',
       ],
@@ -2153,6 +2278,17 @@
         ['exclude', 'AllInOne\\.cpp$'],
       ],
       'conditions': [
+        # Re-include this, to get around the 'exclude .*' exclusion above.
+        ['(OS == "win" or (OS == "lb_shell" and target_arch in ["xb1", "xb360"])) and chromium_win_pch==1', {
+          'sources/': [
+            ['include', '<(win_pch_dir)/WinPrecompile\\.(cpp|h)$'],
+          ],
+        }],
+        ['js_engine == "v8"', {
+          'sources/': [
+            ['exclude', 'JSC'],
+          ],
+        }],
         ['use_default_render_theme==0', {
           'sources/': [
             ['exclude', 'rendering/RenderThemeChromiumDefault.*'],
@@ -2228,6 +2364,7 @@
     {
       'target_name': 'webcore_remaining',
       'type': 'static_library',
+      'includes': ['../../WebKit/chromium/WinPrecompile.gypi'],
       'conditions' : [
         ['OS != "lb_shell"', {
           'dependencies': [
@@ -2243,8 +2380,6 @@
         '<(SHARED_INTERMEDIATE_DIR)/webkit',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings',
         '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings',
-        '../../JavaScriptCore/ForwardingHeaders',
-        '../../JavaScriptCore/bytecode',
       ],
       # This is needed for mac because of webkit_system_interface. It'd be nice
       # if this hard dependency could be split off the rest.
@@ -2259,20 +2394,10 @@
         # Exclude most of bindings, except of the V8-related parts.
         ['exclude', 'bindings/[^/]+/'],
         ['include', 'bindings/generic/'],
+        ['exclude', 'bridge/'],
 
-        # Bridge sources needed for JavaScriptCore
-        ['include', 'bridge/'],
-        ['include', 'bridge/jsc/'],
-        ['include', 'bridge/jni/'],
-        ['exclude', 'bridge/jni/[^/]+_jsobject\\.mm$'],
-        ['exclude', 'bridge/jni/[^/]+_objc\\.mm$'],
-        ['exclude', 'bridge/jni/v8/'],
-        ['exclude', 'bridge/jni/jsc'],
         ['exclude', 'plugins/'],
         ['include', 'plugins/DOM.*'],
-        # these sources needed for JavaScriptCore
-        # exclude test code
-        ['exclude', 'bridge/test'],
         ['include', 'plugins/Plugin'],
 
         # FIXME: Figure out how to store these patterns in a variable.
@@ -2321,6 +2446,22 @@
         ['include', 'loader/appcache/DOMApplicationCache\.(cpp|h)$'],
       ],
       'conditions': [
+        ['js_engine == "jsc"', {
+          'include_dirs': [
+            '../../JavaScriptCore/ForwardingHeaders',
+            '../../JavaScriptCore/bytecode',
+          ],
+          'sources/': [
+            ['include', 'bridge/'],
+            ['include', 'bridge/jsc/'],
+            ['exclude', 'bridge/test'],
+          ],
+        }],
+        ['js_engine == "v8"', {
+          'sources/': [
+            ['exclude', 'JSC'],
+          ],
+        }],
         # Shard this taret into ten parts to work around linker limitations.
         # on link time code generation builds.
         ['OS=="win" and buildtype=="Official"', {
@@ -2370,15 +2511,49 @@
           'sources/': [['exclude', 'Mac\\.(cpp|mm?)$']]
         }],
         ['OS=="lb_shell"', {
+          'conditions': [
+            ['js_engine == "jsc"', {
+              'sources/': [
+                ['include', 'bindings/js/'],
+                ['exclude', 'bindings/js/JSBindingsAllInOne.cpp'],
+                ['exclude', 'bindings/js/JSNotificationCustom.cpp'],
+                ['exclude', 'bindings/js/JSSVGElementInstanceCustom.cpp'],
+                ['exclude', 'bindings/js/JSSVGLengthCustom.cpp'],
+                ['exclude', 'bindings/js/JSSVGPathSegCustom.cpp'],
+                ['exclude', 'bindings/js/ScriptController(Brew|Efl|Gtk|Haiku|Qt|Win|Wx).cpp'],
+                ['include', 'bindings/js/ScriptControllerShell.cpp'],
+              ],
+            }],
+            ['js_engine == "v8"', {
+              'sources/': [
+                ['include', 'bindings/v8/'],
+              ],
+            }],
+            ['use_shell_xml_parser==1', {
+              'defines': [
+                'WTF_USE_LB_SHELL_XML_PARSER=<(use_shell_xml_parser)',
+              ],
+              # Replace builtin xml parser with lb_shell version
+              'sources': [
+                '../xml/parser/shell/XMLDocumentParserShell.cpp',
+                '../xml/parser/shell/XMLDocumentParserShellEvent.cpp',
+                '../xml/parser/shell/XMLDocumentParserShellPendingEvents.cpp',
+                '../xml/parser/shell/XMLDocumentParserShellStream.cpp',
+                '../xml/parser/shell/XMLDocumentParserShellDelegate.cpp',
+                '../xml/parser/shell/XMLDocumentParserShellDelegateLibxml2.cpp',
+              ],
+              'sources!': [
+                '../xml/parser/XMLDocumentParserLibxml2.cpp',
+              ],
+            }],
+            ['component=="shared_library"', {
+              'defines': [
+                'WEBKIT_DLL',
+              ],
+            }],
+          ],
           'sources/': [
-            ['include', 'bindings/js/'],
-            ['exclude', 'bindings/js/JSBindingsAllInOne.cpp'],
-            ['exclude', 'bindings/js/JSNotificationCustom.cpp'],
-            ['exclude', 'bindings/js/JSSVGElementInstanceCustom.cpp'],
-            ['exclude', 'bindings/js/JSSVGLengthCustom.cpp'],
-            ['exclude', 'bindings/js/JSSVGPathSegCustom.cpp'],
-            ['exclude', 'bindings/js/ScriptController(Brew|Efl|Gtk|Haiku|Qt|Win|Wx).cpp'],
-            ['include', 'bindings/js/ScriptControllerShell.cpp'],
+            ['exclude', 'Modules/webdatabase/DatabaseAuthorizer.cpp'],
             ['exclude', 'page/chromium/'],
             ['include', 'plugins/PluginDataNone.cpp'],
             ['include', 'plugins/PlugInOriginHash.cpp'],
@@ -2391,7 +2566,10 @@
             ['include', 'storage/StorageEvent.cpp'],
             ['include', 'storage/StorageEvent.h'],
             ['include', 'storage/StorageNamespace.h'],
-          ]
+            ['exclude', 'storage/StorageThread.cpp'],
+            # excluding chrome's storage also excludes our "storage" JS api, so add that back
+            ['include', 'h5vcc/storage/'],
+          ],
         }],
       ],
     },
@@ -2427,6 +2605,14 @@
         ],
       },
       'conditions': [
+        ['OS == "lb_shell" and js_engine == "v8"', {
+          'dependencies': [
+            '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
+          ],
+          'export_dependent_settings': [
+            '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
+          ],
+        }],
         ['target_arch=="arm"', {
           'dependencies': [
             'webcore_arm_neon',
@@ -2489,6 +2675,7 @@
         '<(INTERMEDIATE_DIR)',
         '<(SHARED_INTERMEDIATE_DIR)/webcore',
         '<(SHARED_INTERMEDIATE_DIR)/webkit',
+        '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings',
         '<@(webcore_include_dirs)',
         '../testing',

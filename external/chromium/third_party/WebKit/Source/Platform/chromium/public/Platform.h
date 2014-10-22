@@ -44,6 +44,36 @@
 #include "WebString.h"
 #include "WebVector.h"
 
+#if defined(__LB_SHELL__)
+namespace WebCore {
+
+class ObjectPositionReporter;
+class SpeechRecognitionClient;
+
+}  // namespace WebCore
+
+namespace H5vcc {
+
+class AccountInfo;
+class AccountManager;
+class AudioConfigArray;
+class ClosedCaptionsSettings;
+class DialNativeServiceHandler;
+class DvrManager;
+class EventReporter;
+class HomePinManager;
+class InputManager;
+class LogPinger;
+class RemoteController;
+class SearchManager;
+class SpeechManager;
+class Sso;
+class Storage;
+class System;
+
+} // namespace H5vcc
+#endif
+
 namespace WebKit {
 
 class WebAudioBus;
@@ -112,6 +142,11 @@ public:
 
     virtual double audioHardwareSampleRate() { return 0; }
     virtual size_t audioHardwareBufferSize() { return 0; }
+#if defined(__LB_SHELL__)
+    // This function returns the maximum channel number that the current hardware can render.
+    // It represents the current status of the system as speakers can be plugged/unpluged at any time.
+    virtual int audioHardwareMaxChannels() { return 0; }
+#endif  // defined(__LB_SHELL__)
     virtual WebAudioDevice* createAudioDevice(size_t bufferSize, unsigned numberOfChannels, double sampleRate, WebAudioDevice::RenderCallback*) { return 0; }
 
 
@@ -445,6 +480,29 @@ public:
 
     virtual void didStartWorkerRunLoop(const WebWorkerRunLoop&) { }
     virtual void didStopWorkerRunLoop(const WebWorkerRunLoop&) { }
+
+#if defined(__LB_SHELL__)
+    virtual WebCore::ObjectPositionReporter* createObjectPositionReporter() { return 0; }
+    virtual WebCore::SpeechRecognitionClient* createSpeechRecognitionClient() {return 0; }
+
+    // H5VCC ----------------------------------------------------------
+    virtual H5vcc::AccountInfo* h5vccAccountInfo() { return 0; }
+    virtual H5vcc::AccountManager* h5vccAccountManager() { return 0; }
+    virtual H5vcc::AudioConfigArray* h5vccAudioConfigArray() { return 0; }
+    virtual H5vcc::ClosedCaptionsSettings* h5vccClosedCaptionsSettings() { return 0; }
+    virtual H5vcc::DialNativeServiceHandler* h5vccDialNativeServiceHandler() { return 0; }
+    virtual H5vcc::DvrManager* h5vccDvrManager() { return 0; }
+    virtual H5vcc::EventReporter* h5vccEventReporter() { return 0; }
+    virtual H5vcc::HomePinManager* h5vccHomePinManager() { return 0; }
+    virtual H5vcc::InputManager* h5vccInputManager() { return 0; }
+    virtual H5vcc::LogPinger* h5vccLogPinger() { return 0; }
+    virtual H5vcc::RemoteController* h5vccRemoteController() { return 0; }
+    virtual H5vcc::SearchManager* h5vccSearchManager() { return 0; }
+    virtual H5vcc::SpeechManager* h5vccSpeechManager() { return 0; }
+    virtual H5vcc::Sso* h5vccSso() { return 0; }
+    virtual H5vcc::Storage* h5vccStorage() { return 0; }
+    virtual H5vcc::System* h5vccSystem() { return 0; }
+#endif
 
 protected:
     virtual ~Platform() { }

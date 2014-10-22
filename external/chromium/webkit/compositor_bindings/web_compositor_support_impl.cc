@@ -62,7 +62,8 @@ void WebCompositorSupportImpl::initialize(WebKit::WebThread* impl_thread) {
   initialized_ = true;
   if (impl_thread) {
     impl_thread_message_loop_proxy_ =
-        dynamic_cast<webkit_glue::WebThreadBase*>(impl_thread)->message_loop_proxy();
+        static_cast<webkit_glue::WebThreadBase*>(impl_thread)->
+            message_loop_proxy();
   } else {
     impl_thread_message_loop_proxy_ = NULL;
   }

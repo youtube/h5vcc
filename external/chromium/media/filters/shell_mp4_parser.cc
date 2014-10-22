@@ -20,7 +20,6 @@
 
 #include "base/stringprintf.h"
 #include "media/base/shell_buffer_factory.h"
-#include "media/base/shell_filter_graph_log.h"
 #include "media/mp4/es_descriptor.h"
 #include "lb_platform.h"
 
@@ -75,8 +74,7 @@ static const int kMapTableAtomCacheEntries_ctts = 51543  / kEntrySize_ctts;
 scoped_refptr<ShellParser> ShellMP4Parser::Construct(
     scoped_refptr<ShellDataSourceReader> reader,
     const uint8 *construction_header,
-    const PipelineStatusCB &status_cb,
-    scoped_refptr<ShellFilterGraphLog> filter_graph_log) {
+    const PipelineStatusCB &status_cb) {
   // detect mp4 stream by looking for ftyp atom at top of file
   uint32 ftyp = LB::Platform::load_uint32_big_endian(construction_header + 4);
   if (ftyp != kAtomType_ftyp) {
@@ -94,23 +92,21 @@ scoped_refptr<ShellParser> ShellMP4Parser::Construct(
 
   // construct and return new mp4 parser
   return scoped_refptr<ShellParser>(new ShellMP4Parser(reader,
-                                                       ftyp_atom_size,
-                                                       filter_graph_log));
+                                                       ftyp_atom_size));
 }
 
 ShellMP4Parser::ShellMP4Parser(
     scoped_refptr<ShellDataSourceReader> reader,
-    uint32 ftyp_atom_size,
-    scoped_refptr<ShellFilterGraphLog> filter_graph_log)
-    : ShellAVCParser(reader, filter_graph_log)
+    uint32 ftyp_atom_size)
+    : ShellAVCParser(reader)
     , atom_offset_(ftyp_atom_size)  // start at next atom, skipping over ftyp
     , current_trak_is_video_(false)
     , current_trak_is_audio_(false)
     , current_trak_time_scale_(0)
     , video_time_scale_hz_(0)
     , audio_time_scale_hz_(0)
-    , audio_map_(new ShellMP4Map(reader, filter_graph_log))
-    , video_map_(new ShellMP4Map(reader, filter_graph_log))
+    , audio_map_(new ShellMP4Map(reader))
+    , video_map_(new ShellMP4Map(reader))
     , audio_sample_(0)
     , video_sample_(0)
     , first_audio_hole_ticks_(0)
@@ -244,7 +240,7 @@ bool ShellMP4Parser::SeekTo(base::TimeDelta timestamp) {
     return false;
   }
   DLOG(INFO) << base::StringPrintf(
-      "seeking to timestamp: %"PRId64", video sample: %d, audio sample: %d",
+      "seeking to timestamp: %" PRId64", video sample: %d, audio sample: %d",
       timestamp.InMilliseconds(), video_sample_, audio_sample_);
   // cheat our buffer continuity system
   if (!audio_map_->GetTimestamp(audio_sample_, first_audio_hole_ticks_)) {
@@ -289,7 +285,7 @@ bool ShellMP4Parser::ParseNextAtom() {
   // atom sizes also include the size of the start of the atom, so sanity-check
   // the size we just parsed against the number of bytes we needed to parse it
   if (atom_size < atom_body) {
-    DLOG(WARNING) << base::StringPrintf("atom size: %"PRId64" less than min body size %d",
+    DLOG(WARNING) << base::StringPrintf("atom size: %" PRId64" less than min body size %d",
         atom_size, atom_body);
     return false;
   }
@@ -465,8 +461,7 @@ void ShellMP4Parser::DumpAtomToDisk(uint32 four_cc,
                                     uint64 atom_offset) {
   // download entire atom into buffer
   scoped_refptr<ShellScopedArray> scoped_buffer =
-      ShellBufferFactory::Instance()->AllocateArray(atom_size,
-                                                    filter_graph_log_);
+      ShellBufferFactory::Instance()->AllocateArray(atom_size);
   uint8* buffer = scoped_buffer->Get();
   int bytes_read = reader_->BlockingRead(atom_offset,
                                          atom_size,
@@ -524,7 +519,7 @@ void ShellMP4Parser::DumpAtomToDisk(uint32 four_cc,
 bool ShellMP4Parser::ParseMP4_esds(uint64 atom_data_size) {
   if (atom_data_size < kFullBoxHeaderAndFlagSize) {
     DLOG(WARNING) << base::StringPrintf(
-        "esds box should at least be %d bytes but now it is %"PRId64" bytes",
+        "esds box should at least be %d bytes but now it is %" PRId64" bytes",
         kFullBoxHeaderAndFlagSize, atom_data_size);
     return false;
   }
@@ -533,12 +528,11 @@ bool ShellMP4Parser::ParseMP4_esds(uint64 atom_data_size) {
   uint64 esds_size = atom_data_size - kFullBoxHeaderAndFlagSize;
   // we'll need to download entire esds, allocate buffer for it
   scoped_refptr<ShellScopedArray> esds_storage =
-      ShellBufferFactory::Instance()->AllocateArray(esds_size,
-                                                    filter_graph_log_);
+      ShellBufferFactory::Instance()->AllocateArray(esds_size);
   uint8* esds = NULL;
   if (!esds_storage || !(esds = esds_storage->Get())) {
     DLOG(WARNING) << base::StringPrintf(
-        "unable to allocate esds temp array of %"PRId64" bytes", esds_size);
+        "unable to allocate esds temp array of %" PRId64" bytes", esds_size);
     return false;
   }
   // download esds
@@ -569,7 +563,7 @@ bool ShellMP4Parser::ParseMP4_hdlr(uint64 atom_data_size, uint8* hdlr) {
   DCHECK_LE(kDesiredBytes_hdlr + 16, kAtomDownload);
   // sanity-check for minimum size
   if (atom_data_size < kDesiredBytes_hdlr) {
-    DLOG(WARNING) << base::StringPrintf("bad size %"PRId64" on hdlr",
+    DLOG(WARNING) << base::StringPrintf("bad size %" PRId64" on hdlr",
         atom_data_size);
     return false;
   }
@@ -600,7 +594,7 @@ bool ShellMP4Parser::ParseMP4_hdlr(uint64 atom_data_size, uint8* hdlr) {
 bool ShellMP4Parser::ParseMP4_mdhd(uint64 atom_data_size, uint8* mdhd) {
   DCHECK_LE(kDesiredBytes_mdhd + 16, kAtomDownload);
   if (atom_data_size < kDesiredBytes_mdhd) {
-    DLOG(WARNING) << base::StringPrintf("bad size %"PRId64" on mdhd",
+    DLOG(WARNING) << base::StringPrintf("bad size %" PRId64" on mdhd",
         atom_data_size);
     return false;
   }
@@ -612,7 +606,7 @@ bool ShellMP4Parser::ParseMP4_mdhd(uint64 atom_data_size, uint8* mdhd) {
                                                time_scale);
   if (track_duration > duration_) {
     DLOG(WARNING) << base::StringPrintf(
-        "mdhd has longer duration: %"PRId64" ms than old value: %"PRId64" ms.",
+        "mdhd has longer duration: %" PRId64" ms than old value: %" PRId64" ms.",
         track_duration.InMilliseconds(), duration_.InMilliseconds());
     duration_ = track_duration;
   }
@@ -642,7 +636,7 @@ bool ShellMP4Parser::ParseMP4_mp4a(uint64 atom_data_size, uint8* mp4a) {
   // number of this atom, which tells us the size of the rest of the header,
   // telling us how much we should skip to get to the extension contents.
   if (atom_data_size < kDesiredBytes_mp4a) {
-    DLOG(WARNING) << base::StringPrintf("bad size %"PRId64" on mp4a",
+    DLOG(WARNING) << base::StringPrintf("bad size %" PRId64" on mp4a",
         atom_data_size);
     return false;
   }
@@ -682,7 +676,7 @@ bool ShellMP4Parser::ParseMP4_mvhd(uint64 atom_data_size, uint8* mvhd) {
   DCHECK_LE(kDesiredBytes_mvhd + 16, kAtomDownload);
   // it should be at least long enough for us to extract the parts we want
   if (atom_data_size < kDesiredBytes_mvhd) {
-    DLOG(WARNING) << base::StringPrintf("bad size %"PRId64" on mvhd",
+    DLOG(WARNING) << base::StringPrintf("bad size %" PRId64" on mvhd",
         atom_data_size);
     return false;
   }

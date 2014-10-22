@@ -67,6 +67,7 @@ v8::Handle<v8::Value> V8InspectorFrontendHost::portCallback(const v8::Arguments&
     return v8::Undefined();
 }
 
+#if ENABLE(CONTEXT_MENUS)
 static void populateContextMenuItems(v8::Local<v8::Array>& itemArray, ContextMenu& menu)
 {
     for (size_t i = 0; i < itemArray->Length(); ++i) {
@@ -133,6 +134,7 @@ v8::Handle<v8::Value> V8InspectorFrontendHost::showContextMenuCallback(const v8:
 
     return v8::Undefined();
 }
+#endif
 
 static v8::Handle<v8::Value> histogramEnumeration(const char* name, const v8::Arguments& args, int boundaryValue)
 {

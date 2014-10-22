@@ -28,6 +28,12 @@
 
 #if ENABLE(SCRIPTED_SPEECH)
 
+// We need WEBKIT_EXPORT to expose some WebCore functionality to the lbshell
+// platform layer. This forces us to include public/WebCommon.h, which we
+// shouldn't since that's a chromium specific header. Here we include it
+// via including wtf/OSAllocator which includes public/WebCommon.h via a
+// relative path.
+#include <wtf/OSAllocator.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -35,7 +41,7 @@ namespace WebCore {
 
 class ScriptExecutionContext;
 
-class SpeechRecognitionAlternative : public RefCounted<SpeechRecognitionAlternative> {
+class WEBKIT_EXPORT SpeechRecognitionAlternative : public RefCounted<SpeechRecognitionAlternative> {
 public:
     static PassRefPtr<SpeechRecognitionAlternative> create(const String&, double);
 

@@ -1,8 +1,24 @@
+/*
+ * Copyright 2014 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "lb_shell_layout_test_runner.h"
 
 #include <sstream>
 #include <string>
 
+#include "external/chromium/base/debug/trace_event.h"
 #include "external/chromium/base/logging.h"
 #include "external/chromium/base/synchronization/waitable_event.h"
 #include "external/chromium/googleurl/src/gurl.h"
@@ -10,7 +26,9 @@
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebDataSource.h"
 #include "external/chromium/third_party/WebKit/Source/Platform/chromium/public/WebURLRequest.h"
 
+#include "lb_globals.h"
 #include "lb_graphics.h"
+#include "lb_on_screen_display.h"
 #include "lb_resource_loader_bridge.h"
 #include "lb_shell.h"
 #include "lb_shell_platform_delegate.h"
@@ -22,36 +40,39 @@
 
 #if defined(__LB_LAYOUT_TESTS__)
 
-extern std::string* global_game_content_path;
-extern const char *global_screenshot_output_path;
-
 const int kTestRunnerThreadStackSize = 32 * 1024;
 const int kTestRunnerThreadPriority = kWebKitThreadPriority;
 
 LBShellLayoutTestRunner::LBShellLayoutTestRunner(
+    LBShell* shell,
     const std::string& work_dir,
     const std::vector<std::string>& tests,
     MessageLoop* webkit_message_loop)
-    : base::SimpleThread("LBShellLayoutTestRunner Thread",
+    : base::SimpleThread("LBShellLayoutTestRunner",
           base::SimpleThread::Options(kTestRunnerThreadStackSize,
-                                      kTestRunnerThreadPriority)),
-    work_dir_(work_dir),
-    tests_(tests),
-    message_loop_(NULL),
-    message_loop_setup_event_(true, false),
-    thread_state_(ThreadState_Running) {
+                                      kTestRunnerThreadPriority))
+    , message_loop_setup_event_(true, false) {
+  // Enable tracing during layout tests as they can be very helpful
+  // to debug flaky test results (and performance is not currently an
+  // issue for layout tests).
+  shell->tracing_manager()->EnableTracing(true);
+
+  work_dir_ = work_dir;
+  tests_ = tests;
+  shell_ = shell;
+  message_loop_ = NULL;
+
+  thread_state_ = ThreadState_Running;
+
   // Ensure that nothing is prepended to screenshot filenames so that we
   // can send them to the contents directory
-  global_screenshot_output_path = ".";
+  GetGlobalsPtr()->screenshot_output_path = strdup(".");
 
   webkit_message_loop_ = webkit_message_loop;
 
   // Disable white listing
   LBResourceLoaderBridge::SetPerimeterCheckEnabled(false);
   LBResourceLoaderBridge::SetPerimeterCheckLogging(false);
-
-  shell_.reset(new LBShell("about:blank"));
-  shell_->Show(WebKit::WebNavigationPolicyNewWindow);
 
   // Setup all the callback bindings that we're interested in
   shell_->SetOnStartedProvisionalLoadCallback(
@@ -60,7 +81,6 @@ LBShellLayoutTestRunner::LBShellLayoutTestRunner(
     base::Bind(&LBShellLayoutTestRunner::OnLoadComplete, this, true));
   shell_->SetOnNetworkFailureCallback(
     base::Bind(&LBShellLayoutTestRunner::OnLoadComplete, this, false));
-
   Start();
 
   // Wait for the message loop to be initialized
@@ -69,6 +89,7 @@ LBShellLayoutTestRunner::LBShellLayoutTestRunner(
 }
 
 LBShellLayoutTestRunner::~LBShellLayoutTestRunner() {
+  Join();
 }
 
 std::string LBShellLayoutTestRunner::GetURLStrFromTest(
@@ -82,10 +103,11 @@ std::string LBShellLayoutTestRunner::GetURLStrFromTest(
 
 std::string LBShellLayoutTestRunner::GetFilePathFromTest(
     const std::string& test_input_str) {
+  const std::string game_content_path(GetGlobalsPtr()->game_content_path);
   if (test_input_str.substr(0, 4) == "http") {
-    return *global_game_content_path + "/local/Previous_OnlineLayoutTest";
+    return game_content_path + "/local/Previous_OnlineLayoutTest";
   } else {
-    return *global_game_content_path + "/local/" + work_dir_ + "/" +
+    return game_content_path + "/local/" + work_dir_ + "/" +
            test_input_str;
   }
 }
@@ -96,19 +118,21 @@ void LBShellLayoutTestRunner::Run() {
   message_loop_ = &message_loop;
   message_loop_setup_event_.Signal();
 
-  // Wait for the initial LBShell startup URL navigation load to complete
-  bool result = WaitForLoadComplete();
+  bool result = WaitForLoadComplete(GURL("about:blank"));
   DCHECK(result);
 
   for (int cur_test = 0; cur_test < tests_.size(); ++cur_test) {
+    TRACE_EVENT1("lb_layout_tests", "Layout Test Iteration",
+                 "Test", tests_[cur_test]);
     DLOG(INFO) << "LBShellLayoutTestRunner -- Test Start (" <<
         tests_[cur_test] << ").";
 
-    std::string testURLStr = GetURLStrFromTest(tests_[cur_test]);
+    GURL testURL = GURL(GetURLStrFromTest(tests_[cur_test]));
 
     // Navigate to the next test page
-    shell_->webViewHost()->SendNavigateTask(GURL(testURLStr));
-    if (WaitForLoadComplete()) {
+    TRACE_EVENT_INSTANT0("lb_layout_tests", "Sending navigate task");
+    shell_->webViewHost()->SendNavigateTask(testURL);
+    if (WaitForLoadComplete(testURL)) {
       // Take a screenshot
       std::ostringstream oss;
       oss << GetFilePathFromTest(tests_[cur_test]) << "-actual";
@@ -126,7 +150,7 @@ void LBShellLayoutTestRunner::Run() {
   DLOG(INFO) << "LBShellLayoutTestRunner -- All tests complete.";
 
   shell_->webViewHost()->SendNavigateTask(GURL("about:blank"));
-  WaitForLoadComplete();
+  WaitForLoadComplete(GURL("about:blank"));
 
   shell_->ResetOnStartedProvisionalLoadCallback();
   shell_->ResetOnNetworkSuccessCallback();
@@ -139,7 +163,9 @@ void LBShellLayoutTestRunner::StartedProvisionalLoad(WebKit::WebFrame* frame) {
   if (frame == 0) return;
 
   GURL url(frame->provisionalDataSource()->originalRequest().url());
-
+  TRACE_EVENT_INSTANT1("lb_layout_tests",
+                       "LBShellLayoutTestRunner::StartedProvisionalLoad",
+                       "url", url.possibly_invalid_spec());
   DLOG(INFO) << "Started provisional load (URL: '" << url << "').";
 }
 
@@ -148,18 +174,27 @@ void LBShellLayoutTestRunner::OnLoadComplete(bool success,
   if (frame == 0) return;
 
   GURL url(frame->dataSource()->originalRequest().url());
+  TRACE_EVENT2("lb_layout_tests",
+               "LBShellLayoutTestRunner::OnLoadComplete",
+               "success", success,
+               "url", url.possibly_invalid_spec());
   DLOG(INFO) << "Load complete (URL: '" << url << "').";
 
   // Relay the OnLoadComplete signal to the test runner thread
   message_loop_->PostTask(FROM_HERE,
-    base::Bind(&LBShellLayoutTestRunner::TaskProcessLoadComplete,
-                this,
-                success));
+      base::Bind(&LBShellLayoutTestRunner::TaskProcessLoadComplete,
+                 this,
+                 success,
+                 url));
 }
 
-bool LBShellLayoutTestRunner::WaitForLoadComplete() {
+bool LBShellLayoutTestRunner::WaitForLoadComplete(const GURL& url) {
+  TRACE_EVENT1("lb_layout_tests",
+               "LBShellLayoutTestRunner::WaitForLoadComplete",
+               "url", url.possibly_invalid_spec());
   DCHECK_EQ(thread_state_, ThreadState_Running);
   thread_state_ = ThreadState_WaitingForPageLoad;
+  wait_for_url_ = url;
 
   message_loop_->Run();
 
@@ -168,16 +203,27 @@ bool LBShellLayoutTestRunner::WaitForLoadComplete() {
 
   return load_successful_;
 }
-void LBShellLayoutTestRunner::TaskProcessLoadComplete(bool success) {
+void LBShellLayoutTestRunner::TaskProcessLoadComplete(bool success,
+                                                      const GURL& url) {
+  TRACE_EVENT2("lb_layout_tests",
+               "LBShellLayoutTestRunner::TaskProcessLoadComplete",
+               "success", success,
+               "url", url.possibly_invalid_spec());
   DCHECK_EQ(thread_state_, ThreadState_WaitingForPageLoad);
 
-  load_successful_ = success;
+  if (url == wait_for_url_) {
+    // The URL we were waiting to load on has finished loading.
+    load_successful_ = success;
 
-  message_loop_->QuitWhenIdle();
+    message_loop_->QuitWhenIdle();
+  }
 }
 
 namespace {
 void SyncWithMessageLoop(MessageLoop* message_loop) {
+  TRACE_EVENT0("lb_layout_tests",
+               "LBShellLayoutTestRunner::SyncWithMessageLoop");
+
   base::WaitableEvent wait_event(true, false);
   message_loop->PostTask(FROM_HERE,
                          base::Bind(&base::WaitableEvent::Signal,
@@ -187,6 +233,9 @@ void SyncWithMessageLoop(MessageLoop* message_loop) {
 
 void EnsureCompositeHasOccurred(MessageLoop* webkit_message_loop,
                                 WebKit::WebLayerTreeView* layer_tree_view) {
+  TRACE_EVENT0("lb_layout_tests",
+               "LBShellLayoutTestRunner::EnsureCompositeHasOccurred");
+
   // Make sure all webkit events are flushed before taking the screenshot
   webkit_message_loop->PostTask(
       FROM_HERE,
@@ -213,17 +262,20 @@ void EnsureCompositeHasOccurred(MessageLoop* webkit_message_loop,
                  base::Unretained(layer_tree_view)));
   SyncWithMessageLoop(webkit_message_loop);
 }
-}
+}  // namespace
 
 void LBShellLayoutTestRunner::TakeScreenshot(const std::string& filename) {
+  TRACE_EVENT0("lb_layout_tests",
+               "LBShellLayoutTestRunner::TakeScreenshot");
+
   // Hide all on-screen information before taking the screenshot
-  bool osd_was_visible = LBGraphics::GetPtr()->OSDVisible();
-  if (LBGraphics::GetPtr()->OSDVisible()) {
-    LBGraphics::GetPtr()->HideOSD();
+  bool osd_was_visible = LB::OnScreenDisplay::GetPtr()->StatsVisible();
+  if (LB::OnScreenDisplay::GetPtr()->StatsVisible()) {
+    LB::OnScreenDisplay::GetPtr()->HideStats();
   }
-  bool console_was_visible = LBGraphics::GetPtr()->ConsoleVisible();
-  if (LBGraphics::GetPtr()->ConsoleVisible()) {
-    LBGraphics::GetPtr()->HideConsole();
+  bool console_was_visible = LB::OnScreenDisplay::GetPtr()->ConsoleVisible();
+  if (LB::OnScreenDisplay::GetPtr()->ConsoleVisible()) {
+    LB::OnScreenDisplay::GetPtr()->HideConsole();
   }
 
 #if defined(__LB_WIIU__)
@@ -242,10 +294,10 @@ void LBShellLayoutTestRunner::TakeScreenshot(const std::string& filename) {
 #endif
 
   if (console_was_visible) {
-    LBGraphics::GetPtr()->ShowConsole();
+    LB::OnScreenDisplay::GetPtr()->ShowConsole();
   }
   if (osd_was_visible) {
-    LBGraphics::GetPtr()->ShowOSD();
+    LB::OnScreenDisplay::GetPtr()->ShowStats();
   }
 }
 

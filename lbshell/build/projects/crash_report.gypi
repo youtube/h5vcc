@@ -15,7 +15,11 @@
             '<(DEPTH)/third_party/linux/include',
           ],
           'sources': [
-            '<!@(find ../../crash_report/ -type f)',
+            '../../crash_report/core2md.cc',
+            '../../crash_report/core_dumper.cc',
+            '../../crash_report/minidump_writer.cc',
+            '../../crash_report/symbol_info.cc',
+            '../../crash_report/common/elf_core_dump.cc',
             '<(DEPTH)/breakpad/src/client/linux/handler/minidump_descriptor.h',
             '<(DEPTH)/breakpad/src/client/linux/handler/minidump_descriptor.cc',
             '<(DEPTH)/breakpad/src/client/minidump_file_writer-inl.h',

@@ -60,13 +60,16 @@ static size_t computeRAMSize()
         return ramSizeGuess;
     return ramSize > std::numeric_limits<size_t>::max() ? std::numeric_limits<size_t>::max() : static_cast<size_t>(ramSize);
 #elif defined(__LB_SHELL__)
-#if LB_MEMORY_COUNT
-    lb_memory_info_t info;
-    lb_memory_stats(&info);
-    return info.user_memory;
-#else
-    return ramSizeGuess;
+#if LB_ENABLE_MEMORY_DEBUGGING
+    if (LB::Memory::IsCountEnabled()) {
+        LB::Memory::Info info;
+        LB::Memory::GetInfo(&info);
+        return info.user_memory;
+    } else
 #endif
+    {
+        return ramSizeGuess;
+    }
 #elif OS(UNIX)
     long pages = sysconf(_SC_PHYS_PAGES);
     long pageSize = sysconf(_SC_PAGE_SIZE);

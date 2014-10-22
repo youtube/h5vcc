@@ -161,8 +161,6 @@ public:
     void enableOutputsIfNecessary();
     void disableOutputsIfNecessary();
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
     // EventTarget implementation, base implementation does nothing
     virtual const AtomicString& interfaceName() const;
     virtual ScriptExecutionContext* scriptExecutionContext() const { return NULL; }

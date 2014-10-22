@@ -536,7 +536,7 @@ bool ResourceProvider::initialize()
         else if (extensions[i] == "GL_EXT_texture_format_BGRA8888")
           useBGRA = true;
     }
-#if !defined (__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
     m_textureCopier = AcceleratedTextureCopier::create(context3d, useBindUniform);
 #endif
     m_textureUploader = TextureUploader::create(context3d, useMapSub, m_useShallowFlush);

@@ -254,8 +254,6 @@ public:
     void setLoadFinishTime(double finishTime) { m_loadFinishTime = finishTime; }
     double loadFinishTime() const { return m_loadFinishTime; }
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     virtual void checkNotify();
 

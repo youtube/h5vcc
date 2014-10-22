@@ -252,7 +252,7 @@ struct _qcms_profile {
 	struct precache_output *output_table_b;
 };
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #define inline _inline
 #endif
 

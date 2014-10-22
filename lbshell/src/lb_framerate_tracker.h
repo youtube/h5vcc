@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _LB_FRAMERATE_TRACKER_H_
-#define _LB_FRAMERATE_TRACKER_H_
+#ifndef SRC_LB_FRAMERATE_TRACKER_H_
+#define SRC_LB_FRAMERATE_TRACKER_H_
 
 #include "external/chromium/base/synchronization/lock.h"
 
@@ -35,9 +35,6 @@ class LBFramerateTracker {
     base::AutoLock auto_lock(monitor_lock_);
     return total_frames_;
   }
-
-  // Return the number of seconds since the tracker received the first tick.
-  int GetLifetime() const;
 
   struct Stats {
     Stats();
@@ -62,9 +59,6 @@ class LBFramerateTracker {
   // The total number of frames seen so far by this tracker
   int total_frames_;
 
-  // The time that the first frame tick occurred
-  double first_frame_time_;
-
   // The time that the last frame tick occurred
   double last_frame_time_;
 
@@ -85,4 +79,4 @@ class LBFramerateTracker {
   Stats prev_sample_set_stats_;
 };
 
-#endif  // _LB_FRAMERATE_TRACKER_H_
+#endif  // SRC_LB_FRAMERATE_TRACKER_H_

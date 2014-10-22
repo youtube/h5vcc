@@ -31,7 +31,7 @@
 #ifndef WorkerScriptDebugServer_h
 #define WorkerScriptDebugServer_h
 
-#if ENABLE(JAVASCRIPT_DEBUGGER) && ENABLE(WORKERS)
+#if ENABLE(JAVASCRIPT_DEBUGGER) && ENABLE(WORKERS) && ENABLE(INSPECTOR)
 
 #include "ScriptDebugServer.h"
 

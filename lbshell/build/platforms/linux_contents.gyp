@@ -2,7 +2,7 @@
   'variables': {
     'static_contents_dir': '../../content',
     'output_contents_dir': '<(PRODUCT_DIR)/content',
-    'shaders_source_dir': '../../src/platform/linux/shaders',
+    'shaders_source_dir': '../../src/shaders_glsl',
   },
   'targets': [
     {
@@ -13,9 +13,12 @@
         '<(SHARED_INTERMEDIATE_DIR)/repack/lb_shell.pak',
       ],
       'inputs_local': [
+        '<!@(find <(static_contents_dir)/local/platform/linux/*)',
+        '<!@(find <(static_contents_dir)/local/common/*)',
         '<(SHARED_INTERMEDIATE_DIR)/licenses.html',
       ],
       'inputs_shaders': [
+        '<(shaders_source_dir)/fragment_quad_drawer.glsl',
         '<(shaders_source_dir)/fragment_reftex.glsl',
         '<(shaders_source_dir)/fragment_solid.glsl',
         '<(shaders_source_dir)/fragment_text.glsl',
@@ -38,7 +41,7 @@
         },
       ],
     },
-    # content files used by both jsc_tests and lb_shell.
+    # content files used by jsc_tests, v8_tests and lb_shell.
     {
       'target_name': 'copy_contents_common',
       'type': 'none',
@@ -89,7 +92,7 @@
       ],
     },
     {
-      'target_name': 'copy_jsc_test_scripts',
+      'target_name': 'copy_js_tests_scripts',
       'type': 'none',
       'inputs': [
         '<(DEPTH)/third_party/WebKit/Source/JavaScriptCore/tests/mozilla',

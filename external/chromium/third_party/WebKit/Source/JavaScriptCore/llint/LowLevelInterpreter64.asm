@@ -622,7 +622,7 @@ _llint_op_div:
             # Assume t3 is scratchable.
             btiz left, slow
             bineq left, -1, .notNeg2TwoThe31DivByNeg1
-            bieq right, -2147483648, .slow
+            bieq right, 0x80000000, .slow
         .notNeg2TwoThe31DivByNeg1:
             btinz right, .intOK
             bilt left, 0, slow

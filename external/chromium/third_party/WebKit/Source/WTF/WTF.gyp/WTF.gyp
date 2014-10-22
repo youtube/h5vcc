@@ -178,9 +178,18 @@
         ['OS=="lb_shell"', {
           'sources': [
             '../wtf/OSAllocatorShell.cpp',
+            '<(lbshell_root)/src/platform/<(target_arch)/wtf/StackBoundsShell.cpp',
           ],
           'sources/': [
             ['exclude', 'OSAllocatorPosix\\.cpp$'],
+          ],
+          'conditions': [
+            ['component=="shared_library"', {
+              'defines': [
+                'WEBKIT_DLL',
+                'WEBKIT_IMPLEMENTATION=1',
+              ],
+            }],
           ],
         }],
         ['OS!="mac"', {

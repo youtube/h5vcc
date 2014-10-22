@@ -4,11 +4,23 @@
 
 #include "net/udp/udp_listen_socket.h"
 
+#include <netinet/in.h>
+
 #include "base/message_loop.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {
+
+#if defined(__LB_PS4__)
+#define MAYBE_DoRead DISABLED_DoRead
+#define MAYBE_DoReadReturnsNullAtEnd DISABLED_DoReadReturnsNullAtEnd
+#define MAYBE_SendTo DISABLED_SendTo
+#else
+#define MAYBE_DoRead DoRead
+#define MAYBE_DoReadReturnsNullAtEnd DoReadReturnsNullAtEnd
+#define MAYBE_SendTo SendTo
+#endif
 
 class MockDelegate : public UDPListenSocket::Delegate {
  public:
@@ -24,9 +36,10 @@ using ::testing::StrEq;
 SocketDescriptor GetSocketBoundToRandomPort() {
   SocketDescriptor s = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   SockaddrStorage src_addr;
-  src_addr.addr_storage.sin_family = AF_INET;
-  src_addr.addr_storage.sin_port = htons(0);
-  src_addr.addr_storage.sin_addr.s_addr = INADDR_ANY;
+  struct sockaddr_in *in = (struct sockaddr_in *)src_addr.addr;
+  in->sin_family = AF_INET;
+  in->sin_port = htons(0);
+  in->sin_addr.s_addr = INADDR_ANY;
   ::bind(s, src_addr.addr, src_addr.addr_len);
   SetNonBlocking(s);
   return s;
@@ -47,7 +60,7 @@ void SendDataToListeningSocket(SocketDescriptor s,
 
 const std::string& kSampleData = "Hello World.";
 
-TEST(UDPListenSocketTest, DoRead) {
+TEST(UDPListenSocketTest, MAYBE_DoRead) {
   SocketDescriptor s = GetSocketBoundToRandomPort();
   MockDelegate del;
   scoped_refptr<UDPListenSocket> sock = new UDPListenSocket(s, &del);
@@ -63,7 +76,7 @@ TEST(UDPListenSocketTest, DoRead) {
   MessageLoop::current()->RunUntilIdle();
 }
 
-TEST(UDPListenSocketTest, DoReadReturnsNullAtEnd) {
+TEST(UDPListenSocketTest, MAYBE_DoReadReturnsNullAtEnd) {
   SocketDescriptor s = GetSocketBoundToRandomPort();
   MockDelegate del;
   scoped_refptr<UDPListenSocket> sock = new UDPListenSocket(s, &del);
@@ -80,7 +93,7 @@ TEST(UDPListenSocketTest, DoReadReturnsNullAtEnd) {
 }
 
 // Create 2 UDPListenSockets. Use one to send message to another.
-TEST(UDPListenSocketTest, SendTo) {
+TEST(UDPListenSocketTest, MAYBE_SendTo) {
   SocketDescriptor s1 = GetSocketBoundToRandomPort();
   MockDelegate del1;
   scoped_refptr<UDPListenSocket> sock1 = new UDPListenSocket(s1, &del1);

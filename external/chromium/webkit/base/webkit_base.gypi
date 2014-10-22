@@ -28,6 +28,11 @@
             '<(DEPTH)/webkit/support/setup_third_party.gyp:third_party_headers',
           ],
         }],
+        ['OS=="lb_shell"', {
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+          ],
+        }],
       ],
     },
   ],

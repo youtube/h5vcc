@@ -15,7 +15,7 @@
 #include "gl/GrGpuGL.h"
 
 GrGpu* GrGpu::Create(GrBackend backend, GrBackendContext context) {
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
     const GrGLInterface* glInterface = NULL;
     SkAutoTUnref<const GrGLInterface> glInterfaceUnref;
 

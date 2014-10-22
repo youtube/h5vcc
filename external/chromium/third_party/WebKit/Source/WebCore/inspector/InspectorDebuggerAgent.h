@@ -129,8 +129,6 @@ public:
 
     virtual ScriptDebugServer& scriptDebugServer() = 0;
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     InspectorDebuggerAgent(InstrumentingAgents*, InspectorState*, InjectedScriptManager*);
 

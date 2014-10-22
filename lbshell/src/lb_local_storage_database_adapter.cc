@@ -18,9 +18,10 @@
 
 #include "base/logging.h"
 #include "base/stringprintf.h"
+#include "lb_console_connection.h"
 #include "lb_savegame_syncer.h"
 #include "sql/statement.h"
-#include "third_party/WebKit/Source/JavaScriptCore/debugger/DebuggerShell.h"
+#include "webkit/tools/test_shell/simple_dom_storage_system.h"
 
 static const int kOriginalLocalStorageSchemaVersion = 1;
 static const int kLatestLocalStorageSchemaVersion = 1;
@@ -38,6 +39,12 @@ void LBLocalStorageDatabaseAdapter::Init() {
   if (initialized_)
     return;
 
+  Reinitialize();
+  initialized_ = true;
+}
+
+// static
+void LBLocalStorageDatabaseAdapter::Reinitialize() {
   LBSavegameSyncer::WaitForLoad();
 
   sql::Connection *conn = LBSavegameSyncer::connection();
@@ -80,16 +87,19 @@ void LBLocalStorageDatabaseAdapter::Init() {
   // On schema change, update kLatestLocalStorageSchemaVersion and write
   // upgrade logic for old tables.  For example:
   //
-  //else if (version == 1) {
+  // else if (version == 1) {
   //  sql::Statement update_table(conn->GetUniqueStatement(
   //      "ALTER TABLE LocalStorageTable ADD COLUMN xyz INTEGER default 10"));
   //  bool ok = update_table.Run();
   //  DCHECK(ok);
   //  LBSavegameSyncer::UpdateSchemaVersion("LocalStorageTable",
   //                                        kLatestLocalStorageSchemaVersion);
-  //}
+  // }
+}
 
-  initialized_ = true;
+// static
+void LBLocalStorageDatabaseAdapter::Flush() {
+  SimpleDomStorageSystem::instance().Flush();
 }
 
 
@@ -172,7 +182,7 @@ void LBLocalStorageDatabaseAdapter::Reset() {
   clear_site.Run();
 }
 
-#if !defined(__LB_SHELL__FOR_RELEASE__)
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
 // static
 void LBLocalStorageDatabaseAdapter::ClearAll() {
   DCHECK(initialized_);
@@ -184,13 +194,13 @@ void LBLocalStorageDatabaseAdapter::ClearAll() {
 }
 
 // static
-void LBLocalStorageDatabaseAdapter::Dump(JSC::DebuggerTTYInterface* tty) {
+void LBLocalStorageDatabaseAdapter::Dump(LBConsoleConnection *connection) {
   DCHECK(initialized_);
 
-  tty->output(StringPrintf("%20s %20s %20s\n",
-                           "database", "key", "value"));
-  tty->output(StringPrintf("%20s %20s %20s\n",
-                           "========", "===", "====="));
+  connection->Output(StringPrintf("%20s %20s %20s\n",
+                                  "database", "key", "value"));
+  connection->Output(StringPrintf("%20s %20s %20s\n",
+                                  "========", "===", "====="));
 
   sql::Connection *conn = LBSavegameSyncer::connection();
   sql::Statement get_all(conn->GetCachedStatement(SQL_FROM_HERE,
@@ -199,9 +209,19 @@ void LBLocalStorageDatabaseAdapter::Dump(JSC::DebuggerTTYInterface* tty) {
     std::string id = get_all.ColumnString(0);
     std::string key = get_all.ColumnString(1);
     std::string value = get_all.ColumnString(2);
-    tty->output(StringPrintf("%20s %20s  %s\n",
-                             id.c_str(), key.c_str(), value.c_str()));
+    connection->Output(StringPrintf("%20s %20s  %s\n",
+                                    id.c_str(), key.c_str(), value.c_str()));
   }
 }
 #endif
 
+// Tell the DomStorageDatabaseAdapter to create LBLocalStorageDatabaseAdapters.
+void LBLocalStorageDatabaseAdapter::Register() {
+  dom_storage::DomStorageDatabaseAdapter::SetClassFactory(
+        LBLocalStorageDatabaseAdapter::Create);
+}
+
+dom_storage::DomStorageDatabaseAdapter*
+    LBLocalStorageDatabaseAdapter::Create(const std::string& id) {
+        return new LBLocalStorageDatabaseAdapter(id);
+}

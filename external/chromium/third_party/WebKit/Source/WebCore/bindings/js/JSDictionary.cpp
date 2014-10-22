@@ -45,6 +45,11 @@
 #include "JSMediaKeyError.h"
 #endif
 
+#if ENABLE(SCRIPTED_SPEECH)
+#include "JSSpeechRecognitionResult.h"
+#include "JSSpeechRecognitionResultList.h"
+#endif
+
 using namespace JSC;
 
 namespace WebCore {
@@ -214,6 +219,18 @@ void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<Uint
 void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<MediaKeyError>& result)
 {
     result = toMediaKeyError(value);
+}
+#endif
+
+#if ENABLE(SCRIPTED_SPEECH)
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<SpeechRecognitionResult>& result)
+{
+    result = toSpeechRecognitionResult(value);
+}
+
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<SpeechRecognitionResultList>& result)
+{
+    result = toSpeechRecognitionResultList(value);
 }
 #endif
 

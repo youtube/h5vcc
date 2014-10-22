@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Generate a Steel build ID header."""
+
 import datetime
 import os
-import subprocess
 import sys
 import time
 
@@ -28,12 +29,12 @@ template = """
 #endif
 """
 
+
 def main(working_dir, output_path, git_hash):
   os.chdir(working_dir)
   ts = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')
-  build_id = git_hash + "-" + ts
+  build_id = git_hash + '-' + ts
   open(output_path, 'w').write(template % build_id)
 
 if __name__ == '__main__':
   main(sys.argv[1], sys.argv[2], sys.argv[3])
-

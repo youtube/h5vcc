@@ -52,6 +52,10 @@ unsigned WebVideoFrameImpl::planes() const {
       break;
     case media::VideoFrame::NATIVE_TEXTURE:
       return 0;
+#if defined(__LB_SHELL__)
+    case media::VideoFrame::PUNCH_OUT:
+      return 0;
+#endif
   }
   NOTREACHED();
   return 0;

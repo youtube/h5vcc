@@ -103,7 +103,6 @@ public:
 
         bool hasCells() const { return cells.size() > 0; }
 
-        void reportMemoryUsage(MemoryObjectInfo*) const;
     };
 
     typedef Vector<CellStruct> Row;
@@ -114,8 +113,6 @@ public:
             , baseline()
         {
         }
-
-        void reportMemoryUsage(MemoryObjectInfo*) const;
 
         Row row;
         RenderTableRow* rowRenderer;
@@ -198,8 +195,6 @@ public:
     }
     
     virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
-
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
 protected:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);

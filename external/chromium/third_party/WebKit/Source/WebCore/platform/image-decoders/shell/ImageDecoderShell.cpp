@@ -28,6 +28,8 @@
 #include "ICOImageDecoder.h"  // We use WebCore's built-in ICO decoder
 #include "JPEGImageReaderShell.h"
 #include "PNGImageReaderShell.h"
+#include "WEBPImageDecoder.h"  // We use WebCore's built-in WEBP decoder
+#include "WEBPImageReaderShell.h"  // matchSignature()
 
 namespace WebCore {
 
@@ -47,6 +49,9 @@ ImageDecoder* ImageDecoderShell::create(const char* buf, size_t size,
 
     if (PNGImageReaderShell::matchSignature(buf, size))
         return createPNGDecoder(alpha, profile);
+
+    if (WEBPImageReaderShell::matchSignature(buf, size))
+        return createWEBPDecoder(alpha, profile);
 
     return NULL;
 }
@@ -105,6 +110,16 @@ ImageDecoder* ImageDecoderShell::createICODecoder(
     // is called from outside directly without calling
     // ImageDecoderShell::create().
     return new ICOImageDecoder(alpha, profile);
+}
+
+/* static */
+ImageDecoder* ImageDecoderShell::createWEBPDecoder(
+    ImageSource::AlphaOption alpha,
+    ImageSource::GammaAndColorProfileOption profile)
+{
+    // We use WebCore's built-in WEBP decoder. Note that the decoder uses
+    // internal code instead of external lib to decode image.
+    return new WEBPImageDecoder(alpha, profile);
 }
 
 ImageDecoderShell::ImageDecoderShell(ImageReaderShell* reader,

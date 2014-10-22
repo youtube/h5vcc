@@ -4,6 +4,7 @@
 
 #include "cc/bitmap_content_layer_updater.h"
 
+#include "base/debug/trace_event.h"
 #include "cc/layer_painter.h"
 #include "cc/rendering_stats.h"
 #include "cc/resource_update.h"
@@ -50,16 +51,47 @@ scoped_ptr<LayerUpdater::Resource> BitmapContentLayerUpdater::createResource(Pri
 void BitmapContentLayerUpdater::prepareToUpdate(const gfx::Rect& contentRect, const gfx::Size& tileSize, float contentsWidthScale, float contentsHeightScale, gfx::Rect& resultingOpaqueRect, RenderingStats& stats)
 {
 #if defined(__LB_SHELL__)
+    TRACE_EVENT0("cc", "BitmapContentLayerUpdater::prepareToUpdate");
+
     if (m_canvasSize != contentRect.size()) {
         m_canvasSize = contentRect.size();
         // If we need a bigger buffer, recreate, otherwise keep the previous buffer
         gfx::Size newSize(std::max(contentRect.width(), m_internalSize.width()),
                           std::max(contentRect.height(), m_internalSize.height()));
+        // Allow for aligning the bitmap pitch to allow for faster memcpys
+        // on some platforms.
+#if defined(__LB_WIIU__)
+        const int kPitchAlignmentInBytes = 8;
+#else
+        const int kPitchAlignmentInBytes = 1;
+#endif
+        const int kBytesPerPixel = 4;
+
+        COMPILE_ASSERT(!(kPitchAlignmentInBytes < kBytesPerPixel) ||
+                       1 == kPitchAlignmentInBytes,
+                       ByteAlignmentMustBe1IfLessThanPixelAlignment);
+        COMPILE_ASSERT(kPitchAlignmentInBytes < kBytesPerPixel ||
+                       0 == kPitchAlignmentInBytes % kBytesPerPixel,
+                       ByteAlignmentMustBeDivisibleByBytesPerPixel);
+        const int kPitchAlignmentInPixels =
+            kPitchAlignmentInBytes > kBytesPerPixel ?
+            kPitchAlignmentInBytes / kBytesPerPixel :
+            1;
+
+        newSize.set_width((newSize.width() + kPitchAlignmentInPixels - 1) / kPitchAlignmentInPixels * kPitchAlignmentInPixels);
+
         if (m_internalSize != newSize) {
             m_internalSize = newSize;
             // Destroy the old one before creating a new one, to reduce memory pressure.
             m_canvas.reset();
             m_canvas = make_scoped_ptr(skia::CreateBitmapCanvas(m_internalSize.width(), m_internalSize.height(), m_opaque));
+            const SkBitmap& bitmap = m_canvas->getDevice()->accessBitmap(false);
+            DCHECK_EQ(kBytesPerPixel, bitmap.bytesPerPixel());
+            DCHECK_EQ(0, bitmap.rowBytes() % kPitchAlignmentInBytes);
+            DCHECK_EQ(
+                0,
+                reinterpret_cast<intptr_t>(
+                    bitmap.getPixels()) % kPitchAlignmentInBytes);
         }
     }
 

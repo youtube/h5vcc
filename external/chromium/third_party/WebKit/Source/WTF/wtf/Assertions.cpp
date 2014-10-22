@@ -64,7 +64,7 @@
 #include <execinfo.h>
 #endif
 
-#if OS(ANDROID)
+#if OS(ANDROID) || defined(__LB_ANDROID__)
 #include "android/log.h"
 #endif
 
@@ -116,7 +116,7 @@ static void vprintf_stderr_common(const char* format, va_list args)
 
 #elif PLATFORM(BLACKBERRY)
     BBLOGV(BlackBerry::Platform::LogLevelCritical, format, args);
-#elif OS(ANDROID)
+#elif OS(ANDROID) || defined(__LB_ANDROID__)
     __android_log_vprint(ANDROID_LOG_WARN, "WebKit", format, args);
 #elif HAVE(ISDEBUGGERPRESENT)
     if (IsDebuggerPresent()) {
@@ -281,7 +281,7 @@ void WTFReportBacktrace()
 #    if defined(__GLIBC__) && !defined(__UCLIBC__)
 #      define WTF_USE_BACKTRACE_SYMBOLS 1
 #    endif
-#  elif !OS(ANDROID)
+#  elif !OS(ANDROID) && !defined(__LB_ANDROID__)
 #    define WTF_USE_DLADDR 1
 #  endif
 #endif

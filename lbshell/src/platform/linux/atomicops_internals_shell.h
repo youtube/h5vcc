@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATOMICOPS_INTERNALS_SHELL_LINUX_H_
-#define ATOMICOPS_INTERNALS_SHELL_LINUX_H_
+#ifndef SRC_PLATFORM_LINUX_ATOMICOPS_INTERNALS_SHELL_H_
+#define SRC_PLATFORM_LINUX_ATOMICOPS_INTERNALS_SHELL_H_
 #include "base/atomicops_internals_x86_gcc.h"
-#endif
+#endif  // SRC_PLATFORM_LINUX_ATOMICOPS_INTERNALS_SHELL_H_

@@ -60,7 +60,6 @@
 #include "StylePropertySet.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitCSSTransformValue.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/text/StringBuilder.h>
@@ -363,6 +362,10 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitShapeMargin,
     CSSPropertyWebkitShapePadding,
     CSSPropertyWebkitWrapThrough,
+#endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    CSSPropertyH5vccTargetScreen,
+    CSSPropertyH5vccGesturable,
 #endif
 #if ENABLE(SVG)
     CSSPropertyClipPath,
@@ -2597,6 +2600,13 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyBackgroundRepeatY:
             break;
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+        case CSSPropertyH5vccTargetScreen:
+            return cssValuePool().createValue(style->h5vccTargetScreen());
+        case CSSPropertyH5vccGesturable:
+            return cssValuePool().createValue(style->h5vccGesturable());
+#endif
+
         /* Unimplemented CSS 3 properties (including CSS3 shorthand properties) */
         case CSSPropertyWebkitTextEmphasis:
         case CSSPropertyTextLineThrough:
@@ -2847,12 +2857,6 @@ PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::copyPropertiesInSet(co
             list.append(CSSProperty(set[i], value.release(), false));
     }
     return StylePropertySet::create(list.data(), list.size());
-}
-
-void CSSComputedStyleDeclaration::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_node);
 }
 
 CSSRule* CSSComputedStyleDeclaration::parentRule() const

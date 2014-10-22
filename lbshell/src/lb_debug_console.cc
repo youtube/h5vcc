@@ -24,31 +24,36 @@
 
 #include <sstream>
 
-#include "external/chromium/base/logging.h"
-#include "external/chromium/base/message_loop.h"
-#include "external/chromium/base/message_pump_shell.h"
-#include "external/chromium/base/string_util.h"
-#include "external/chromium/base/stringprintf.h"
-#include "external/chromium/base/utf_string_conversions.h"
-#include "external/chromium/net/cookies/canonical_cookie.h"
-#include "external/chromium/skia/ext/SkMemory_new_handler.h"
-#include "external/chromium/sql/statement.h"
-#include "external/chromium/third_party/WebKit/Source/JavaScriptCore/debugger/DebuggerShell.h"
-#include "external/chromium/third_party/WebKit/Source/WebCore/platform/chromium/KeyboardCodes.h"
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebView.h"
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebFrame.h"
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebInputEvent.h"
-#include "external/chromium/third_party/WebKit/Source/WTF/wtf/OSAllocator.h"
-#include "external/chromium/webkit/glue/webkit_glue.h"
+#include "Platform.h"
+
+#include "base/logging.h"
+#include "base/message_loop.h"
+#include "base/message_pump_shell.h"
+#include "base/string_util.h"
+#include "base/stringprintf.h"
+#include "base/sys_string_conversions.h"
+#include "base/utf_string_conversions.h"
+#include "net/cookies/canonical_cookie.h"
+#include "skia/ext/SkMemory_new_handler.h"
+#include "sql/statement.h"
+#include "third_party/WebKit/Source/WebCore/platform/chromium/KeyboardCodes.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/WebView.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/WebFrame.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/WebInputEvent.h"
+#include "third_party/WebKit/Source/WTF/config.h"
+#include "third_party/WebKit/Source/WTF/wtf/OSAllocator.h"
+#include "webkit/glue/webkit_glue.h"
 
 #include "lb_cookie_store.h"
 #include "lb_graphics.h"
 #include "lb_local_storage_database_adapter.h"
 #include "lb_memory_manager.h"
 #include "lb_network_console.h"
+#include "lb_on_screen_display.h"
 #include "lb_resource_loader_bridge.h"
 #include "lb_savegame_syncer.h"
 #include "lb_shell.h"
+#include "lb_shell_console_values_hooks.h"
 #if defined(__LB_PS3__)
 #include "lb_shell/lb_web_graphics_context_3d_ps3.h"
 #endif
@@ -58,49 +63,45 @@ static const char * whitespace = " \t\n";
 ////////////////////////////////////////////////////////////////////////////////
 // TASKS
 
-static void DumpRenderTreeTask(WebKit::WebFrame * webframe,
-                               JSC::DebuggerTTYInterface * tty) {
+static void DumpRenderTreeTask(WebKit::WebFrame *webframe,
+                               LBConsoleConnection *connection) {
   std::string dump =
       UTF16ToUTF8(webkit_glue::DumpRenderer(webframe));
-  tty->output(dump);
+  connection->Output(dump);
   DLOG(INFO) << dump;
 }
 
-static void NavigateTask(GURL url, LBShell * shell) {
+static void NavigateTask(GURL url, LBShell *shell) {
   shell->LoadURL(url);
 }
 
-static void HistoryTask(int offset, LBShell * shell) {
+static void HistoryTask(int offset, LBShell *shell) {
   shell->navigation_controller()->GoToOffset(offset);
 }
 
-static void LocationTask(LBShell * shell, JSC::DebuggerTTYInterface * tty) {
+static void LocationTask(LBShell *shell, LBConsoleConnection *connection) {
   LBNavigationController * nav = shell->navigation_controller();
   WebKit::WebHistoryItem item = nav->GetCurrentEntry();
   std::string url = item.urlString().utf8();
-  tty->output(url);
+  connection->Output(url + "\n");
 }
 
-static void SetDebuggerTask(LBShell * shell, JSC::Debugger *debugger) {
-  shell->webView()->mainFrame()->attachJSCDebugger(debugger);
-}
-
-#if LB_MEMORY_DUMP_GRAPH
-static void ContinuousGraphTask(LBShell * shell) {
+static void ContinuousGraphTask(LBShell *shell) {
   if (shell->webViewHost() == NULL) return;  // this happened during shutdown.
   if (shell->webViewHost()->IsExiting()) return;
 
   char buf[128];
-  snprintf(buf, sizeof(buf), "continuous/%d.png", (int)time(NULL));
-  lb_memory_dump_fragmentation_graph(buf);
+  snprintf(buf, sizeof(buf), "continuous/%d.png", static_cast<int>(time(NULL)));
+  LB::Memory::DumpFragmentationGraph(buf);
 
   LBResourceLoaderBridge::GetIoThread()->PostDelayedTask(FROM_HERE,
     base::Bind(ContinuousGraphTask, shell), base::TimeDelta::FromSeconds(1));
 }
-#endif
 
-/** Get the remaining part of a command line expression concatenated into a string. */
-std::string GetRemainingExpression(const std::vector<std::string>& tokens, int startpos) {
+// Get the remaining part of a command line expression concatenated into
+// a string.
+std::string GetRemainingExpression(const std::vector<std::string>& tokens,
+                                   int startpos) {
   std::string code;
   if (tokens.size() <= startpos) {
     return code;
@@ -152,14 +153,16 @@ static void TokenizeString(const std::string &statement, bool respect_brackets,
 // LBCommandBack
 class LBCommandBack : public LBCommand {
  public:
-  LBCommandBack(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandBack(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "back";
     help_summary_ = "Navigate back.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
         base::Bind(HistoryTask, -1, shell()));
   }
 };
@@ -169,21 +172,174 @@ class LBCommandBack : public LBCommand {
 
 class LBCommandBye : public LBCommand {
  public:
-  LBCommandBye(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandBye(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "bye";
     help_summary_ = "Close telnet session.\n";
     help_details_ = "bye usage:\n"
                     "  bye\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    if (shell()->webViewHost()->GetTelnetConnection()) {
-      tty()->output("Bye.");
-      shell()->webViewHost()->GetTelnetConnection()->Close();
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    connection->Output("Bye.\n");
+    connection->Close();
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// LBCommandCompositorLogging
+
+class LBCommandCompositorLogging : public LBCommand {
+ public:
+  explicit LBCommandCompositorLogging(LBDebugConsole *console)
+      : LBCommand(console) {
+    command_syntax_ = "comp_log";
+    help_summary_ = "Enable compositor logging to stderr.\n";
+  }
+
+ protected:
+  virtual void DoCommand(
+      LBConsoleConnection* connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
+        base::Bind(&webkit_glue::EnableWebCoreLogChannels, "Compositing"));
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// LBCommandCVal
+class LBCommandCVal : public LBCommand {
+ public:
+  explicit LBCommandCVal(LBDebugConsole *console) : LBCommand(console) {
+    command_syntax_ = "cval ...";
+    help_summary_ = "Interact with system console values.\n";
+    help_details_ = "cval usage:\n\n"
+
+                    "  cval add CVAL_PATTERN\n"
+                    "Add CVals matching CVAL_PATTERN to the CVal whitelist.\n"
+                    "CVAL_PATTERN can contain wildcards like * and ?.\n\n"
+
+                    "  cval remove CVAL_PATTERN\n"
+                    "Remove CVals matching CVAL_PATTERN from the CVal\n"
+                    "whitelist\n"
+                    "CVAL_PATTERN can contain wildcards like * and ?\n\n"
+
+                    "  cval default\n"
+                    "Restores the CVal whitelist to the default\n\n"
+
+                    "  cval save FILENAME\n"
+                    "Saves the current CVal whitelist to the specified file\n\n"
+
+                    "  cval load FILENAME\n"
+                    "Loads a CVal whitelist from the specified file\n\n"
+
+                    "  cval listwl\n"
+                    "List all CVals currently in the whitelist\n\n"
+
+                    "  cval list [CVAL_PATTERN]\n"
+                    "List all CVals whose name matches CVAL_PATTERN.\n"
+                    "If CVAL_PATTERN is not given, list all CVals.\n\n"
+
+                    "  cval print CVAL_NAME\n"
+                    "Prints the value of the given CVal.\n\n";
+  }
+
+ protected:
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    LB::ShellConsoleValueHooks* shell_hooks =
+        LB::ShellConsoleValueHooks::GetInstance();
+    LB::ShellConsoleValueHooks::Whitelist* whitelist =
+        shell_hooks->GetWhitelist();
+    LB::ConsoleValueManager* cvm = LB::ConsoleValueManager::GetInstance();
+
+    if (tokens[1] == "add") {
+      if (tokens.size() < 3) {
+        connection->Output("Error: No CVAL_NAME specified.");
+      } else {
+        bool cval_matched = false;
+        std::set<std::string> cval_set = cvm->GetOrderedCValNames();
+        for (std::set<std::string>::const_iterator iter = cval_set.begin();
+             iter != cval_set.end(); ++iter) {
+          if (MatchPattern(*iter, tokens[2])) {
+            cval_matched = true;
+            if (!whitelist->Add(*iter)) {
+              connection->Output("CVal " + *iter + " is already in whitelist.");
+            }
+          }
+        }
+        if (!cval_matched) {
+          connection->Output("No CVals matched the given pattern.");
+        }
+      }
+    } else if (tokens[1] == "remove") {
+      if (tokens.size() < 3) {
+        connection->Output("Error: No CVAL_NAME specified.");
+      } else {
+        std::set<std::string> cval_set = whitelist->GetOrderedValues();
+        bool cval_matched = false;
+        for (std::set<std::string>::const_iterator iter = cval_set.begin();
+             iter != cval_set.end(); ++iter) {
+          if (MatchPattern(*iter, tokens[2])) {
+            cval_matched = true;
+            bool result = whitelist->Remove(*iter);
+            DCHECK(result);
+          }
+        }
+        if (!cval_matched) {
+          connection->Output("Pattern not found in whitelist.");
+        }
+      }
+    } else if (tokens[1] == "default") {
+      whitelist->RestoreToDefault();
+    } else if (tokens[1] == "save") {
+      if (tokens.size() < 3) {
+        connection->Output("Error: No filename specified.");
+      } else {
+        if (!whitelist->SaveNamedWhitelist(tokens[2])) {
+          connection->Output("Error saving whitelist to the specified file.");
+        }
+      }
+    } else if (tokens[1] == "load") {
+      if (tokens.size() < 3) {
+        connection->Output("Error: No filename specified.");
+      } else {
+        if (!whitelist->LoadNamedWhitelist(tokens[2])) {
+          connection->Output(
+              "Error loading whitelist from the specified file.");
+        }
+      }
+    } else if (tokens[1] == "listwl") {
+      std::set<std::string> wl_cvals = whitelist->GetOrderedValues();
+      for (std::set<std::string>::const_iterator iter = wl_cvals.begin();
+           iter != wl_cvals.end(); ++iter) {
+        connection->Output(*iter);
+      }
+    } else if (tokens[1] == "list") {
+      std::set<std::string> cval_set = cvm->GetOrderedCValNames();
+      for (std::set<std::string>::const_iterator iter = cval_set.begin();
+           iter != cval_set.end(); ++iter) {
+        if (MatchPattern(*iter, (tokens.size() >= 3 ? tokens[2] : "*"))) {
+          connection->Output(*iter);
+        }
+      }
+    } else if (tokens[1] == "print") {
+      if (tokens.size() < 3) {
+        connection->Output("Error: No CVAL_NAME specified.");
+      } else {
+        LB::ConsoleValueManager::ValueQueryResults value_info =
+            cvm->GetValueAsString(tokens[2]);
+        if (value_info.valid) {
+          connection->Output(value_info.value);
+        } else {
+          connection->Output("Error: Could not find specified CVal.");
+        }
+      }
     } else {
-      // You can't close a console session.
-      tty()->output("Hello.");
+      connection->Output("Error: Unknown cval command.");
     }
   }
 };
@@ -193,7 +349,7 @@ class LBCommandBye : public LBCommand {
 
 class LBCommandDB : public LBCommand {
  public:
-  LBCommandDB(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandDB(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "db ...";
     help_summary_ = "Database (cookie & local storage) commands.\n";
     help_details_ = "db usage:\n\n"
@@ -212,20 +368,22 @@ class LBCommandDB : public LBCommand {
 
                     "  db flush\n"
                     "flush the database to disk right away\n\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     if (tokens[1] == "cookies") {
       if (tokens.size() < 3) {
-        CookiesUsage(tty());
+        CookiesUsage(connection);
       } else {
         // view/edit browser cookies
         if (tokens[2] == "list") {
-          CookiesList(tty());
+          CookiesList(connection);
         } else if (tokens[2] == "add") {
           if (tokens.size() < 6) {
-            tty()->output(
+            connection->Output(
               "db cookies add usage:\n\n"
 
               "  db cookies add DOMAIN PATH NAME [VALUE]\n"
@@ -239,14 +397,14 @@ class LBCommandDB : public LBCommand {
               value += tokens[i];
               value += (i == tokens.size()-1 ? "" : " ");
             }
-            console_->shell()->webViewHost()->main_message_loop()->PostTask(
+            console_->shell()->webViewHost()->webkit_message_loop()->PostTask(
               FROM_HERE,
-              base::Bind(CookiesAdd, tty(), console_->shell(),
+              base::Bind(CookiesAdd, connection, console_->shell(),
                 tokens[3], tokens[4], tokens[5], value));
           }
         } else if (tokens[2] == "delete") {
           if (tokens.size() != 6) {
-            tty()->output(
+            connection->Output(
               "db cookies delete usage:\n\n"
 
               "  db cookies delete DOMAIN PATH NAME\n"
@@ -256,12 +414,12 @@ class LBCommandDB : public LBCommand {
               "when determining which cookies to delete.\n\n"
               ".\n\n");
           } else {
-            CookiesDelete(tty(),
+            CookiesDelete(connection,
               tokens[3], tokens[4], tokens[5]);
           }
         } else if (tokens[2] == "search") {
           if (tokens.size() != 6) {
-            tty()->output(
+            connection->Output(
               "db cookies search usage:\n\n"
 
               "  db cookies search DOMAIN PATH NAME\n"
@@ -270,16 +428,16 @@ class LBCommandDB : public LBCommand {
               "in the search.  i.e. 'db cookies search * * *' prints the\n"
               "same thing as 'db cookies list'.\n\n");
           } else {
-            CookiesSearch(tty(),
+            CookiesSearch(connection,
               tokens[3], tokens[4], tokens[5]);
           }
         } else {
-          CookiesUsage(tty());
+          CookiesUsage(connection);
         }
       }
     } else if (tokens[1] == "exec") {
       if (tokens.size() < 3 || tokens[2] == "help") {
-        tty()->output(
+        connection->Output(
             "db exec usage:\n"
             "  db exec <arbitrary sql command string>\n"
             "executes the provided command.\n\n");
@@ -294,8 +452,8 @@ class LBCommandDB : public LBCommand {
         sql::Connection *conn = LBSavegameSyncer::connection();
         sql::Statement stmt(conn->GetUniqueStatement(
             sql_command.c_str(),
-            false // asks that errors in the statement not be considered fatal
-        ));
+            // asks that errors in the statement not be considered fatal
+            false));
 
         if (stmt.is_valid()) {
           // This output should be equivalent to the sqlite3 command-line app
@@ -308,7 +466,7 @@ class LBCommandDB : public LBCommand {
             buf.append(base::StringPrintf("%s", stmt.ColumnName(i).c_str()));
           }
           buf.push_back('\n');
-          tty()->output(buf);
+          connection->Output(buf);
           buf.clear();
 
           while (stmt.Step()) {
@@ -319,7 +477,7 @@ class LBCommandDB : public LBCommand {
               buf.append(output);
             }
             buf.push_back('\n');
-            tty()->output(buf);
+            connection->Output(buf);
             buf.clear();
           }
         }
@@ -329,29 +487,29 @@ class LBCommandDB : public LBCommand {
           std::string err = conn->GetErrorMessage();
           if (err.length()) {
             err.push_back('\n');
-            tty()->output(err);
+            connection->Output(err);
           } else {
-            tty()->output("Unknown sqlite3 error.\n");
+            connection->Output("Unknown sqlite3 error.\n");
           }
         }
       }
     } else if (tokens[1] == "local") {
-      LBLocalStorageDatabaseAdapter::Dump(tty());
+      LBLocalStorageDatabaseAdapter::Dump(connection);
     } else if (tokens[1] == "wipe") {
       LBResourceLoaderBridge::ClearCookies();
       LBCookieStore::DeleteAllCookies();
       LBLocalStorageDatabaseAdapter::ClearAll();
-      tty()->output("database wiped.\n");
+      connection->Output("database wiped.\n");
     } else if (tokens[1] == "flush") {
-      LBSavegameSyncer::ForceSync();
+      LBSavegameSyncer::ForceSync(true);
     } else {
-      tty()->output("unknown db subcommand, see \"help db\".\n");
+      connection->Output("unknown db subcommand, see \"help db\".\n");
     }
   }
 
  private:
-  static void CookiesUsage(JSC::DebuggerTTYInterface* tty) {
-    tty->output(
+  static void CookiesUsage(LBConsoleConnection *connection) {
+    connection->Output(
       "db cookies usage:\n\n"
 
       "  db cookies list\n"
@@ -399,7 +557,7 @@ class LBCommandDB : public LBCommand {
   }
 
   // Add the specified cookie to the cookie store
-  static void CookiesAdd(JSC::DebuggerTTYInterface* tty,
+  static void CookiesAdd(LBConsoleConnection* connection,
                          LBShell* shell,
                          const std::string& domain,
                          const std::string& path,
@@ -432,14 +590,14 @@ class LBCommandDB : public LBCommand {
     if (cookie.get() != NULL) {
       LBCookieStore::QuickAddCookie(*cookie);
 
-      tty->output("Cookie added successfully.\n");
+      connection->Output("Cookie added successfully.\n");
     } else {
-      tty->output("There was an error adding the cookie.\n");
+      connection->Output("There was an error adding the cookie.\n");
     }
   }
 
   // Delete all cookies that match this criteria
-  static void CookiesDelete(JSC::DebuggerTTYInterface* tty,
+  static void CookiesDelete(LBConsoleConnection* connection,
                             const std::string& domain,
                             const std::string& path,
                             const std::string& name) {
@@ -452,27 +610,27 @@ class LBCommandDB : public LBCommand {
   }
 
   // List all cookies that match the specified criteria
-  static void CookiesSearch(JSC::DebuggerTTYInterface* tty,
+  static void CookiesSearch(LBConsoleConnection* connection,
                             const std::string& domain,
                             const std::string& path,
                             const std::string& name) {
     const std::vector<net::CanonicalCookie*> cookies(
         FindCookies(domain, path, name));
     std::vector<net::CanonicalCookie*>::const_iterator it;
-    tty->output(StringPrintf("%20s %20s %20s %20s\n",
+    connection->Output(StringPrintf("%20s %20s %20s %20s\n",
         "domain", "path", "name", "value"));
-    tty->output(StringPrintf("%20s %20s %20s %20s\n",
+    connection->Output(StringPrintf("%20s %20s %20s %20s\n",
         "======", "====", "====", "====="));
     for (it = cookies.begin(); it != cookies.end(); it++) {
-      tty->output(StringPrintf("%20s %20s %20s  %s\n",
+      connection->Output(StringPrintf("%20s %20s %20s  %s\n",
           (*it)->Domain().c_str(), (*it)->Path().c_str(),
           (*it)->Name().c_str(), (*it)->Value().c_str()));
     }
   }
 
   // List all cookies
-  static void CookiesList(JSC::DebuggerTTYInterface* tty) {
-    CookiesSearch(tty, "*", "*", "*");
+  static void CookiesList(LBConsoleConnection* connection) {
+    CookiesSearch(connection, "*", "*", "*");
   }
 };
 
@@ -480,15 +638,19 @@ class LBCommandDB : public LBCommand {
 // LBCommandDumpRenderTree
 class LBCommandDumpRenderTree : public LBCommand {
  public:
-  LBCommandDumpRenderTree(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandDumpRenderTree(LBDebugConsole *console)
+      : LBCommand(console) {
     command_syntax_ = "drt";
     help_summary_ = "Dump Render Tree.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
-      base::Bind(DumpRenderTreeTask, shell()->webView()->mainFrame(), tty()));
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
+      base::Bind(DumpRenderTreeTask, shell()->webView()->mainFrame(),
+      connection));
   }
 };
 
@@ -496,13 +658,15 @@ class LBCommandDumpRenderTree : public LBCommand {
 // LBCommandExit
 class LBCommandExit : public LBCommand {
  public:
-  LBCommandExit(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandExit(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "exit";
     help_summary_ = "Exit the application.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     shell()->webViewHost()->RequestQuit();
   }
 };
@@ -511,77 +675,91 @@ class LBCommandExit : public LBCommand {
 // LBCommandForward
 class LBCommandForward : public LBCommand {
  public:
-  LBCommandForward(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandForward(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "forward";
     help_summary_ = "Navigate forward.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
         base::Bind(HistoryTask, 1, shell()));
   }
 };
 
-// TODO: Make the Fuzzer command generic and not PS3 specific
-#if defined(__LB_PS3__)
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandFuzzer
 class LBCommandFuzzer : public LBCommand {
  public:
-  LBCommandFuzzer(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandFuzzer(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "fuzzer ...";
     help_summary_ = "Generate and save the random input to a file.\n"
                     "Input is generated at time intervals drawn from a "
                     "Gaussian distribution.\n";
-    help_details_ = "fuzzer usage:\n"
-                    "  fuzzer start <file-name> <time-mean> <time-std> [arrows]\n"
-                    "    file-name: name of the output file\n"
-                    "    time-mean: mean-value for the random time (secs)\n"
-                    "    time-std: standard deviation for the random time (secs)\n"
-                    "    arrows: add this if you want just arrow input (optional)\n"
-                    "  fuzzer stop\n";
-  };
+    help_details_ =
+        "fuzzer usage:\n"
+        "  fuzzer start <file-name> <time-mean> <time-std> [arrows|all]\n"
+        "    file-name: name of the output file\n"
+        "    time-mean: mean-value for the random time (secs)\n"
+        "    time-std: standard deviation for the random time (secs)\n"
+        "    arrows: add this if you want just arrow input (optional)\n"
+        "    all: add this if you want to fuzz keys that are not mapped"
+            " to the controller (optional)\n"
+        "    default behaviour is to fuzz only keys that are mapped to a"
+            " controller"
+        "  fuzzer stop\n";
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    if ((tokens.size() == 5 || tokens.size() == 6)&& tokens[1] == "start") {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    if ((tokens.size() == 5 || tokens.size() == 6) && tokens[1] == "start") {
       // FUZZER START
-      tty()->output("starting fuzzer..");
+      connection->Output("starting fuzzer...\n");
       const std::string& file_name = tokens[2];
       const float time_mean = atof(tokens[3].c_str());
       const float time_std = atof(tokens[4].c_str());
       if (tokens.size() == 5) {
-        shell()->webViewHost()->FuzzerStart(file_name, time_mean, time_std, false);
+        shell()->webViewHost()->FuzzerStart(
+            file_name, time_mean, time_std, LBInputFuzzer::kMappedKeys);
       } else if (tokens[5] == "arrows") {
-        shell()->webViewHost()->FuzzerStart(file_name, time_mean, time_std, true);
+        shell()->webViewHost()->FuzzerStart(
+            file_name, time_mean, time_std, LBInputFuzzer::kArrowKeys);
+      } else if (tokens[5] == "all") {
+        shell()->webViewHost()->FuzzerStart(
+            file_name, time_mean, time_std, LBInputFuzzer::kAllKeys);
       }
     } else if (tokens.size() == 2 && tokens[1] == "stop") {
       // FUZZER STOP
-      tty()->output("stopping fuzzer..");
+      connection->Output("stopping fuzzer...\n");
       shell()->webViewHost()->FuzzerStop();
     } else {
-      tty()->output(help_details_);
+      connection->Output(help_details_);
     }
   }
 };
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandHelp
 
 class LBCommandHelp : public LBCommand {
  public:
-  LBCommandHelp(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandHelp(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "help [<command>]";
     help_summary_ = "Help.  Prints this message or details about a command.\n";
     help_details_ = "help usage:\n"
                     "  help [<command>]";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    const std::map<std::string, LBCommand*> &commands = console_->GetRegisteredCommands();
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    const std::map<std::string, LBCommand*> &commands =
+        console_->GetRegisteredCommands();
     std::map<std::string, LBCommand*>::const_iterator itr;
 
     if (tokens.size() > 1) {
@@ -589,9 +767,9 @@ class LBCommandHelp : public LBCommand {
       std::string token = tokens[1];
       itr = commands.find(token);
       if (itr != commands.end()) {
-        tty()->output(itr->second->GetHelpString(false));
+        connection->Output(itr->second->GetHelpString(false));
       } else {
-        tty()->output("Unrecognized command.\n");
+        connection->Output("Unrecognized command.\n");
       }
     } else {
       // Display the help summary
@@ -602,21 +780,22 @@ class LBCommandHelp : public LBCommand {
         max_length = std::max(size, max_length);
       }
 
-      tty()->output("Leanback Debug Console Commands:\n\n");
+      connection->Output("Debug Console Commands:\n\n");
 
       // Output the summaries for each item
       for (itr = commands.begin(); itr != commands.end(); itr++) {
         std::string help_string = itr->second->GetCommandSyntax();
         // Insert proper number of spaces such that the summaries all line up
-        for (int spaces = max_length - help_string.size(); spaces > 0; spaces--) {
+        for (int spaces = max_length - help_string.size(); spaces > 0;
+             spaces--) {
           help_string.append(" ");
         }
         help_string.append(" - ");
         help_string.append(itr->second->GetHelpString(true));
-        tty()->output(help_string);
+        connection->Output(help_string);
       }
 
-      tty()->output(
+      connection->Output(
             "Help can also display help for a single command. For example,\n"
             "'help nav' will print more info about the nav command.\n");
     }
@@ -628,7 +807,7 @@ class LBCommandHelp : public LBCommand {
 
 class LBCommandInput : public LBCommand {
  public:
-  LBCommandInput(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandInput(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "input ...";
     help_summary_ = "User input recording and playback.\n";
     help_details_ = "input usage:\n\n"
@@ -640,290 +819,56 @@ class LBCommandInput : public LBCommand {
                     "  input play <once/repeat> [<filename>]\n"
                     "playback recorded input from filename\n"
                     "omit filename to stop\n\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     if (tokens[1] == "record") {
       // check for filename
       if (tokens.size() == 3) {
         shell()->webViewHost()->RecordKeyInput(tokens[2].c_str());
-        tty()->output("recording input.\n");
+        connection->Output("recording input.\n");
       } else {
         // call with NULL to stop recording
         shell()->webViewHost()->RecordKeyInput(NULL);
-        tty()->output("recording stopped.\n");
+        connection->Output("recording stopped.\n");
       }
     } else if (tokens[1] == "play") {
       if (tokens.size() == 4) {
         bool repeat = tokens[2] == "repeat";
         shell()->webViewHost()->PlaybackKeyInput(tokens[3].c_str(), repeat);
-        tty()->output("input playback started.\n");
+        connection->Output("input playback started.\n");
       } else {
         shell()->webViewHost()->PlaybackKeyInput(NULL, false);
-        tty()->output("input playback stopped.\n");
+        connection->Output("input playback stopped.\n");
       }
     } else {
-      tty()->output("unknown input subcommand, see \"help input\".\n");
+      connection->Output("unknown input subcommand, see \"help input\".\n");
     }
   }
 };
 
-
-////////////////////////////////////////////////////////////////////////////////
-// LBCommandJS
-
-class LBCommandJS : public LBCommand {
- public:
-  LBCommandJS(LBDebugConsole *console) : LBCommand(console) {
-    command_syntax_ = "js ...";
-    help_summary_ = "JavaScript debugger commands.\n";
-    help_details_ =
-        "js usage:\n\n"
-
-        // please keep this list alphabetized:
-        "  js break <url or filename>:<line>\n"
-        "set a breakpoint\n\n"
-
-        "  js bt\n"
-        "print a backtrace from the current frame\n\n"
-
-        "  js clear <url or filename>:<line>\n"
-        "clear a breakpoint\n\n"
-
-        "  js continue\n"
-        "continue execution\n\n"
-
-        "  js dumpsource <on/off>\n"
-        "tells the debugger whether to dump sources as they are parsed\n\n"
-
-        "  js eval <code>\n"
-        "evaluate code at the current frame\n\n"
-
-        "  js pause\n"
-        "pause execution at the next statement\n\n"
-
-        "  js step [in]\n"
-        "Step to next line of code. Will step into a function.\n\n"
-
-        "  js next | js step over\n"
-        "Execute next line of code. Will not enter functions.\n\n"
-
-        "  js [watch|w] <code>\n"
-        "Watch a variable. Print this everytime the debugger has paused.\n\n"
-
-        "  js [unwatch|unw] <index>\n"
-        "Stop watching a variable. Index is listed when the watch list gets displayed.\n\n"
-
-        "  js finish | js step out\n"
-        "Continue to end of function.\n\n"
-
-        "  js sources\n"
-        "list parsed source files\n\n"
-
-        "  js trace <on/off>\n"
-        "sets the debugger's trace setting\n\n";
-
-    jscd_ = LB_NEW JSC::DebuggerShell(tty());
-    debugger_attached_ = false;
-  };
-  ~LBCommandJS() {
-    shell()->webView()->mainFrame()->attachJSCDebugger(NULL);
-    debugger_attached_ = false;
-    delete jscd_;
-  }
-
- protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    // attach debugger before running any js commands.
-    // it is not attached by default because of the performance impact
-    // to the JavaScript interpretter.
-    AttachDebugger();
-    // TODO: add explicit commands for attach & detach
-
-    if (tokens[1] == "trace") {
-      if (tokens.size() == 3 && (tokens[2] == "on" || tokens[2] == "off")) {
-        if (tokens[2] == "on") {
-          tty()->output("trace enabled.\n");
-          jscd_->setTrace(true);
-        } else {
-          jscd_->setTrace(false);
-          tty()->output("trace disabled.\n");
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "dumpsource" || tokens[1] == "sourcedump") {
-      if (tokens.size() == 3 && (tokens[2] == "on" || tokens[2] == "off")) {
-        if (tokens[2] == "on") {
-          tty()->output("source dumping enabled.\n");
-          jscd_->setDumpSource(true);
-        } else {
-          jscd_->setDumpSource(false);
-          tty()->output("source dumping disabled.\n");
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "pause") {
-      if (tokens.size() == 2) {
-        tty()->output("requesting a pause.\n");
-        bool ok = jscd_->pause();
-        if (!ok) {
-          tty()->output("the interpreter is already paused.\n");
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "continue" || tokens[1] == "cont") {
-      if (tokens.size() == 2) {
-        tty()->output("continuing execution.\n");
-        bool ok = jscd_->unpause();
-        if (!ok) {
-          tty()->output("the interpreter was not paused.\n");
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "sources") {
-      JSC::DebuggerShell::ListOfSources sources = jscd_->getSources();
-      std::sort(sources.begin(), sources.end());
-      for (int i = 0; i < sources.size(); i++) {
-        tty()->output(StringPrintf("[%d] = %s\n",
-            sources[i].first, sources[i].second.c_str()));
-      }
-    } else if (tokens[1] == "break") {
-      if (tokens.size() == 3) {
-        std::size_t colon = tokens[2].find(':');
-        if (colon == std::string::npos) {
-          tty()->output("bad source line syntax, see \"help js\".\n");
-        } else {
-          std::string file(tokens[2], 0, colon);
-          int line = atoi(tokens[2].c_str() + colon + 1);
-          bool ok = jscd_->setBreakpoint(file, line);
-          if (ok) {
-            tty()->output("breakpoint set.\n");
-          } else {
-            tty()->output("source line not found.\n");
-          }
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "clear") {
-      if (tokens.size() == 3) {
-        std::size_t colon = tokens[2].find(':');
-        if (colon == std::string::npos) {
-          tty()->output("bad source line syntax, see \"help js\".\n");
-        } else {
-          std::string file(tokens[2], 0, colon);
-          int line = atoi(tokens[2].c_str() + colon + 1);
-          bool ok = jscd_->clearBreakpoint(file, line);
-          if (ok) {
-            tty()->output("breakpoint cleared.\n");
-          } else {
-            tty()->output("breakpoint not found.\n");
-          }
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "eval") {
-      if (tokens.size() >= 3) {
-        // build the code string.
-        std::string code = GetRemainingExpression(tokens, 2);
-        // evaluate it
-        std::string output;
-        bool ok = jscd_->evaluate(code, output);
-        if (ok) {
-          output.append("\n");
-          tty()->output(output);
-        } else {
-          tty()->output("not paused, can't eval.\n");
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if (tokens[1] == "watch" || tokens[1] == "w") {
-      if (tokens.size() < 3) {
-        tty()->output("bad syntax, see \"help js\".\n");
-      } else {
-        std::string code = GetRemainingExpression(tokens, 2);
-        jscd_->addWatchExpression(code);
-      }
-    } else if (tokens[1] == "unwatch" || tokens[1] == "uw") {
-      if (tokens.size() != 3) {
-        tty()->output("bad syntax, see \"help js\".\n");
-      } else if (!jscd_->removeWatchExpression(atoi(tokens[2].c_str()))) {
-        tty()->output("Failed to remove watch index. Perhaps invalid index?\n");
-      }
-    } else if (tokens[1] == "backtrace" || tokens[1] == "bt") {
-      if (tokens.size() == 2) {
-        std::string output;
-        bool ok = jscd_->backtrace(output);
-        if (ok) {
-          tty()->output(output);
-        } else {
-          tty()->output("not paused, can't backtrace.\n");
-        }
-      } else {
-        tty()->output("bad syntax, see \"help js\".\n");
-      }
-    } else if ((tokens[1] == "step" || tokens[1] == "s") && (tokens.size() == 2 || tokens[2] == "in")) {
-      if (!jscd_->stepInto()) {
-        tty()->output("Failed to step in into the call. You probably need to pause first.");
-      }
-    } else if (tokens[1] == "next" || tokens[1] == "n" ||
-        ((tokens[1] == "step" || tokens[1] == "s") && tokens.size() > 2 && tokens[2] == "over")) {
-      if (!jscd_->stepOver()) {
-        tty()->output("Failed to step over the statement. You probably need to pause first.");
-      }
-    } else if (tokens[1] == "finish" || tokens[1] == "f" ||
-        ((tokens[1] == "step" || tokens[1] == "s") && tokens.size() > 2 && tokens[2] == "out")) {
-      if (!jscd_->stepOut()) {
-        tty()->output("Failed to step out of the function.  You probably need to pause first.");
-      }
-    } else {
-      tty()->output("unknown js subcommand, see \"help js\".\n");
-    }
-  }
-
-  void AttachDebugger() {
-    if (debugger_attached_ == true) return;
-    debugger_attached_ = true;
-
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
-        base::Bind(SetDebuggerTask, shell(), jscd_));
-  }
-
-  void DetachDebugger() {
-    if (debugger_attached_ == false) return;
-    debugger_attached_ = false;
-
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
-        base::Bind(SetDebuggerTask, shell(), (JSC::Debugger *)NULL));
-  }
-
-  JSC::DebuggerShell * jscd_;
-  bool debugger_attached_;
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandKey
 
 class LBCommandKey : public LBCommand {
  public:
-  LBCommandKey(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandKey(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "key <name>";
     help_summary_ = "Send a controller keypress to the browser.\n";
     help_details_ = "key usage:\n"
                     "  key <name>\n"
                     "where <name> is one of:\n"
                     "  up, down, left, right, enter, escape\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     int keyCode = -1;
     wchar_t charCode = 0;
     if (tokens[1] == "up") {
@@ -941,8 +886,8 @@ class LBCommandKey : public LBCommand {
       keyCode = WebCore::VKEY_ESCAPE;
       charCode = WebCore::VKEY_ESCAPE;
     } else {
-      tty()->output(tokens[1] + ": unsupported key name."
-          "  Type 'key help' for more info.\n");
+      connection->Output(tokens[1] + ": unsupported key name.\n");
+      connection->Output("Type 'key help' for more info.\n");
     }
     if (keyCode != -1) {
       shell()->webViewHost()->InjectKeystroke(keyCode, charCode,
@@ -957,15 +902,17 @@ class LBCommandKey : public LBCommand {
 
 class LBCommandLabel : public LBCommand {
  public:
-  LBCommandLabel(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandLabel(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "label <label id>";
     help_summary_ = "Navigate to a specific label.\n";
     help_details_ = "label usage:\n"
                     "  label <label id>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     std::string url = shell()->GetStartupURL();
     size_t question_mark = url.find('?');
     if (question_mark != std::string::npos) {
@@ -973,7 +920,7 @@ class LBCommandLabel : public LBCommand {
     }
     url.append("?version=4&label=");
     url.append(tokens[1]);
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
         base::Bind(NavigateTask, GURL(url), shell()));
   }
 };
@@ -985,16 +932,51 @@ class LBCommandLabel : public LBCommand {
 
 class LBCommandLang : public LBCommand {
  public:
-  LBCommandLang(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandLang(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "lang <lang code>";
     help_summary_ = "Override the system language.\n";
     help_details_ = "lang usage:\n"
                     "  lang <lang code>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     shell()->SetPreferredLanguage(tokens[1]);
+    // Reinitialize the xlb string database
+    LBShell::InitStrings();
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// LBCommandLayerBackingsInfo
+
+class LBCommandLayerBackingsInfo : public LBCommand {
+ public:
+  explicit LBCommandLayerBackingsInfo(LBDebugConsole *console)
+      : LBCommand(console) {
+    command_syntax_ = "lbi";
+    help_summary_ = "Dump info about current backed render layers to the "
+                    "console.\n";
+  }
+
+ protected:
+  virtual void DoCommand(
+      LBConsoleConnection* connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
+        base::Bind(DumpCompositeInfo, shell()->webView()->mainFrame(),
+                   connection));
+  }
+
+ private:
+  static void DumpCompositeInfo(WebKit::WebFrame *webframe,
+                                LBConsoleConnection *connection) {
+    std::string dump =
+        UTF16ToUTF8(webframe->layerBackingsInfo());
+    connection->Output(dump);
+    DLOG(INFO) << dump;
   }
 };
 
@@ -1003,16 +985,18 @@ class LBCommandLang : public LBCommand {
 
 class LBCommandLocation : public LBCommand {
  public:
-  LBCommandLocation(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandLocation(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "location";
     help_summary_ = "Dump the current URL.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     // get current URL
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
-        base::Bind(LocationTask, shell(), tty()));
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
+        base::Bind(LocationTask, shell(), connection));
   }
 };
 
@@ -1020,68 +1004,69 @@ class LBCommandLocation : public LBCommand {
 // LBCommandLogToTelnet
 class LBCommandLogToTelnet : public LBCommand {
  public:
-  LBCommandLogToTelnet(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandLogToTelnet(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "log2telnet <on/off>";
     help_summary_ = "Log all output to the telnet console.\n";
     help_details_ = "log2telnet usage:\n"
                     "  log2telnet <on/off>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     if (tokens.size() > 1) {
-      if (tokens[1] == "on")
+      if (tokens[1] == "on") {
         LBNetworkConsole::CaptureLogging(true);
-      else if (tokens[1] == "off")
+      } else if (tokens[1] == "off") {
         LBNetworkConsole::CaptureLogging(false);
-      else
-        tty()->output(help_details_);
+      } else {
+        connection->Output(help_details_);
+      }
     } else {
-      tty()->output(help_details_);
+      connection->Output(help_details_);
     }
   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandMemDump
-
-#if LB_MEMORY_DUMP_CALLERS
 class LBCommandMemDump : public LBCommand {
  public:
-  LBCommandMemDump(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandMemDump(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "memdump [<file>]";
     help_summary_ = "Dump a raw memory allocation table to disk.\n";
     help_details_ = "memdump usage:\n"
                     "  memdump [<file>]\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     std::string filename = "memdump.txt";
     if (tokens.size() > 1) {
       filename = tokens[1];
     }
-    lb_memory_dump_callers(filename.c_str());
+    LB::Memory::DumpCallers(filename.c_str());
   }
 };
-#endif
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandMemGraph
-
-#if LB_MEMORY_DUMP_GRAPH
 class LBCommandMemGraph : public LBCommand {
  public:
-  LBCommandMemGraph(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandMemGraph(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "memgraph [<file>]";
     help_summary_ = "Dump a fragmentation graph to disk.\n";
     help_details_ = "memgraph usage:\n"
                     "  memgraph [<file>|continuous]\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     if (tokens.size() > 1 && tokens[1] == "continuous") {
       ContinuousGraphTask(shell());
     } else {
@@ -1089,109 +1074,85 @@ class LBCommandMemGraph : public LBCommand {
       if (tokens.size() > 1) {
         filename = tokens[1];
       }
-      lb_memory_dump_fragmentation_graph(filename.c_str());
+      LB::Memory::DumpFragmentationGraph(filename.c_str());
     }
   }
 };
-#endif
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandMemInfo
 
 class LBCommandMemInfo : public LBCommand {
  public:
-  LBCommandMemInfo(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandMemInfo(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "meminfo";
     help_summary_ = "Print current memory statistics.\n";
     help_details_ = "meminfo usage:\n"
                     "  meminfo\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-#if LB_MEMORY_COUNT
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    if (LB::Memory::IsCountEnabled()) {
     // Write some useful stats in JSON format for easier parsing.
 #if defined (__LB_PS3__)
-    int rsx_mem =
-        LBGraphicsPS3::GetPtr()->GetGLResourceManager()->GetRSXUsedMemory();
+      int rsx_mem =
+          LBGraphicsPS3::GetPtr()->GetGLResourceManager()->GetRSXUsedMemory();
 #endif
 
-    lb_memory_info_t info;
-    lb_memory_stats(&info);
+      LB::Memory::Info info;
+      LB::Memory::GetInfo(&info);
 
-    int shell_allocator_bytes = OSAllocator::getCurrentBytesAllocated();
-    int skia_bytes = sk_get_bytes_allocated();
+      int shell_allocator_bytes = OSAllocator::getCurrentBytesAllocated();
+      int skia_bytes = sk_get_bytes_allocated();
 
-    std::string memory_stats;
-    memory_stats.append("{\"memory\": {");
-    memory_stats.append(base::StringPrintf(
-      "\"application\" : %d"
-      ", \"free\" : %d"
-      ", \"javascript\" : %d"
-      ", \"skia\" : %d",
-      info.application_memory,
-      info.free_memory,
-      shell_allocator_bytes,
-      skia_bytes));
+      std::string memory_stats;
+      memory_stats.append("{\"memory\": {");
+      memory_stats.append(base::StringPrintf(
+        "\"application\" : %d"
+        ", \"free\" : %d"
+        ", \"javascript\" : %d"
+        ", \"skia\" : %d",
+        static_cast<int>(info.application_memory),
+        static_cast<int>(info.free_memory),
+        shell_allocator_bytes,
+        skia_bytes));
 #if defined (__LB_PS3__)
-    memory_stats.append(base::StringPrintf(
-      ", \"rsx\" : %d", rsx_mem));
+      memory_stats.append(base::StringPrintf(
+        ", \"rsx\" : %d", rsx_mem));
 #endif
-    memory_stats.append("}}\n");
-    tty()->output(memory_stats);
-#else
-    tty()->output("Application was not compiled with LB_MEMORY_COUNT enabled.");
-#endif
-  }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// LBCommandMouseClick
-class LBCommandMouseClick : public LBCommand {
- public:
-  LBCommandMouseClick(LBDebugConsole *console) : LBCommand(console) {
-    command_syntax_ = "mouseclick <x> <y>";
-    help_summary_ = "Sends a mouse click to WebKit at x, y.\n";
-    help_details_ = "mouseclick usage:\n"
-                    "  mouseclick <x> <y>\n";
-  }
-
- protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    if (tokens.size() != 3) {
-      tty()->output(help_details_);
+      memory_stats.append("}}\n");
+      connection->Output(memory_stats);
     } else {
-      int x = atoi(tokens[1].c_str());
-      int y = atoi(tokens[2].c_str());
-      shell()->webViewHost()->SendMouseClick(WebKit::WebMouseEvent::ButtonLeft,
-                                             x, y);
-      tty()->output("mouse click sent\n");
+      connection->Output("Not compiled with kLbMemoryCount enabled.\n");
     }
   }
 };
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandNav
 
 class LBCommandNav : public LBCommand {
  public:
-  LBCommandNav(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandNav(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "nav <url>";
     help_summary_ = "Point the browser at supplied URL.\n";
     help_details_ = "nav usage:\n"
                     "  nav <url>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     GURL url(tokens[1]);
     if (url.is_valid()) {
-      shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+      shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
           base::Bind(NavigateTask, url, shell()));
     } else {
-      tty()->output(tokens[1] + ": bad url.\n");
+      connection->Output(tokens[1] + ": bad url.\n");
     }
   }
 };
@@ -1199,158 +1160,106 @@ class LBCommandNav : public LBCommand {
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandPerimeter
 
+#if !defined(__LB_SHELL__FOR_RELEASE__)
 class LBCommandPerimeter : public LBCommand {
  public:
-  LBCommandPerimeter(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandPerimeter(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "perimeter <mode>";
     help_summary_ = "Set network perimeter checking level.\n";
     help_details_ = "perimeter usage:\n"
                     "  perimeter <enable|warn|disable>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     if (tokens[1] == "enable") {
       // activate perimeter checking
       LBResourceLoaderBridge::SetPerimeterCheckEnabled(true);
       LBResourceLoaderBridge::SetPerimeterCheckLogging(true);
-      tty()->output("Perimeter checking enabled\n");
+      connection->Output("Perimeter checking enabled\n");
     } else if (tokens[1] == "warn") {
       // disable perimeter checking, but log errors
       LBResourceLoaderBridge::SetPerimeterCheckEnabled(false);
       LBResourceLoaderBridge::SetPerimeterCheckLogging(true);
-      tty()->output("Perimeter checking disabled with logging\n");
+      connection->Output("Perimeter checking disabled with logging\n");
     } else if (tokens[1] == "disable") {
       // disable perimeter checking
       LBResourceLoaderBridge::SetPerimeterCheckEnabled(false);
       LBResourceLoaderBridge::SetPerimeterCheckLogging(false);
-      tty()->output("Perimeter checking disabled silently\n");
+      connection->Output("Perimeter checking disabled silently\n");
     } else {
-      tty()->output(help_details_);
+      connection->Output(help_details_);
     }
   }
 };
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandReload
 
 class LBCommandReload : public LBCommand {
  public:
-  LBCommandReload(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandReload(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "reload";
     help_summary_ = "Reload the current page.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
         base::Bind(HistoryTask, 0, shell()));
   }
 };
 
-#if defined (__LB_PS3__)
-////////////////////////////////////////////////////////////////////////////////
-// LBCommandRequirePSN
 
-class LBCommandRequirePSN : public LBCommand {
- public:
-  LBCommandRequirePSN(LBDebugConsole *console) : LBCommand(console) {
-    command_syntax_ = "requirepsn <mode>";
-    help_summary_ = "Enables or disables PSN connection requirement.\n";
-    help_details_ = "requirepsn usage: \n"
-                    "  requirepsn <on/off>\n"
-                    "sets whether a PSN connection is required to run the application\n";
-  };
-
- protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    if (tokens[1] == "on" || tokens[1] == "true") {
-      shell()->webViewHost()->RequirePSN(true);
-    } else if (tokens[1] == "off" || tokens[1] == "false") {
-      shell()->webViewHost()->RequirePSN(false);
-    } else {
-      tty()->output("unknown command, see \"help requirepsn\".\n");
-    }
-  }
-};
-#endif
-
-#if defined (__LB_PS3__)
-////////////////////////////////////////////////////////////////////////////////
-// LBCommandRSX
-
-class LBCommandRSX : public LBCommand {
- public:
-  LBCommandRSX(LBDebugConsole *console) : LBCommand(console) {
-    command_syntax_ = "rsx ...";
-    help_summary_ = "RSX graphics debugging.\n";
-    help_details_ = "rsx usage: \n"
-                    "  rsx log\n"
-                    "dump the most recent WebKit buffer to the console log\n\n"
-                    "  rsx save <filename>\n"
-                    "save the most recent WebKit buffer to the filename\n\n";
-  };
-
- protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    LBWebGraphicsContext3DPS3* ps3_graphics_context =
-        static_cast<LBWebGraphicsContext3DPS3*>(
-            LBGraphicsPS3::GetPtr()->GetCompositorContext());
-
-    if (tokens[1] == "log") {
-      ps3_graphics_context->LogRSXBuffer();
-    } else if (tokens[1] == "save") {
-      if (tokens.size() == 3) {
-        ps3_graphics_context->SaveRSXBuffer(
-            tokens[2].c_str());
-      } else {
-        tty()->output("unknown command to rsx save, see \"help rsx\".\n");
-      }
-    } else {
-      tty()->output("unknown rsx subcommand, see \"help rsx\".\n");
-    }
-  }
-};
-#endif
-
+#if defined(__LB_SHELL__ENABLE_SCREENSHOT__)
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandScreenshot
 
 class LBCommandScreenshot : public LBCommand {
  public:
-  LBCommandScreenshot(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandScreenshot(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "ss [<filename>.png]";
     help_summary_ = "Takes a screen shot\n";
     help_details_ = "ss usage:\n"
                     "  ss [<filename>.png]\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     std::string filename = "";
     if (tokens.size() > 2) {
-      tty()->output(help_details_);
+      connection->Output(help_details_);
     } else if (tokens.size() == 2) {
       filename = tokens[1];
     }
     LBGraphics::GetPtr()->TakeScreenshot(filename);
   }
 };
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandSearch
 
 class LBCommandSearch : public LBCommand {
  public:
-  LBCommandSearch(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandSearch(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "search [<terms>]";
     help_summary_ = "Search for the specified video.\n";
     help_details_ = "search usage:\n"
                     "  search [<terms>]\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     // go to search page
     std::string url = shell()->GetStartupURL();
     url.append("#/browse?mode=search&q=");
@@ -1358,60 +1267,8 @@ class LBCommandSearch : public LBCommand {
       url.append(tokens[i]);
       url.append("%20");
     }
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
       base::Bind(NavigateTask, GURL(url), shell()));
-  }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// LBCommandTex
-
-class LBCommandTex : public LBCommand {
- public:
-  LBCommandTex(LBDebugConsole *console) : LBCommand(console) {
-    command_syntax_ = "tex ...";
-    help_summary_ = "WebKit texture debugging commands.\n";
-    help_details_ = "tex usage:\n"
-                    "NOTE: tex commands should only be used while WebKit is paused\n"
-                    "with the \"wedge\" command.\n\n"
-
-                    "  tex save <handle or \"all\"> <prefix>\n"
-                    "saves one or all textures to <prefix><handle>.png\n\n"
-
-                    "  tex status\n"
-                    "print an overview of WebKit's texture usage\n\n"
-
-                    "  tex watch <handle>\n"
-                    "add texture to the onscreen watch, 0 to disable\n\n";
-  };
-
- protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    // WebKit texture debugging
-    if (tokens[1] == "save") {
-      if (tokens.size() == 4) {
-        uint32_t handle = 0;
-        if (tokens[2] == "all") {
-          handle = 0xffffffff;
-        } else {
-          handle = (uint32_t)atoi(tokens[2].c_str());
-        }
-        LBGraphics::GetPtr()->SaveTexture(handle, tokens[3].c_str());
-      } else {
-        tty()->output("bad syntax, see \"help tex\".\n");
-      }
-    } else if (tokens[1] == "status") {
-      tty()->output(LBGraphics::GetPtr()->PrintTextureSummary());
-    } else if (tokens[1] == "watch") {
-      if (tokens.size() == 3) {
-        uint32_t handle = (uint32_t)atoi(tokens[2].c_str());
-        LBGraphics::GetPtr()->WatchTexture(handle);
-      } else {
-        tty()->output("bad syntax, see \"help tex\".\n");
-      }
-    } else {
-      tty()->output("unknown tex subcommand, see \"help tex\".\n");
-    }
   }
 };
 
@@ -1419,88 +1276,79 @@ class LBCommandTex : public LBCommand {
 // LBCommandToggleOSD
 class LBCommandToggleOSD : public LBCommand {
  public:
-  LBCommandToggleOSD(LBDebugConsole* console) : LBCommand(console) {
+  explicit LBCommandToggleOSD(LBDebugConsole* console) : LBCommand(console) {
     command_syntax_ = "toggle_osd";
-    help_summary_ = "Toggle the display of the onscreen display (FPS/Memory info, etc..)\n";
+    help_summary_ = "Toggle the display of the onscreen display\n"
+                    "(FPS/Memory info, etc..)\n";
     help_details_ = "toggle_osd usage:\n"
                     "  toggle_osd\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    LBGraphics::GetPtr()->ToggleOSD();
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    LB::OnScreenDisplay::GetPtr()->ToggleStats();
   }
 };
 
-
-#if defined (__LB_PS3__) || defined (__LB_WIIU__)
 ////////////////////////////////////////////////////////////////////////////////
-// LBCommandTweak
-class LBCommandTweak : public LBCommand {
+// LBCommandTracing
+
+class LBCommandTracing : public LBCommand {
  public:
-  LBCommandTweak(LBDebugConsole *console) : LBCommand(console) {
-    command_syntax_ = "tweak ...";
-    help_summary_ = "Tweak controller input settings.\n";
-    help_details_ =
-        "tweak usage:\n"
-        "  tweak <name> <setting> <value>\n"
-        "a non-exhaustive list of <name> values:\n"
-        "  dpad_up, dpad_down, l1, r1, circle, cross, ...\n"
-        "possible <setting> values:\n"
-        "  delay (ms), rate (ms), min (0-128), max (128-255)\n";
-    min_arguments_ = 3;
-  };
+  explicit LBCommandTracing(LBDebugConsole* console) : LBCommand(console) {
+    command_syntax_ = "tracing <start|end>";
+    help_summary_ = "Enables or disables Chrome tracing.\n";
+    help_details_ = "Records Chrome runtime trace events and will\n"
+                    "save them to a file when turned off.\n"
+                    "\n"
+                    "Results can be viewed by browsing to\n"
+                    "about:tracing on your desktop chrome and\n"
+                    "loading the produced JSON file.\n\n";
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    // FIXME: make controller input generic one day
-    int value = (tokens.size() == 4) ? atoi(tokens[3].c_str()) : 0;
-    if (value == 0 && tokens[3] != "0") {
-      tty()->output(help_details_);
-      return;
-    } else {
-      LBUserInputMapping::Tweakable fn = 0;
-      if (tokens[2] == "delay") {
-        fn = &LBUserInputMapping::SetDelay;
-      } else if (tokens[2] == "rate") {
-        fn = &LBUserInputMapping::SetRate;
-      } else if (tokens[2] == "min") {
-        fn = &LBUserInputMapping::SetMin;
-      } else if (tokens[2] == "max") {
-        fn = &LBUserInputMapping::SetMax;
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    if (tokens[1] == "start") {
+      if (!shell()->tracing_manager()->IsEnabled()) {
+        shell()->tracing_manager()->EnableTracing(true);
       } else {
-        tty()->output(StringPrintf("No such tweakable value '%s' found.\n",
-            tokens[2].c_str()));
+        connection->Output("Tracing is already enabled!\n");
       }
-      if (fn) {
-        bool ret = shell()->webViewHost()->TweakControllers(
-            fn, tokens[1].c_str(), value);
-        if (!ret) {
-          tty()->output(StringPrintf("No such mapping '%s' found.\n",
-              tokens[1].c_str()));
-        }
+    } else if (tokens[1] == "end") {
+      if (shell()->tracing_manager()->IsEnabled()) {
+        shell()->tracing_manager()->EnableTracing(false);
+      } else {
+        connection->Output("Tracing is not currently enabled!\n");
       }
+    } else {
+      connection->Output("Unexpected parameter passed to tracing command.\n");
     }
   }
 };
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommandUnicode
 class LBCommandUnicode : public LBCommand {
  public:
-  LBCommandUnicode(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandUnicode(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "unicode <hex>";
     help_summary_ = "Load a test page for the given hex codepoint.\n";
     help_details_ = "unicode usage:\n"
                     "  unicode <hex codepoint>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
-    std::string url = "http://www.fileformat.info/info/unicode/char/" + tokens[1]
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
+    std::string url = "http://www.fileformat.info/info/unicode/char/"
+                      + tokens[1]
                       + "/browsertest.htm";
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
         base::Bind(NavigateTask, GURL(url), shell()));
   }
 };
@@ -1510,19 +1358,21 @@ class LBCommandUnicode : public LBCommand {
 // LBCommandVideo
 class LBCommandVideo : public LBCommand {
  public:
-  LBCommandVideo(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandVideo(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "video <base64 id>";
     help_summary_ = "Load a specific video in leanback.\n";
     help_details_ = "video usage:\n"
                     "  video <base64 id>\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     std::string url = shell()->GetStartupURL();
     url.append("#/watch?v=");
     url.append(tokens[1]);
-    shell()->webViewHost()->main_message_loop()->PostTask(FROM_HERE,
+    shell()->webViewHost()->webkit_message_loop()->PostTask(FROM_HERE,
         base::Bind(NavigateTask, GURL(url), shell()));
   }
 };
@@ -1532,22 +1382,23 @@ class LBCommandVideo : public LBCommand {
 // LBCommandWedge
 class LBCommandWedge : public LBCommand {
  public:
-  LBCommandWedge(LBDebugConsole *console) : LBCommand(console) {
+  explicit LBCommandWedge(LBDebugConsole *console) : LBCommand(console) {
     command_syntax_ = "wedge";
     help_summary_ = "Toggle blocking the WebKit thread.\n";
-  };
+  }
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {
+  virtual void DoCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) OVERRIDE {
     // wedge - pause/unpause webkit thread
     if (shell()->webViewHost()->toggleWebKitWedged()) {
-      tty()->output("webkit wedged.\n");
+      connection->Output("webkit wedged.\n");
     } else {
-      tty()->output("webkit unwedged.\n");
+      connection->Output("webkit unwedged.\n");
     }
   }
 };
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // LBCommand
@@ -1576,8 +1427,8 @@ void LBCommand::ValidateSyntax() {
       else if (command_syntax_.at(i) == ']')
         --square_brackets;
     }
-    DCHECK(brackets == 0) << "Mismatch in <> brackets.";
-    DCHECK(square_brackets == 0) << "Mismatch in [] brackets.";
+    DCHECK_EQ(brackets, 0) << "Mismatch in <> brackets.";
+    DCHECK_EQ(square_brackets, 0) << "Mismatch in [] brackets.";
 
     // Make sure each token appears valid
     for (int i = 1; i < syntax_tokens.size(); i++) {
@@ -1626,13 +1477,15 @@ void LBCommand::ValidateSyntax() {
   }
 }
 
-void LBCommand::ExecuteCommand(std::vector<std::string> &tokens) {
+void LBCommand::ExecuteCommand(
+      LBConsoleConnection *connection,
+      const std::vector<std::string> &tokens) {
   // Display help for the command if there aren't enough arguments
   if (tokens.size() - 1 < min_arguments_) {
-    tty()->output(GetHelpString(false));
+    connection->Output(GetHelpString(false));
     return;
   }
-  DoCommand(tokens);
+  DoCommand(connection, tokens);
 }
 
 const std::string& LBCommand::GetCommandName() const {
@@ -1647,83 +1500,78 @@ const std::string& LBCommand::GetCommandSyntax() const {
 ////////////////////////////////////////////////////////////////////////////////
 // LBDebugConsole
 
-inline JSC::DebuggerTTYInterface * LBDebugConsole::tty() const {
-  return static_cast<JSC::DebuggerTTYInterface *>(shell_->webViewHost());
-}
-
 void LBDebugConsole::Init(LBShell * shell) {
   shell_ = shell;
 #if ATTACH_DEBUGGER_ON_STARTUP
   AttachDebugger();
 #endif
-#if LB_MEMORY_CONTINUOUS_GRAPH
-  ContinuousGraphTask(shell);
-#endif
+  if (LB::Memory::IsContinuousGraphEnabled()) {
+    ContinuousGraphTask(shell);
+  }
 
   // Register commands
-  RegisterCommand(LB_NEW LBCommandBack(this));
-  RegisterCommand(LB_NEW LBCommandBye(this));
-  RegisterCommand(LB_NEW LBCommandDB(this));
-  RegisterCommand(LB_NEW LBCommandDumpRenderTree(this));
-  RegisterCommand(LB_NEW LBCommandExit(this));
-  RegisterCommand(LB_NEW LBCommandForward(this));
-  RegisterCommand(LB_NEW LBCommandHelp(this));
-  RegisterCommand(LB_NEW LBCommandInput(this));
-  RegisterCommand(LB_NEW LBCommandJS(this));
-  RegisterCommand(LB_NEW LBCommandKey(this));
-  RegisterCommand(LB_NEW LBCommandLabel(this));
-  RegisterCommand(LB_NEW LBCommandLang(this));
-  RegisterCommand(LB_NEW LBCommandLocation(this));
-  RegisterCommand(LB_NEW LBCommandLogToTelnet(this));
-  RegisterCommand(LB_NEW LBCommandMemInfo(this));
-  RegisterCommand(LB_NEW LBCommandMouseClick(this));
-  RegisterCommand(LB_NEW LBCommandNav(this));
-  RegisterCommand(LB_NEW LBCommandPerimeter(this));
-  RegisterCommand(LB_NEW LBCommandReload(this));
-  RegisterCommand(LB_NEW LBCommandScreenshot(this));
-  RegisterCommand(LB_NEW LBCommandSearch(this));
-  RegisterCommand(LB_NEW LBCommandTex(this));
-  RegisterCommand(LB_NEW LBCommandUnicode(this));
-  RegisterCommand(LB_NEW LBCommandVideo(this));
-  RegisterCommand(LB_NEW LBCommandWedge(this));
-
-#if defined(__LB_PS3__)
-  RegisterCommand(LB_NEW LBCommandFuzzer(this));
-  RegisterCommand(LB_NEW LBCommandRequirePSN(this));
-  RegisterCommand(LB_NEW LBCommandRSX(this));
-  RegisterCommand(LB_NEW LBCommandTweak(this));
+  RegisterCommand(new LBCommandBack(this));
+  RegisterCommand(new LBCommandBye(this));
+  RegisterCommand(new LBCommandCompositorLogging(this));
+  RegisterCommand(new LBCommandCVal(this));
+  RegisterCommand(new LBCommandDB(this));
+  RegisterCommand(new LBCommandDumpRenderTree(this));
+  RegisterCommand(new LBCommandExit(this));
+  RegisterCommand(new LBCommandForward(this));
+  RegisterCommand(new LBCommandHelp(this));
+  RegisterCommand(new LBCommandInput(this));
+  RegisterCommand(new LBCommandKey(this));
+  RegisterCommand(new LBCommandLabel(this));
+  RegisterCommand(new LBCommandLang(this));
+  RegisterCommand(new LBCommandLayerBackingsInfo(this));
+  RegisterCommand(new LBCommandLocation(this));
+  RegisterCommand(new LBCommandLogToTelnet(this));
+  RegisterCommand(new LBCommandMemInfo(this));
+  RegisterCommand(new LBCommandNav(this));
+#if !defined(__LB_SHELL__FOR_RELEASE__)
+  RegisterCommand(new LBCommandPerimeter(this));
 #endif
-
-#if defined(__LB_WIIU__)
-  RegisterCommand(LB_NEW LBCommandTweak(this));
+  RegisterCommand(new LBCommandReload(this));
+#if defined(__LB_SHELL__ENABLE_SCREENSHOT__)
+  RegisterCommand(new LBCommandScreenshot(this));
 #endif
+  RegisterCommand(new LBCommandSearch(this));
+  RegisterCommand(new LBCommandUnicode(this));
+  RegisterCommand(new LBCommandVideo(this));
+  RegisterCommand(new LBCommandWedge(this));
+  RegisterCommand(new LBCommandFuzzer(this));
+  RegisterCommand(new LBCommandToggleOSD(this));
+  RegisterCommand(new LBCommandTracing(this));
 
-  RegisterCommand(LB_NEW LBCommandToggleOSD(this));
+  if (LB::Memory::IsDumpCallersEnabled()) {
+    RegisterCommand(new LBCommandMemDump(this));
+  }
 
-#if LB_MEMORY_DUMP_CALLERS
-  RegisterCommand(LB_NEW LBCommandMemDump(this));
-#endif
+  if (LB::Memory::IsDumpGraphEnabled()) {
+    RegisterCommand(new LBCommandMemGraph(this));
+  }
 
-#if LB_MEMORY_DUMP_GRAPH
-  RegisterCommand(LB_NEW LBCommandMemGraph(this));
-#endif
+  // Register any platform-specific commands
+  RegisterPlatformConsoleCommands(this);
 }
 
 void LBDebugConsole::Shutdown() {
   std::map<std::string, LBCommand*>::iterator itr;
-  for (itr = registered_commands_.begin(); itr != registered_commands_.end(); itr++) {
+  for (itr = registered_commands_.begin(); itr != registered_commands_.end();
+       itr++) {
     delete itr->second;
   }
 }
 
-
-inline void LBDebugConsole::RegisterCommand(LBCommand *command) {
+void LBDebugConsole::RegisterCommand(LBCommand *command) {
   command->ValidateSyntax();
   std::string command_string = command->GetCommandName();
   registered_commands_[command_string] = command;
 }
 
-void LBDebugConsole::ParseAndExecuteCommand(const std::string& command_string) {
+void LBDebugConsole::ParseAndExecuteCommand(
+    LBConsoleConnection *connection,
+    const std::string& command_string) {
   std::vector<std::string> tokens;
   TokenizeString(command_string, false, &tokens);
 
@@ -1735,14 +1583,13 @@ void LBDebugConsole::ParseAndExecuteCommand(const std::string& command_string) {
   std::map<std::string, LBCommand*>::iterator itr;
   itr = registered_commands_.find(tokens[0]);
   if (itr == registered_commands_.end()) {
-    tty()->output(tokens[0] + ": unrecognized command. "
-                  "Type 'help' to see all commands.");
+    connection->Output(tokens[0] + ": unrecognized command.\n");
+    connection->Output("Type 'help' to see all commands.\n");
     return;
   }
 
-  itr->second->ExecuteCommand(tokens);
-  return;
+  LBCommand *command = itr->second;
+  command->ExecuteCommand(connection, tokens);
 }
 
-
-#endif // __LB_SHELL__ENABLE_CONSOLE__
+#endif  // __LB_SHELL__ENABLE_CONSOLE__

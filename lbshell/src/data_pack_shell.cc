@@ -50,22 +50,21 @@
 // accessor functions get called. I'm relying on std::map to not do any internal
 // copying/moving of data if it has to rebalance its internal tree.
 
-#include "external/chromium/ui/base/resource/data_pack.h"
+#include "ui/base/resource/data_pack.h"
 
 #include <utility>
 
-#include "external/chromium/base/logging.h"
-#include "external/chromium/base/memory/ref_counted_memory.h"
-#include "external/chromium/base/metrics/histogram.h"
-#include "external/chromium/base/platform_file.h"
-#include "external/chromium/base/string_piece.h"
-#include "external/chromium/base/stringprintf.h"
-#include "external/chromium/base/sys_byteorder.h"
+#include "base/logging.h"
+#include "base/memory/ref_counted_memory.h"
+#include "base/metrics/histogram.h"
+#include "base/platform_file.h"
+#include "base/string_piece.h"
+#include "base/stringprintf.h"
+#include "base/sys_byteorder.h"
 #include "lb_memory_manager.h"
 
 namespace {
 static const uint32 kFileFormatVersion = 4;
-static const size_t kHeaderLength = 2 * sizeof(uint32) + sizeof(uint8);;
 }
 
 namespace ui {
@@ -81,56 +80,46 @@ bool DataPack::LoadFromPath(const FilePath& path) {
     DLOG(ERROR) << "Could not open resources pack";
     return false;
   }
-  return LoadFromFile(f);
+  bool ok = LoadFromFile(f);
+  base::ClosePlatformFile(f);
+  return ok;
 }
 
 // Loads a pack file from |file|, returning false on error.
 bool DataPack::LoadFromFile(base::PlatformFile file) {
-  union {
-    struct {
-      uint32 version;
-      uint32 resource_count;
-      uint8 encoding;
-    } __attribute__((packed)) file_header;
-    DataPackEntry data_pack_entry;
-  } buffer;
+  DataPackHeader file_header;
 
   if (base::ReadPlatformFile(file, 0,
-          reinterpret_cast<char*>(&(buffer.file_header)), ::kHeaderLength) !=
-      ::kHeaderLength) {
+          reinterpret_cast<char*>(&file_header), sizeof(DataPackHeader)) !=
+      sizeof(DataPackHeader)) {
     DLOG(ERROR) << "Could not read resources pack header";
-    base::ClosePlatformFile(file);
     return false;
   }
-  if (base::ByteSwapToLE32(buffer.file_header.version) != ::kFileFormatVersion) {
+  if (base::ByteSwapToLE32(file_header.version) != ::kFileFormatVersion) {
     DLOG(ERROR) << StringPrintf("%s %s %d", "Resources pack is wrong version!",
                                             "Expected version:",
                                             ::kFileFormatVersion);
-    base::ClosePlatformFile(file);
     return false;
   }
-  resource_count_ = base::ByteSwapToLE32(buffer.file_header.resource_count);
-  text_encoding_type_ = static_cast<TextEncodingType>(
-      buffer.file_header.encoding);
+  resource_count_ = base::ByteSwapToLE32(file_header.resource_count);
+  text_encoding_type_ = static_cast<TextEncodingType>(file_header.encoding);
   if (text_encoding_type_ != UTF8 && text_encoding_type_ != UTF16 &&
       text_encoding_type_ != BINARY) {
     DLOG(ERROR) << "Resources pack has unknown encoding type!";
-    base::ClosePlatformFile(file);
     return false;
   }
 
-  metadata_.reset(LB_NEW DataPackEntry[resource_count_]);
+  metadata_.reset(new DataPackEntry[resource_count_]);
 
   // Read in all the metadata
   if (base::ReadPlatformFile(
-          file, ::kHeaderLength, reinterpret_cast<char*>(metadata_.get()),
+          file, sizeof(DataPackHeader),
+          reinterpret_cast<char*>(metadata_.get()),
           resource_count_ * sizeof(DataPackEntry))
       != resource_count_ * sizeof(DataPackEntry)) {
     DLOG(ERROR) << StringPrintf("Could not load resource metadata!");
-    base::ClosePlatformFile(file);
     return false;
   }
-  base::ClosePlatformFile(file);
 
   // Convert the endianness of the data we just read in
   for (int i(0); i < resource_count_; i++) {
@@ -166,7 +155,7 @@ bool DataPack::GetStringPiece(uint16 resource_id,
   // can only assume there's a bogus entry at the end.
   int length = metadata_[index+1].file_offset - metadata_[index].file_offset;
 
-  scoped_array<char> buffer(LB_NEW char[length]);
+  scoped_array<char> buffer(new char[length]);
 
   base::PlatformFileError e;
   base::PlatformFile f(

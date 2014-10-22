@@ -138,9 +138,11 @@ string16 GetStringFUTF16Int(int message_id, int64 a);
 UI_EXPORT void SortStrings16(const std::string& locale,
                              std::vector<string16>* strings);
 
+#if !defined(__LB_SHELL__)
 // Returns a vector of available locale codes. E.g., a vector containing
 // en-US, es, fr, fi, pt-PT, pt-BR, etc.
 UI_EXPORT const std::vector<std::string>& GetAvailableLocales();
+#endif
 
 // Returns a vector of locale codes usable for accept-languages.
 UI_EXPORT void GetAcceptLanguagesForLocale(

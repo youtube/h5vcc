@@ -20,11 +20,9 @@
 #include "base/string_piece.h"
 #include "ui/base/layout.h"
 #include "ui/base/ui_export.h"
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
 #include "ui/gfx/font.h"
-#endif
 #include "ui/gfx/image/image.h"
-#if !defined(__LB_SHELL__)
 #include "ui/gfx/native_widget_types.h"
 #endif
 
@@ -84,6 +82,7 @@ class UI_EXPORT ResourceBundle {
     virtual FilePath GetPathForLocalePack(const FilePath& pack_path,
                                           const std::string& locale) = 0;
 
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
     // Return an image resource or an empty value to attempt retrieval of the
     // default resource.
     virtual gfx::Image GetImageNamed(int resource_id) = 0;
@@ -91,6 +90,7 @@ class UI_EXPORT ResourceBundle {
     // Return an image resource or an empty value to attempt retrieval of the
     // default resource.
     virtual gfx::Image GetNativeImageNamed(int resource_id, ImageRTL rtl) = 0;
+#endif
 
     // Return a static memory resource or NULL to attempt retrieval of the
     // default resource.
@@ -108,7 +108,7 @@ class UI_EXPORT ResourceBundle {
     // false to attempt retrieval of the default string.
     virtual bool GetLocalizedString(int message_id, string16* value) = 0;
 
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
     // Return a font resource or NULL to attempt retrieval of the default
     // resource.
     virtual scoped_ptr<gfx::Font> GetFont(FontStyle style) = 0;
@@ -182,6 +182,7 @@ class UI_EXPORT ResourceBundle {
   // on another thread.
   std::string ReloadLocaleResources(const std::string& pref_locale);
 
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
   // Gets image with the specified resource_id from the current module data.
   // Returns a pointer to a shared instance of gfx::ImageSkia. This shared
   // instance is owned by the resource bundle and should not be freed.
@@ -207,6 +208,7 @@ class UI_EXPORT ResourceBundle {
 
   // Same as GetNativeImageNamed() except that RTL is not enabled.
   gfx::Image& GetNativeImageNamed(int resource_id);
+#endif
 
   // Loads the raw bytes of a scale independent data resource.
   base::RefCountedStaticMemory* LoadDataResourceBytes(int resource_id) const;
@@ -235,7 +237,7 @@ class UI_EXPORT ResourceBundle {
   // string if the message_id is not found.
   string16 GetLocalizedString(int message_id);
 
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
   // Returns the font for the specified style.
   const gfx::Font& GetFont(FontStyle style);
 
@@ -248,7 +250,7 @@ class UI_EXPORT ResourceBundle {
   // loaded. Pass an empty path to undo.
   void OverrideLocalePakForTest(const FilePath& pak_path);
 
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
   // Returns the full pathname of the locale file to load.  May return an empty
   // string if no locale data files are found and |test_file_exists| is true.
   // Used on Android to load the local file in the browser process and pass it
@@ -278,10 +280,10 @@ class UI_EXPORT ResourceBundle {
   explicit ResourceBundle(Delegate* delegate);
   ~ResourceBundle();
 
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
   // Free skia_images_.
   void FreeImages();
 
-#if !defined(__LB_SHELL__)
   // Load the main resources.
   void LoadCommonResources();
 #endif
@@ -296,7 +298,7 @@ class UI_EXPORT ResourceBundle {
   // accordingly.
   void AddDataPack(DataPack* data_pack);
 
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
   // Try to load the locale specific strings from an external data module.
   // Returns the locale that is loaded.
   std::string LoadLocaleResources(const std::string& pref_locale);
@@ -310,10 +312,9 @@ class UI_EXPORT ResourceBundle {
   // comments for ReloadLocaleResources().
   void UnloadLocaleResources();
 
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
   // Initialize all the gfx::Font members if they haven't yet been initialized.
   void LoadFontsIfNecessary();
-#endif
 
   // Fills the |bitmap| given the data file to look in and the |resource_id|.
   // Returns false if the resource does not exist.
@@ -337,6 +338,7 @@ class UI_EXPORT ResourceBundle {
   // Returns an empty image for when a resource cannot be loaded. This is a
   // bright red bitmap.
   gfx::Image& GetEmptyImage();
+#endif
 
   const FilePath& GetOverriddenPakPath();
 
@@ -344,8 +346,10 @@ class UI_EXPORT ResourceBundle {
   // be NULL.
   Delegate* delegate_;
 
+#if !defined(__LB_SHELL__)
   // Protects |images_| and font-related members.
   scoped_ptr<base::Lock> images_and_fonts_lock_;
+#endif
 
   // Protects |locale_resources_data_|.
   scoped_ptr<base::Lock> locale_resources_data_lock_;
@@ -357,6 +361,7 @@ class UI_EXPORT ResourceBundle {
   // The maximum scale factor currently loaded.
   ScaleFactor max_scale_factor_;
 
+#if !defined(__LB_SHELL__)
   // Cached images. The ResourceBundle caches all retrieved images and keeps
   // ownership of the pointers.
   typedef std::map<int, gfx::Image> ImageMap;
@@ -364,7 +369,6 @@ class UI_EXPORT ResourceBundle {
 
   gfx::Image empty_image_;
 
-#if !defined(__LB_SHELL__)
   // The various fonts used. Cached to avoid repeated GDI creation/destruction.
   scoped_ptr<gfx::Font> base_font_;
   scoped_ptr<gfx::Font> bold_font_;

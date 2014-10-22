@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _LB_DEBUG_CONSOLE_H_
-#define _LB_DEBUG_CONSOLE_H_
+#ifndef SRC_LB_DEBUG_CONSOLE_H_
+#define SRC_LB_DEBUG_CONSOLE_H_
 
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
 
@@ -22,35 +22,33 @@
 #include <string>
 #include <vector>
 
-#include "external/chromium/base/logging.h"
+#include "base/logging.h"
 
 class LBCommand;
+class LBConsoleConnection;
 class LBShell;
-
-namespace JSC {
-class DebuggerTTYInterface;
-}
 
 class LBDebugConsole {
  public:
   void Init(LBShell * shell);
   void Shutdown();
 
-  // parse a command string and execute results
-  void ParseAndExecuteCommand(const std::string& command);
+  // Parse a command string and execute results.
+  // If the command comes from the on-screen console, connection is NULL.
+  void ParseAndExecuteCommand(LBConsoleConnection *connection,
+                              const std::string& command);
   void RegisterCommand(LBCommand *command);
 
-  inline LBShell * shell() const { return shell_; }
-  inline const std::map<std::string, LBCommand*> & GetRegisteredCommands() const {
+  LBShell* shell() const { return shell_; }
+  const std::map<std::string, LBCommand*>& GetRegisteredCommands() const {
     return registered_commands_;
   }
-  JSC::DebuggerTTYInterface * tty() const;
 
  private:
   void AttachDebugger();
   void DetachDebugger();
 
-  LBShell * shell_;
+  LBShell* shell_;
 
   std::map<std::string, LBCommand*> registered_commands_;
 };
@@ -59,12 +57,13 @@ class LBDebugConsole {
 class LBCommand {
  public:
   // Argument description structure must be populated within constructor
-  LBCommand(LBDebugConsole *console) : console_(console), min_arguments_(-1),
-                                       syntax_validated_(false) {};
-  virtual ~LBCommand() {};
+  explicit LBCommand(LBDebugConsole *console)
+      : console_(console), min_arguments_(-1), syntax_validated_(false) {}
+  virtual ~LBCommand() {}
 
   void ValidateSyntax();
-  void ExecuteCommand(std::vector<std::string> &tokens);
+  void ExecuteCommand(LBConsoleConnection *connection,
+                      const std::vector<std::string> &tokens);
 
   const std::string& GetHelpString(bool summary) const {
     if (summary || help_details_.empty())
@@ -77,9 +76,9 @@ class LBCommand {
   const std::string& GetCommandSyntax() const;
 
  protected:
-  virtual void DoCommand(const std::vector<std::string> &tokens) {};
+  virtual void DoCommand(LBConsoleConnection *connection,
+                         const std::vector<std::string> &tokens) = 0;
 
-  inline JSC::DebuggerTTYInterface * tty() const { return console_->tty(); }
   inline LBShell * shell() const { return console_->shell(); }
 
   LBDebugConsole *console_;
@@ -91,6 +90,9 @@ class LBCommand {
   bool syntax_validated_;
 };
 
+// Registers any platform-specific debug console commands.  This method
+// is to be implemented in lb_debug_console_PLAT.cc
+void RegisterPlatformConsoleCommands(LBDebugConsole* console);
 
-#endif // __LB_SHELL__ENABLE_CONSOLE__
-#endif // _LB_DEBUG_CONSOLE_H_
+#endif  // __LB_SHELL__ENABLE_CONSOLE__
+#endif  // SRC_LB_DEBUG_CONSOLE_H_

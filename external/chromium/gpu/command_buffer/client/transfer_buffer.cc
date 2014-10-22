@@ -6,6 +6,7 @@
 
 #include "../client/transfer_buffer.h"
 #include "../client/cmd_buffer_helper.h"
+#include "base/logging.h"
 
 namespace gpu {
 
@@ -102,6 +103,24 @@ void TransferBuffer::AllocateRingBuffer(unsigned int size) {
   usable_ = false;
 }
 
+#if defined(__LB_ANDROID__) && defined(__clang__)
+
+// The original function doesn't work due to what seems to be a compiler bug
+static unsigned int ComputePOTSize(unsigned int dimension) {
+  if (dimension == 0)
+    return 0;
+
+  // This will return n=2^k, where k is the smallest number to satisfy:
+  // dimension <= 2^k
+  unsigned int result = 1;
+  while (result < dimension)
+    result += result;
+
+  return result;
+}
+
+#else
+
 // Returns the integer i such as 2^i <= n < 2^(i+1)
 static int Log2Floor(uint32 n) {
   if (n == 0)
@@ -134,6 +153,8 @@ static unsigned int ComputePOTSize(unsigned int dimension) {
   return (dimension == 0) ? 0 : 1 << Log2Ceiling(dimension);
 }
 
+#endif
+
 void TransferBuffer::ReallocateRingBuffer(unsigned int size) {
   // What size buffer would we ask for if we needed a new one?
   unsigned int needed_buffer_size = ComputePOTSize(size + result_size_);
@@ -153,6 +174,10 @@ void* TransferBuffer::AllocUpTo(
     unsigned int size, unsigned int* size_allocated) {
   GPU_DCHECK(size_allocated);
 
+  if (size > buffer_.size) {
+    DLOG(WARNING) << "TransferBuffer wants to resize from " << buffer_.size
+                  << " to " << size << " bytes.";
+  }
   ReallocateRingBuffer(size);
 
   if (!HaveBuffer()) {

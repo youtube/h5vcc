@@ -35,7 +35,9 @@
 namespace WebCore {
 
 enum EdgeIntersectionType {
-    Normal,
+    // LB_SHELL: Renamed from Normal to avoid clashes
+    // with other Normal enums in WebCore.
+    VertexNormal,
     VertexMinY,
     VertexMaxY,
     VertexYBoth
@@ -168,7 +170,7 @@ static bool computeXIntersection(const ExclusionPolygonEdge* edgePointer, float 
         intersectionType = VertexMaxY;
         intersectionX = (vertex1.y() > vertex2.y()) ? vertex1.x() : vertex2.x();
     } else {
-        intersectionType = Normal;
+        intersectionType = VertexNormal;
         intersectionX = ((y - vertex1.y()) * (vertex2.x() - vertex1.x()) / dy) + vertex1.x();
     }
 
@@ -265,7 +267,7 @@ void ExclusionPolygon::computeXIntersections(float y, bool isMinY, Vector<Exclus
         }
 
         if (evenOddCrossing) {
-            bool edgeCrossing = thisIntersection.type == Normal;
+            bool edgeCrossing = thisIntersection.type == VertexNormal;
             if (!edgeCrossing) {
                 FloatPoint prevVertex;
                 FloatPoint thisVertex;

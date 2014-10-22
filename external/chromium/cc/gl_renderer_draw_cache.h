@@ -7,6 +7,9 @@
 
 #include <vector>
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+#include <public/H5VCCTargetScreen.h>
+#endif
 
 // Collects 4 floats at a time for easy upload to GL.
 struct Float4 { float data[4]; };
@@ -37,6 +40,10 @@ struct TexturedQuadDrawCache {
   std::vector<Float4> uv_xform_data;
   std::vector<float> vertex_opacity_data;
   std::vector<Float16> matrix_data;
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+  WebKit::H5VCCTargetScreen target_screen;
+#endif
 };
 
 #endif // CC_GL_RENDERER_DRAW_CACHE_H_

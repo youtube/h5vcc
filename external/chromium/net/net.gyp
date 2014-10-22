@@ -15,7 +15,7 @@
       }, {  # chromeos == 0
         'use_kerberos%': 1,
       }],
-      ['OS=="android"', {
+      ['OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
         # The way the cache uses mmap() is inefficient on some Android devices.
         # If this flag is set, we hackily avoid using mmap() in the disk cache.
         'posix_avoid_mmap%': 1,
@@ -30,7 +30,7 @@
         'enable_built_in_dns%': 0,
       }],
       ['OS=="lb_shell"', {
-         'enable_websockets%' : 1,
+         'enable_websockets%' : 0,
          'use_v8_in_net%' : 0,
          'enable_built_in_dns%' : 1,
       }],
@@ -963,6 +963,10 @@
         ['OS=="lb_shell"', {
           'dependencies': [
             '../../openssl/openssl.gyp:openssl',
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+          ],
+          'include_dirs': [
+            '<(lbshell_root)/src/platform/<(target_arch)/chromium',
           ],
           'sources': [
             'base/file_stream_metrics_shell.cc',
@@ -973,6 +977,9 @@
             'disk_cache/file_shell.cc',
             'disk_cache/mapped_file_shell.cc',
             'dns/address_sorter_shell.cc',
+            '<!@(find <(lbshell_root)/src/platform/<(target_arch)/chromium/net -type f)',
+            '<(lbshell_root)/src/tcp_client_socket_shell.cc',
+            '<(lbshell_root)/src/tcp_client_socket_shell.h',
           ],
           'sources/': [
             # we don't use file tree access
@@ -1002,14 +1009,101 @@
             ['exclude', 'base/dnsrr_resolver.cc'],
             # remove windows files
             ['exclude', '_win.cc$'],
+            # no support for disk_cache
+            ['exclude', 'disk_cache/']
           ],
           'conditions': [
+            ['target_arch=="android"', {
+              'sources!': [
+                '<(lbshell_root)/src/tcp_client_socket_shell.cc',
+                '<(lbshell_root)/src/tcp_client_socket_shell.h',
+              ],
+              'sources/': [
+                ['exclude', 'dial/'],
+                ['include', 'libevent'],
+              ],
+            }],
+            ['target_arch=="xb1"', {
+              'msvs_settings': {
+                'VCCLCompilerTool': {
+                  'ComponentExtensions': 'true'
+                },
+              },
+            }],
             ['use_native_http_stack==1', {
               'sources': [
                 'http/shell/http_stream_shell.cc',
                 'http/shell/http_stream_shell_loader.cc',
                 'http/shell/http_transaction_factory_shell.cc',
                 'http/shell/http_transaction_shell.cc',
+              ],
+            }],
+            # Exclude things we don't need when using native http stack.
+            # Note that for shared_library, we require implementations
+            # of a lot more functions.
+            # TODO: Really prune out everything we don't need.
+            ['use_native_http_stack==1 and component=="static_library"', {
+              'sources/': [
+                ['exclude', 'base/host_resolver'],
+                ['exclude', 'base/keygen'],
+                ['exclude', 'dial/'],
+                ['exclude', 'http/http_cache'],
+                # Note: don't exclude http_stream_shell_* from lbshell.
+                ['exclude', 'http/http_stream_factory'],
+                ['exclude', 'http/http_stream_parser'],
+                ['exclude', 'proxy/dhcp'],
+                ['exclude', 'socket/'],
+                ['exclude', 'spdy/'],
+                ['exclude', 'quic/'],
+                ['exclude', 'udp/'],
+              ],
+              'sources!': [
+                'dns/address_sorter.h',
+                'dns/address_sorter_shell.cc',
+                'dns/dns_client.cc',
+                'dns/dns_client.h',
+                'dns/dns_hosts.cc',
+                'dns/dns_hosts.h',
+                'dns/dns_protocol.h',
+                'dns/dns_query.cc',
+                'dns/dns_query.h',
+                'dns/dns_response.cc',
+                'dns/dns_response.h',
+                'dns/dns_session.cc',
+                'dns/dns_session.h',
+                'dns/dns_socket_pool.cc',
+                'dns/dns_socket_pool.h',
+                'dns/dns_transaction.cc',
+                'dns/dns_transaction.h',
+                'dns/serial_worker.cc',
+                'dns/serial_worker.h',
+                'http/http_network_layer.cc',
+                'http/http_network_layer.h',
+                'http/http_network_session_peer.cc',
+                'http/http_network_session_peer.h',
+                'http/http_network_transaction.cc',
+                'http/http_network_transaction.h',
+                'proxy/network_delegate_error_observer.cc',
+                'proxy/network_delegate_error_observer.h',
+                'proxy/proxy_resolver_error_observer.h',
+                'proxy/proxy_resolver_js_bindings.cc',
+                'proxy/proxy_resolver_js_bindings.h',
+                'proxy/proxy_resolver_request_context.h',
+                'proxy/proxy_resolver_script.h',
+                'proxy/proxy_retry_info.h',
+                'proxy/proxy_script_fetcher.h',
+                'proxy/proxy_script_fetcher_impl.cc',
+                'proxy/proxy_script_fetcher_impl.h',
+                'proxy/sync_host_resolver.h',
+                'proxy/sync_host_resolver_bridge.cc',
+                'proxy/sync_host_resolver_bridge.h',
+              ]
+            }],
+            ['use_native_http_stack==1 and component=="shared_library"', {
+              'sources/': [
+                ['exclude', 'dial/'],
+                ['exclude', 'udp/'],
+                ['exclude', 'websockets/'],
               ],
             }],
           ],
@@ -1305,14 +1399,13 @@
             },
           },
         ],
-        ['OS=="android" and _toolset=="target" and android_build_type == 0', {
+        ['OS=="android" or (OS=="lb_shell" and target_arch=="android") and _toolset=="target" and android_build_type == 0', {
           'dependencies': [
              'net_java',
           ],
         }],
-        [ 'OS == "android"', {
+        [ 'OS == "android" or (OS=="lb_shell" and target_arch=="android")', {
             'dependencies': [
-              '../third_party/openssl/openssl.gyp:openssl',
               'net_jni_headers',
             ],
             'sources!': [
@@ -1325,6 +1418,12 @@
             'defines': [
               # These are the features Android doesn't support.
               'ENABLE_MEDIA_CODEC_THEORA',
+            ],
+          },
+        ],
+        [ 'OS == "android"', {
+            'dependencies': [
+              '../third_party/openssl/openssl.gyp:openssl',
             ],
           },
         ],
@@ -1677,7 +1776,7 @@
             'proxy/proxy_config_service_linux_unittest.cc',
           ],
         }],
-        [ 'OS == "android"', {
+        [ 'OS == "android" or (OS=="lb_shell" and target_arch=="android")', {
           'sources!': [
             # No res_ninit() et al on Android, so this doesn't make a lot of
             # sense.
@@ -1867,7 +1966,7 @@
             ],
           },
         ],
-        ['OS == "android" and gtest_target_type == "shared_library"', {
+        ['OS == "android" or (OS=="lb_shell" and target_arch=="android") and gtest_target_type == "shared_library"', {
           'dependencies': [
             '../testing/android/native_test.gyp:native_test_native_code',
           ]
@@ -1880,6 +1979,14 @@
         ['OS=="lb_shell"', {
           'dependencies': [
             '../../openssl/openssl.gyp:openssl',
+          ],
+        }],
+        ['OS=="lb_shell" and target_arch=="android"', {
+          'sources!': [
+             'dns/dns_config_service_posix_unittest.cc',
+          ],
+          'sources/': [
+            ['exclude', 'dial/'],
           ],
         }],
       ],
@@ -2375,7 +2482,7 @@
         },
       ]
     }],
-    ['OS=="android"', {
+    ['OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
       'targets': [
         {
           'target_name': 'net_jni_headers',
@@ -2457,7 +2564,7 @@
     # Special target to wrap a gtest_target_type==shared_library
     # net_unittests into an android apk for execution.
     # See base.gyp for TODO(jrg)s about this strategy.
-    ['OS == "android" and gtest_target_type == "shared_library"', {
+    ['OS == "android" or (OS=="lb_shell" and target_arch=="android") and gtest_target_type == "shared_library"', {
       'targets': [
         {
           'target_name': 'net_unittests_apk',

@@ -27,6 +27,8 @@
 template<typename T>
 inline void unusedParam(T& x) { (void)x; }
 #define UNUSED_PARAM(variable) unusedParam(variable)
+#elif defined (__LB_XB1__) || defined(__LB_XB360__)
+#define UNUSED_PARAM(variable)
 #else
 #define UNUSED_PARAM(variable) (void)variable
 #endif

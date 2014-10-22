@@ -35,7 +35,6 @@
 #include "JPEGImageDecoder.h"
 #endif
 #include "PNGImageDecoder.h"
-#include "PlatformMemoryInstrumentation.h"
 #include "SharedBuffer.h"
 #if USE(WEBP)
 #include "WEBPImageDecoder.h"
@@ -43,7 +42,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <wtf/MemoryInstrumentationVector.h>
 
 using namespace std;
 
@@ -113,7 +111,7 @@ ImageDecoder* ImageDecoder::create(const SharedBuffer& data, ImageSource::AlphaO
     if (length < lengthOfLongestSignature)
         return 0;
 #if defined(__LB_SHELL__)
-    // We use builtin GIF/BMP decoders (created in ImageDecoderShell::create)
+    // We use builtin GIF/BMP/WEBP decoders (created in ImageDecoderShell::create)
     // and replace JPEG/PNG decoders with our own version. We don't
     // support other image formats hence we call return immediately afterwards
     // without checking the result.
@@ -242,12 +240,6 @@ void ImageFrame::setStatus(FrameStatus status)
     m_status = status;
 }
 
-void ImageFrame::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-    info.addMember(m_backingStore);
-}
-
 #endif
 
 namespace {
@@ -349,16 +341,6 @@ int ImageDecoder::lowerBoundScaledY(int origY, int searchStart)
 int ImageDecoder::scaledY(int origY, int searchStart)
 {
     return getScaledValue<Exact>(m_scaledRows, origY, searchStart);
-}
-
-void ImageDecoder::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-    info.addMember(m_data);
-    info.addMember(m_frameBufferCache);
-    info.addMember(m_colorProfile);
-    info.addMember(m_scaledColumns);
-    info.addMember(m_scaledRows);
 }
 
 }

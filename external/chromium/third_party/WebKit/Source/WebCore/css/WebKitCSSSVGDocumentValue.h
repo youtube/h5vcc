@@ -45,8 +45,6 @@ public:
     const String& url() const { return m_url; }
     bool loadRequested() const { return m_loadRequested; }
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     WebKitCSSSVGDocumentValue(const String& url);
 

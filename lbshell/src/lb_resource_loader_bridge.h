@@ -16,20 +16,22 @@
 // This file is a fork of:
 // external/chromium/webkit/tools/test_shell/simple_resource_loader_bridge.h
 
-#ifndef _LB_RESOURCE_LOADER_BRIDGE_H_
-#define _LB_RESOURCE_LOADER_BRIDGE_H_
+#ifndef SRC_LB_RESOURCE_LOADER_BRIDGE_H_
+#define SRC_LB_RESOURCE_LOADER_BRIDGE_H_
 
 #include <string>
-#include "external/chromium/base/message_loop_proxy.h"
-#include "external/chromium/net/cookies/cookie_monster.h"
-#include "external/chromium/net/http/http_cache.h"
-#include "external/chromium/webkit/glue/resource_loader_bridge.h"
+
+#include "base/message_loop_proxy.h"
+#include "lb_shell_export.h"
+#include "net/cookies/cookie_monster.h"
+#include "net/http/http_cache.h"
+#include "webkit/glue/resource_loader_bridge.h"
 
 class FilePath;
 class GURL;
-namespace webkit_glue { class ResourceResponseInfo; }
+namespace webkit_glue { struct ResourceResponseInfo; }
 
-class LBResourceLoaderBridge {
+class LB_SHELL_EXPORT LBResourceLoaderBridge {
  public:
   // Call this function to initialize the simple resource loader bridge.
   // It is safe to call this function multiple times.
@@ -45,13 +47,25 @@ class LBResourceLoaderBridge {
   // Call this function to shutdown the simple resource loader bridge.
   static void Shutdown();
 
+  // Call this during app termination before tearing down WebKit to ensure that
+  // all requests have been completed. Must not be called from the IO thread.
+  static void WaitForAllRequests();
+
   // May only be called after Init.
   static void SetCookie(const GURL& url,
                         const GURL& first_party_for_cookies,
                         const std::string& cookie);
   static std::string GetCookies(const GURL& url,
                                 const GURL& first_party_for_cookies);
+
   static void ClearCookies();
+  static bool GetCookiesEnabled();
+  static void SetCookiesEnabled(bool value);
+
+  // Destroy and re-create the net::CookieMonster, ensuring any cookie state
+  // has been cleared. Does not delete cookies saved to disk.
+  static void PurgeCookies(const base::Closure& cookies_cleared_cb);
+
   static bool EnsureIOThread();
   static void SetAcceptAllCookies(bool accept_all_cookies);
 
@@ -97,11 +111,12 @@ class LBResourceLoaderBridge {
   static bool PerimeterCheckEnabled() { return perimeter_check_enabled_; }
 #endif
 
-private:
+ private:
+  static bool cookies_enabled_;
 #if !defined(__LB_SHELL__FOR_RELEASE__)
   static bool perimeter_log_enabled_;
   static bool perimeter_check_enabled_;
 #endif
 };
 
-#endif  // _LB_RESOURCE_LOADER_BRIDGE_H_
+#endif  // SRC_LB_RESOURCE_LOADER_BRIDGE_H_

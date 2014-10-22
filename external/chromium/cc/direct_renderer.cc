@@ -12,9 +12,9 @@
 #include "ui/gfx/rect_conversions.h"
 #include "ui/gfx/transform.h"
 
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
 #include "base/hash_tables.h"
-#include "base/shell_allocator.h"
+#include "cc/shell_allocator.h"
 #endif
 
 static gfx::Transform orthoProjectionMatrix(float left, float right, float bottom, float top)
@@ -55,7 +55,7 @@ static gfx::Transform windowMatrix(int x, int y, int width, int height)
 
 namespace cc {
 
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
 static const int kMaxRenderPassReuseListCount = 16;
 class RenderPassReuseList :
       public base::ShellAllocatorBufferList<kMaxRenderPassReuseListCount> {
@@ -139,7 +139,7 @@ void DirectRenderer::setEnlargePassTextureAmountForTesting(gfx::Vector2d amount)
 
 void DirectRenderer::decideRenderPassAllocationsForFrame(const RenderPassList& renderPassesInDrawOrder)
 {
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
     typedef base::shell_hash_map<RenderPass::Id, const RenderPass*, base::ShellAllocator<std::pair<RenderPass::Id, const RenderPass*>, RenderPassReuseList> > RenderPassesHashMap;
 #else
     typedef base::hash_map<RenderPass::Id, const RenderPass*> RenderPassesHashMap;

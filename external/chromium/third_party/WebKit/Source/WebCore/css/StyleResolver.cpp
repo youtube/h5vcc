@@ -124,16 +124,12 @@
 #include "TranslateTransformOperation.h"
 #include "UserAgentStyleSheets.h"
 #include "ViewportStyleResolver.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitCSSKeyframeRule.h"
 #include "WebKitCSSKeyframesRule.h"
 #include "WebKitCSSRegionRule.h"
 #include "WebKitCSSTransformValue.h"
 #include "WebKitFontFamilyNames.h"
 #include "XMLNames.h"
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
@@ -177,14 +173,6 @@
 #endif
 
 using namespace std;
-
-namespace WTF {
-
-template<> struct SequenceMemoryInstrumentationTraits<const WebCore::RuleData*> {
-    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
-};
-
-}
 
 namespace WebCore {
 
@@ -3707,6 +3695,26 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         m_style->setGridItemRow(row);
         return;
     }
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    case CSSPropertyH5vccTargetScreen: {
+#if defined(__LB_WIIU__)
+        HANDLE_INHERIT_AND_INITIAL(h5vccTargetScreen, H5vccTargetScreen);
+        if (primitiveValue) {
+            m_style->setH5vccTargetScreen(*primitiveValue);
+        }
+#endif
+        return;
+    }
+    case CSSPropertyH5vccGesturable: {
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+        HANDLE_INHERIT_AND_INITIAL(h5vccGesturable, H5vccGesturable);
+        if (primitiveValue) {
+            m_style->setH5vccGesturable(*primitiveValue);
+        }
+#endif
+        return;
+    }
+#endif
     // These properties are implemented in the StyleBuilder lookup table.
     case CSSPropertyBackgroundAttachment:
     case CSSPropertyBackgroundClip:
@@ -5287,54 +5295,6 @@ void StyleResolver::collectFeatures()
 
     m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
     m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
-}
-
-void StyleResolver::MatchedProperties::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(properties);
-}
-
-void StyleResolver::MatchedPropertiesCacheItem::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(matchedProperties);
-}
-
-void MediaQueryResult::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_expression);
-}
-
-void StyleResolver::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_style);
-    info.addMember(m_authorStyle);
-    info.addMember(m_userStyle);
-    info.addMember(m_siblingRuleSet);
-    info.addMember(m_uncommonAttributeRuleSet);
-    info.addMember(m_keyframesRuleMap);
-    info.addMember(m_matchedPropertiesCache);
-    info.addMember(m_matchedRules);
-
-    info.addMember(m_ruleList);
-    info.addMember(m_pendingImageProperties);
-    info.addMember(m_lineHeightValue);
-    info.addMember(m_viewportDependentMediaQueryResults);
-    info.addMember(m_styleRuleToCSSOMWrapperMap);
-    info.addMember(m_styleSheetCSSOMWrapperSet);
-#if ENABLE(CSS_FILTERS) && ENABLE(SVG)
-    info.addMember(m_pendingSVGDocuments);
-#endif
-    info.addMember(m_scopeResolver);
-
-    // FIXME: move this to a place where it would be called only once?
-    info.addMember(defaultStyle);
-    info.addMember(defaultQuirksStyle);
-    info.addMember(defaultPrintStyle);
-    info.addMember(defaultViewSourceStyle);
 }
 
 } // namespace WebCore

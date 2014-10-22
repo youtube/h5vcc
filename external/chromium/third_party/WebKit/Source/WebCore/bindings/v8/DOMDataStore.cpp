@@ -33,7 +33,6 @@
 
 #include "DOMWrapperMap.h"
 #include "V8Binding.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -71,12 +70,6 @@ DOMDataStore* DOMDataStore::current(v8::Isolate* isolate)
     }
 
     return mainWorldStore();
-}
-
-void DOMDataStore::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Binding);
-    info.addMember(m_wrapperMap);
 }
 
 void DOMDataStore::weakCallback(v8::Persistent<v8::Value> value, void* context)

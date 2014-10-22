@@ -215,9 +215,9 @@ ThreadIdentifier createThreadInternal(ThreadFunction entryPoint, void* data, con
 
 void initializeCurrentThreadInternal(const char* threadName)
 {
-#if HAVE(PTHREAD_SETNAME_NP)
+#if HAVE(PTHREAD_SETNAME_NP) && !defined(__ANDROID__)
     pthread_setname_np(threadName);
-#elif OS(QNX)
+#elif OS(QNX) || defined(__ANDROID__)
     pthread_setname_np(pthread_self(), threadName);
 #else
     UNUSED_PARAM(threadName);

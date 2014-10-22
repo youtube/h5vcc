@@ -33,13 +33,13 @@ namespace base {
 namespace steel {
 
 struct Watch {
-  ObjectWatcher * watcher;            // associated ObjectWatcher instance
-  int object;                         // the file descriptor being watched
-  int watch_handle;                   // used for uniquely identifying watches
-  MessageLoop * origin_loop;          // the origin thread's message loop
-  ObjectWatcher::Delegate * delegate; // delegate to notify when signaled
-  bool did_signal;                    // set when DoneWaiting is called
-  MessagePumpShell::Mode mode;       // callback on read, write or both?
+  ObjectWatcher * watcher;             // associated ObjectWatcher instance
+  int object;                          // the file descriptor being watched
+  int watch_handle;                    // used for uniquely identifying watches
+  MessageLoop * origin_loop;           // the origin thread's message loop
+  ObjectWatcher::Delegate * delegate;  // delegate to notify when signaled
+  bool did_signal;                     // set when DoneWaiting is called
+  MessagePumpShell::Mode mode;         // callback on read, write or both?
 
   void Run() {
     // The watcher may have already been torn down, in which case we need to
@@ -83,18 +83,25 @@ class ObjectWatchMultiplexer : public base::SimpleThread {
 
   // blocking call to exit the internal thread
   void Join() {
-    exit_ = true;
-    // wake up the thread in case it's waiting on the empty list event
-    non_empty_list_event_.Signal();
+    {
+      // RecomposePollFDArray may reset the event, but can only be called
+      // while this lock is held.  To break the race between these two, grab
+      // the lock before setting exit_ and signalling the event, and make sure
+      // that exit_ is checked before resetting the event.
+      base::AutoLock lock(add_watch_list_lock_);
+      exit_ = true;
+      // wake up the thread in case it's waiting on the empty list event
+      non_empty_list_event_.Signal();
+    }
     // in any event it should timeout eventually and see the exit flag..
     base::SimpleThread::Join();
   }
 
-  // although you can add different watches with the same file descriptor all day long
-  // please don't add the same watch twice it will create an error.
+  // although you can add different watches with the same file descriptor all
+  // day long, please don't add the same watch twice it will create an error.
   void AddWatch(Watch * watch) {
     DCHECK(watch);
-    DCHECK(watch->watch_handle == 0);
+    DCHECK_EQ(watch->watch_handle, 0);
     // grab the mutex to modify the watch map et al
     base::AutoLock lock(add_watch_list_lock_);
     should_recompose_pollfd_array_ = true;
@@ -156,12 +163,18 @@ class ObjectWatchMultiplexer : public base::SimpleThread {
         int event_count = poll(&pollfd_array_.front(),
                                      pollfd_array_.size(), kPollTimeout);
         // negative value returned means error...
+        if (event_count < 0) {
+          // Sleep for kPollTimeout, otherwise this thread could busy-wait until
+          // poll returns a non-error value
+          base::PlatformThread::Sleep(
+              base::TimeDelta::FromMilliseconds(kPollTimeout));
+        }
 
         // we need the mutex to access the map. AddWatch() is on a different
         // map object so we dont need the add_watch_list_lock_ here.
         remove_watch_list_lock_.Acquire();
         DCHECK_LE(event_count, static_cast<int>(pollfd_array_.size()));
-        for(int j = 0; j < pollfd_array_.size() && event_count > 0; ++j) {
+        for (int j = 0; j < pollfd_array_.size() && event_count > 0; ++j) {
           if (pollfd_array_[j].revents != 0) {
             event_count--;
             WatchMap::iterator start =
@@ -171,20 +184,19 @@ class ObjectWatchMultiplexer : public base::SimpleThread {
             for (WatchMap::iterator it = start; it != stop; it++) {
               // oh STL, your capacity for obfuscation never ceases to amaze.
               // this if/else block tries to match interest for each fd event
-              // to the associated watchers.  If a watcher was watching for reads
-              // and a read happened, then we add it to the stack of callbacks
-              // to process.  Else if it was watching for writes and a write
-              // happened then we do the same.
+              // to the associated watchers.  If a watcher was watching for
+              // reads and a read happened, then we add it to the stack of
+              // callbacks to process.  Else if it was watching for writes and
+              // a write happened then we do the same.
               // note that signaled watches are going to become the property
               // of their respectively owned MessageLoops and will be deleted
               // once executed, and so will be removed from the hash_map
               if ((pollfd_array_[j].revents & POLLIN) &&
-                (it->second->mode & MessagePumpShell::WATCH_READ)) {
+                  (it->second->mode & MessagePumpShell::WATCH_READ)) {
                 watch_removal_stack.push(it);
                 watch_callback_stack.push(it->second);
-              }
-              else if ((pollfd_array_[j].revents & POLLOUT) &&
-                (it->second->mode & MessagePumpShell::WATCH_WRITE)) {
+              } else if ((pollfd_array_[j].revents & POLLOUT) &&
+                         (it->second->mode & MessagePumpShell::WATCH_WRITE)) {
                 watch_removal_stack.push(it);
                 watch_callback_stack.push(it->second);
               }
@@ -226,7 +238,7 @@ class ObjectWatchMultiplexer : public base::SimpleThread {
         // signaled and we won't have to wait.
         non_empty_list_event_.Wait();
       }  // if (!pollfd_array_.empty())
-    } // while (!exit_)
+    }  // while (!exit_)
   }
 
   // it is assumed that any call to this function is within the context
@@ -282,7 +294,11 @@ class ObjectWatchMultiplexer : public base::SimpleThread {
       // reset the empty event if we've completely emptied the watch list
       DCHECK(watch_map_.empty());
       DCHECK(new_watch_map_.empty());
-      non_empty_list_event_.Reset();
+      // Join may have signalled the event because we are exitting.  If so,
+      // don't reset the event.  That would lead to an infinite wait on
+      // shutdown.
+      if (!exit_)
+        non_empty_list_event_.Reset();
     }  // if (!pollfd_array_.empty())
     // reset flag
     should_recompose_pollfd_array_ = false;
@@ -307,7 +323,7 @@ class ObjectWatchMultiplexer : public base::SimpleThread {
   base::Lock      add_watch_list_lock_;
   base::Lock      remove_watch_list_lock_;
   bool should_recompose_pollfd_array_;
-  typedef std::multimap<int,Watch*> WatchMap;
+  typedef std::multimap<int, Watch*> WatchMap;
   WatchMap watch_map_;      // current working watches
   WatchMap new_watch_map_;  // new watches
   int max_watch_handle_;
@@ -323,7 +339,7 @@ static ObjectWatchMultiplexer * OWMuxInstance = NULL;
 // who watches the watchers?
 // static
 void ObjectWatcher::InitializeObjectWatcherSystem() {
-  OWMuxInstance = LB_NEW ObjectWatchMultiplexer();
+  OWMuxInstance = new ObjectWatchMultiplexer();
   OWMuxInstance->Start();
 }
 
@@ -352,7 +368,7 @@ bool ObjectWatcher::StartWatching(int object,
     return false;
   }
 
-  watch_ = LB_NEW Watch;
+  watch_ = new Watch;
   watch_->watcher = this;
   watch_->object = object;
   watch_->mode = mode;
@@ -370,16 +386,17 @@ bool ObjectWatcher::StartWatching(int object,
 }
 
 bool ObjectWatcher::StopWatching() {
-  DCHECK(OWMuxInstance != NULL);
   if (!watch_)
     return false;
+
+  DCHECK(OWMuxInstance != NULL);
 
   // make sure stop call happens on same thread as start call
   DCHECK(watch_->origin_loop == MessageLoop::current());
 
   // this will block until this watch has been removed from the mux
   OWMuxInstance->RemoveWatch(watch_);
-  // let the watch know that the watcher has died, in case the watch is 
+  // let the watch know that the watcher has died, in case the watch is
   // still sitting in a message loop.  See Watch::Run() to see that it
   // will bug out in that event.
   watch_->watcher = NULL;
@@ -403,5 +420,5 @@ void ObjectWatcher::WillDestroyCurrentMessageLoop() {
   StopWatching();
 }
 
-} // namespace steel
-} // namespace base
+}  // namespace steel
+}  // namespace base

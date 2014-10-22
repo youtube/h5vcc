@@ -494,6 +494,11 @@ bool MediaPlayer::sourceAbort(const String& id)
     return m_private->sourceAbort(id);
 }
 
+double MediaPlayer::sourceGetDuration() const
+{
+    return m_private->sourceGetDuration();
+}
+
 void MediaPlayer::sourceSetDuration(double duration)
 {
     m_private->sourceSetDuration(duration);

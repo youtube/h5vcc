@@ -57,6 +57,14 @@ namespace WebCore {
 
     class WorkerContext : public RefCounted<WorkerContext>, public ScriptExecutionContext, public EventTarget {
     public:
+        // The V8 code generator creates an array of constants for classes
+        // which have constants, but those constants can also be conditional.
+        // If all constants are disabled, the compiler will fail with an error
+        // saying that empty arrays are illegal.  This constant is an
+        // unconditional constant to keep the array from being empty and avoid
+        // this compilation error.
+        enum { __HACK };
+
         virtual ~WorkerContext();
 
         virtual bool isWorkerContext() const { return true; }

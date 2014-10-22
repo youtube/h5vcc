@@ -486,6 +486,11 @@ enum RubyPosition { RubyPositionBefore, RubyPositionAfter };
 enum DraggableRegionMode { DraggableRegionNone, DraggableRegionDrag, DraggableRegionNoDrag };
 #endif
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+enum H5VCCTargetScreen { ScreenSmall, ScreenLarge, ScreenAll };
+enum H5VCCGesturable { GestureIgnored, GestureClickable, GestureScrollHorizontal, GestureScrollVertical, GestureScrollBoth, MaxH5VCCGesturable = GestureScrollBoth };
+#endif
+
 } // namespace WebCore
 
 #endif // RenderStyleConstants_h

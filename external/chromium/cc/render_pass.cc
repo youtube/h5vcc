@@ -6,7 +6,7 @@
 
 namespace cc {
 
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
 static RenderPassIdReuseList s_render_pass_id_reuse_list;
 RenderPassIdReuseList* RenderPassIdReuseList::get_instance() {
   return &s_render_pass_id_reuse_list;

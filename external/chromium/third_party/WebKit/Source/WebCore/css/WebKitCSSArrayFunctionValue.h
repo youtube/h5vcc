@@ -48,8 +48,6 @@ public:
 
     PassRefPtr<WebKitCSSArrayFunctionValue> cloneForCSSOM() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     WebKitCSSArrayFunctionValue();
     WebKitCSSArrayFunctionValue(const WebKitCSSArrayFunctionValue& cloneFrom);

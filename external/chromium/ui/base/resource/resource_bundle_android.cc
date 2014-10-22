@@ -15,7 +15,7 @@
 #include "ui/base/resource/resource_handle.h"
 
 namespace ui {
-
+#if !defined(__LB_SHELL__)
 void ResourceBundle::LoadCommonResources() {
   FilePath path;
   PathService::Get(ui::DIR_RESOURCE_PAKS_ANDROID, &path);
@@ -30,5 +30,5 @@ gfx::Image& ResourceBundle::GetNativeImageNamed(int resource_id, ImageRTL rtl) {
   DCHECK_EQ(rtl, RTL_DISABLED);
   return GetImageNamed(resource_id);
 }
-
+#endif
 }

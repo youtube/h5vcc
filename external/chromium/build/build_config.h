@@ -34,6 +34,8 @@
 #if !defined(TOOLKIT_VIEWS)
 #define TOOLKIT_GTK
 #endif
+#elif defined(__LB_SHELL__)
+// NO toolkit!
 #elif defined(_WIN32)
 #define OS_WIN 1
 #define TOOLKIT_VIEWS 1
@@ -46,8 +48,6 @@
 #elif defined(__sun)
 #define OS_SOLARIS 1
 #define TOOLKIT_GTK
-#elif defined(__LB_SHELL__)
-// NO toolkit!
 #else
 #error Please add support for your platform in build/build_config.h
 #endif
@@ -106,7 +106,7 @@
 #define ARCH_CPU_X86_64 1
 #define ARCH_CPU_64_BITS 1
 #define ARCH_CPU_LITTLE_ENDIAN 1
-#elif defined(__LB_PS3__) || defined(__LB_WIIU__)
+#elif defined(__LB_PS3__) || defined(__LB_WIIU__) || defined(__LB_XB360__)
 #define ARCH_CPU_32_BITS 1
 #define ARCH_CPU_BIG_ENDIAN 1
 #define ARCH_CPU_PPC_FAMILY 1
@@ -132,12 +132,14 @@
 #endif
 
 // Type detection for wchar_t.
-#if defined(OS_WIN) || defined(__LB_PS3__) || defined(__LB_WIIU__)
-#define WCHAR_T_IS_UTF16
+#if defined(OS_WIN) || \
+    (defined(__LB_SHELL__) && \
+        !(defined(__LB_LINUX__) || defined(__LB_ANDROID__)))
+#define WCHAR_T_IS_UTF16 1
 #elif defined(OS_POSIX) && defined(COMPILER_GCC) && \
     defined(__WCHAR_MAX__) && \
     (__WCHAR_MAX__ == 0x7fffffff || __WCHAR_MAX__ == 0xffffffff)
-#define WCHAR_T_IS_UTF32
+#define WCHAR_T_IS_UTF32 1
 #elif defined(OS_POSIX) && defined(COMPILER_GCC) && \
     defined(__WCHAR_MAX__) && \
     (__WCHAR_MAX__ == 0x7fff || __WCHAR_MAX__ == 0xffff)
@@ -145,7 +147,7 @@
 // compile in this mode (in particular, Chrome doesn't). This is intended for
 // other projects using base who manage their own dependencies and make sure
 // short wchar works for them.
-#define WCHAR_T_IS_UTF16
+#define WCHAR_T_IS_UTF16 1
 #else
 #error Please add support for your compiler in build/build_config.h
 #endif

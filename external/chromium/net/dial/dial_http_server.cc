@@ -15,7 +15,7 @@
 #include "net/server/http_server_request_info.h"
 
 #if defined(__LB_SHELL__)
-#include "lb_platform.h"
+#include "lb_network_helpers.h"
 #endif
 
 namespace net {
@@ -91,9 +91,10 @@ int DialHttpServer::GetLocalAddress(IPEndPoint* addr) {
 
   // Now get the IPAddress of the network card.
   SockaddrStorage sock_addr;
-  ret |= LB::Platform::GetLocalIpAddress(&sock_addr.addr_storage.sin_addr);
-  sock_addr.addr_storage.sin_family = AF_INET;
-  sock_addr.addr_storage.sin_port = htons(addr->port());
+  struct sockaddr_in *in = (struct sockaddr_in *)sock_addr.addr;
+  ret |= LB::Platform::GetLocalIpAddress(&in->sin_addr);
+  in->sin_family = AF_INET;
+  in->sin_port = htons(addr->port());
 
   return (ret == 0 && addr->FromSockAddr(sock_addr.addr, sock_addr.addr_len))
       ? OK : ERR_FAILED;
@@ -101,8 +102,8 @@ int DialHttpServer::GetLocalAddress(IPEndPoint* addr) {
 
 void DialHttpServer::OnHttpRequest(int conn_id,
                                    const HttpServerRequestInfo& info) {
-  DLOG(INFO) << "Http Request: "
-             << info.method << " " << info.path << " HTTP/1.1";
+  DVLOG(1) << "Http Request: "
+           << info.method << " " << info.path << " HTTP/1.1";
 
   if (info.method == "GET" && LowerCaseEqualsASCII(info.path, "/dd.xml")) {
     // If dd.xml request
@@ -176,35 +177,36 @@ bool DialHttpServer::CallbackJsHttpRequest(int conn_id,
   return ret;
 }
 
+// Runs on the dial service message loop.
+static void ReceivedResponse(int conn_id, HttpServer* http_server,
+                             HttpServerResponseInfo* response, bool ok) {
+  DCHECK(response);
+  DCHECK_EQ(DialService::GetInstance()->GetMessageLoop(),
+            MessageLoop::current());
+
+  if (http_server) {
+    if (!ok) {
+      http_server->Send404(conn_id);
+    } else {
+      http_server->Send(conn_id,
+                        static_cast<HttpStatusCode>(response->response_code),
+                        response->body,
+                        response->mime_type,
+                        response->headers);
+    }
+  }
+  delete response;
+}
+
 // This runs on JS thread. Free it up ASAP.
 void DialHttpServer::AsyncReceivedResponse(int conn_id,
     HttpServerResponseInfo* response, bool ok) {
   // Should not be called from the same thread. Call ReceivedResponse instead.
   DCHECK_NE(DialService::GetInstance()->GetMessageLoop(),
             MessageLoop::current());
-
   VLOG(1) << "Received response from JS.";
   DialService::GetInstance()->GetMessageLoop()->PostTask(FROM_HERE,
-      base::Bind(&DialHttpServer::ReceivedResponse, this, conn_id, response,
-                 ok));
-}
-
-void DialHttpServer::ReceivedResponse(int conn_id,
-    HttpServerResponseInfo* response, bool ok) {
-  DCHECK(response);
-  DCHECK_EQ(DialService::GetInstance()->GetMessageLoop(),
-            MessageLoop::current());
-
-  if (!ok) {
-    http_server_->Send404(conn_id);
-  } else {
-    http_server_->Send(conn_id,
-                       static_cast<HttpStatusCode>(response->response_code),
-                       response->body,
-                       response->mime_type,
-                       response->headers);
-  }
-  delete response;
+      base::Bind(ReceivedResponse, conn_id, http_server_, response, ok));
 }
 
 } // namespace net

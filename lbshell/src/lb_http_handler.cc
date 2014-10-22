@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+#if ENABLE_INSPECTOR
 
 #include "lb_http_handler.h"
 
@@ -23,6 +23,7 @@
 
 #include "base/stringprintf.h"
 #include "base/string_util.h"
+#include "net/base/ip_endpoint.h"
 #include "net/base/tcp_listen_socket.h"
 #include "net/server/http_server_request_info.h"
 
@@ -32,21 +33,50 @@
 #include "third_party/WebKit/Source/WebKit/chromium/public/platform/WebString.h"
 
 #include "lb_inspector_resources.h"
+#include "lb_globals.h"
 #include "lb_memory_manager.h"
+#include "lb_network_helpers.h"
 
-LBHttpHandler::LBHttpHandler(LBWebViewHost *host) : host_(host),
-    agent_(NULL) {
+#if defined(__LB_PS4__)
+#include "lb_shell/lb_shell_constants.h"
+#endif
+
+#if defined(__LB_XB1__)
+// non-standard port number
+static const int kWebInspectorPort = 4601;
+#elif defined(__LB_PS4__)
+// PS4's packaged builds don't let us bind to a specific port. Use
+// an ephemeral port and retrieve the value at runtime instead.
+static const int kWebInspectorPort = 0;
+#else
+static const int kWebInspectorPort = 9222;
+#endif
+
+LBHttpHandler::LBHttpHandler(LBWebViewHost *host)
+    : host_(host)
+    , agent_(NULL)
+    , console_display_("WebInspector", "not running", "WebInspector Address") {
   // Create thread for http server
-  thread_.reset(LB_NEW base::Thread("http_handler"));
-  thread_->StartWithOptions(base::Thread::Options(MessageLoop::TYPE_IO, 0));
+  thread_.reset(new base::Thread("http_handler"));
+
+#if defined(__LB_PS4__)
+  thread_->StartWithOptions(
+      base::Thread::Options(MessageLoop::TYPE_IO, kHttpHandlerThreadStackSize));
+#else
+  thread_->StartWithOptions(
+      base::Thread::Options(MessageLoop::TYPE_IO, 0));
+#endif  // defined(__LB_PS4__)
 
   thread_->message_loop()->PostTask(FROM_HERE, base::Bind(
-      &LBHttpHandler::CreateServer, this));
+      &LBHttpHandler::CreateServer, base::Unretained(this)));
 }
 
 LBHttpHandler::~LBHttpHandler() {
+  if (agent_) {
+    agent_->Detach();
+    agent_ = NULL;
+  }
   thread_->Stop();
-  DCHECK(!agent_) << "Agent should have been cleaned up by now!";
 }
 
 void LBHttpHandler::CreateServer() {
@@ -56,8 +86,37 @@ void LBHttpHandler::CreateServer() {
   LBInspectorResource::GenerateMap(inspector_resource_map_);
 
   // Create http server
-  factory_.reset(LB_NEW net::TCPListenSocketFactory("0.0.0.0", 9222));
-  server_ = LB_NEW net::HttpServer(*factory_, this);
+  factory_.reset(new net::TCPListenSocketFactory("0.0.0.0", kWebInspectorPort));
+  server_ = new net::HttpServer(*factory_, this);
+
+  // The GetLocalAddress usually returns 0.0.0.0:PORT, whereas
+  // GetLocalIpAddress just returns the IP address. We need to combine
+  // both to get the final end point address.
+  struct sockaddr_in addr = { 0 };
+  addr.sin_family = AF_INET;
+  int port = 0;
+  if (LB::Platform::GetLocalIpAddress(&addr.sin_addr) == 0 &&
+      GetWebInspectorPort(&port)) {
+    net::IPEndPoint ip_addr;
+    CHECK(ip_addr.FromSockAddr(reinterpret_cast<sockaddr*>(&addr),
+                               sizeof(addr)));
+    // Add the CVal string to the system display.
+    console_display_ = std::string("http://") + net::IPAddressToStringWithPort(
+        ip_addr.address(), port);
+  }
+}
+
+bool LBHttpHandler::GetWebInspectorPort(int* pport) {
+  DCHECK(pport);
+#if defined(__LB_PS4__)
+  net::IPEndPoint port_addr;
+  int ret = server_->GetLocalAddress(&port_addr);
+  *pport = (ret == 0) ? port_addr.port() : 0;
+  return (ret == 0);
+#else  // defined(__LB_PS4__)
+  *pport = kWebInspectorPort;
+  return true;
+#endif  // defined(__LB_PS4__)
 }
 
 // From external/chromium/content/browser/debugger/devtools_http_handler.cc
@@ -81,8 +140,7 @@ static std::string GetMimeType(const std::string& filename) {
 void LBHttpHandler::SendFile(const int connection_id,
                              const std::string &path) const {
   DCHECK_EQ(MessageLoop::current(), thread_->message_loop());
-  extern std::string *global_game_content_path;
-  std::string full_path = *global_game_content_path;
+  std::string full_path(GetGlobalsPtr()->game_content_path);
   full_path.append(path);
 
   // If path is in the "inspector" path, use the special embedded files
@@ -92,10 +150,11 @@ void LBHttpHandler::SendFile(const int connection_id,
     GeneratedResourceMap::const_iterator itr =
         inspector_resource_map_.find(filename);
     if (itr != inspector_resource_map_.end()) {
-      std::string data(itr->second.data, itr->second.size);
+      std::string data(
+          reinterpret_cast<const char*>(itr->second.data), itr->second.size);
       server_->Send200(connection_id, data, GetMimeType(path));
+      return;
     }
-    return;
   }
 
   // try to open the file
@@ -174,27 +233,39 @@ void LBHttpHandler::OnWebSocketRequest(const int connection_id,
   server_->AcceptWebSocket(connection_id, info);
 
   // Connect to the backend
-  agent_ = LB_NEW LBDevToolsAgent(connection_id, host_, this);
+  agent_ = new LBDevToolsAgent(connection_id, host_, this);
   agent_->Attach();
-  return;
 }
 
 void LBHttpHandler::OnWebSocketMessage(const int connection_id,
                                        const std::string& data) {
   DCHECK_EQ(MessageLoop::current(), thread_->message_loop());
+  if (agent_) {
+    DCHECK_EQ(agent_->connection_id(), connection_id);
+    if (agent_->connection_id() == connection_id) {
+      WebKit::WebString webstring;
+      webstring = WebKit::WebString::fromUTF8(data.c_str(), data.length());
+      agent_->sendMessageToInspectorBackend(webstring);
+    }
+  }
+}
+
+void LBHttpHandler::DoClose(const int connection_id) {
+  DCHECK_EQ(MessageLoop::current(), thread_->message_loop());
   if (agent_ && agent_->connection_id() == connection_id) {
-    WebKit::WebString webstring;
-    webstring = WebKit::WebString::fromUTF8(data.c_str(), data.length());
-    agent_->sendMessageToInspectorBackend(webstring);
+    agent_->Detach();
+    agent_ = NULL;
   }
 }
 
 void LBHttpHandler::OnClose(const int connection_id) {
-  DCHECK_EQ(MessageLoop::current(), thread_->message_loop());
-  if (agent_ && agent_->connection_id() == connection_id) {
-    agent_->Detach();
-    agent_->Release();
-    agent_ = NULL;
+  // Invoked by the ObjectWatcher when the inspector is closed,
+  // or the view host when Steel is shut down with the inspector open.
+  // In the latter case, this is called inside the destructor, with
+  // the thread already shut down.
+  if (thread_->IsRunning()) {
+    thread_->message_loop()->PostTask(FROM_HERE, base::Bind(
+        &LBHttpHandler::DoClose, base::Unretained(this), connection_id));
   }
 }
 
@@ -207,7 +278,8 @@ void LBHttpHandler::DoSendOverWebSocket(const int connection_id,
 void LBHttpHandler::SendOverWebSocket(const int connection_id,
                                       const std::string &data) const {
   thread_->message_loop()->PostTask(FROM_HERE, base::Bind(
-      &LBHttpHandler::DoSendOverWebSocket, this, connection_id, data));
+      &LBHttpHandler::DoSendOverWebSocket, base::Unretained(this),
+      connection_id, data));
 }
 
-#endif // __LB_SHELL__ENABLE_CONSOLE__
+#endif  // ENABLE_INSPECTOR

@@ -135,6 +135,17 @@ scoped_refptr<VideoFrame> VideoFrame::CreateBlackFrame(const gfx::Size& size) {
   return CreateColorFrame(size, kBlackY, kBlackUV, kBlackUV, kZero);
 }
 
+#if defined(__LB_SHELL__)
+// static
+scoped_refptr<VideoFrame> VideoFrame::CreatePunchOutFrame(
+    const gfx::Size& size) {
+  scoped_refptr<VideoFrame> frame(new VideoFrame(
+      VideoFrame::PUNCH_OUT, gfx::Size(size), gfx::Rect(size), gfx::Size(size),
+      base::TimeDelta()));
+  return frame;
+}
+#endif
+
 static inline size_t RoundUp(size_t value, size_t alignment) {
   // Check that |alignment| is a power of 2.
   DCHECK((alignment + (alignment - 1)) == (alignment | (alignment - 1)));

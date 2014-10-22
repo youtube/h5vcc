@@ -38,8 +38,8 @@ DialService* DialService::GetInstance() {
 
 DialService::DialService()
     : thread_(new base::Thread("dial_service"))
-    , http_server_(new DialHttpServer())
-    , udp_server_(new DialUdpServer())
+    , http_server_(NULL)
+    , udp_server_(NULL)
     , is_running_(false) {
   // DialService is lazy, so we can start in the constructor
   // and always have a messageloop.
@@ -47,7 +47,8 @@ DialService::DialService()
 }
 
 DialService::~DialService() {
-  DCHECK(!is_running());
+  DLOG_IF(FATAL, is_running()) << "Dial server is still running when "
+                                  "destroying the service.";
 }
 
 MessageLoop* DialService::GetMessageLoop() {
@@ -75,11 +76,40 @@ void DialService::StopService() {
       base::Bind(&DialService::SpinDownServices, base::Unretained(this)));
 }
 
+// Syncrhonized call to stop the service.
+void DialService::Terminate() {
+  // Should be called from a different thread.
+  DCHECK(!CurrentThreadIsValid());
+
+  if (thread_) {
+    thread_->Stop();
+    thread_.reset();
+  }
+
+  DLOG_IF(WARNING, http_server_ || udp_server_)
+      << "Force Terminating Dial Server.";
+
+  if (http_server_.get()) {
+    http_server_->Stop();
+    http_server_ = NULL;
+  }
+  if (udp_server_.get()) {
+    udp_server_->Stop();
+    udp_server_.reset();
+  }
+}
+
 void DialService::SpinUpServices() {
   DCHECK(CurrentThreadIsValid());
 
   // Do nothing.
   if (is_running_) return;
+
+  DCHECK(!http_server_.get());
+  DCHECK(!udp_server_.get());
+
+  http_server_ = new DialHttpServer();
+  udp_server_.reset(new DialUdpServer());
 
   // Create servers
   if (!http_server_->Start())
@@ -108,15 +138,21 @@ void DialService::SpinDownServices() {
   // running is false when both Stops() return true;
   is_running_ = !(http_ret && udp_ret);
 
+  http_server_ = NULL;
+  udp_server_.reset();
+
   // Check that both are in same state.
   DCHECK(http_ret == udp_ret);
 }
 
 bool DialService::Register(DialServiceHandler* handler) {
-  const std::string& path = handler->service_name();
-  if (path.empty() || handler == NULL) {
+  if (!handler)
     return false;
-  }
+
+  const std::string& path = handler->service_name();
+  if (path.empty())
+    return false;
+
   GetMessageLoop()->PostTask(FROM_HERE,
       base::Bind(&DialService::AddToHandlerMap, base::Unretained(this),
                  base::Unretained(handler)));

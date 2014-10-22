@@ -59,7 +59,6 @@
 #include "Settings.h"
 #include "TiledBacking.h"
 #include "TransformState.h"
-#include "WebCoreMemoryInstrumentation.h"
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
 #include "HTMLMediaElement.h"
@@ -526,6 +525,18 @@ void RenderLayerCompositor::layerBecameNonComposited(const RenderLayer* renderLa
     --m_compositedLayerCount;
 }
 
+String RenderLayerCompositor::logLayerInfoString(const RenderLayer* layer, int depth) {
+    RenderLayerBacking* backing = layer->backing();
+    ASSERT(backing);
+    const int kMaxLogLineLength = 1024;
+    char layerInfoBuffer[kMaxLogLineLength];
+    snprintf(layerInfoBuffer, sizeof(layerInfoBuffer),
+        "%*p %dx%d %.2fKB (%s) %s\n", 12 + depth * 2, layer, backing->compositedBounds().width(), backing->compositedBounds().height(),
+        backing->backingStoreMemoryEstimate() / 1024,
+        reasonForCompositing(layer), layer->backing()->nameForLayer().utf8().data());
+    return String(layerInfoBuffer);
+}
+
 #if !LOG_DISABLED
 void RenderLayerCompositor::logLayerInfo(const RenderLayer* layer, int depth)
 {
@@ -541,9 +552,7 @@ void RenderLayerCompositor::logLayerInfo(const RenderLayer* layer, int depth)
         m_secondaryBackingStoreBytes += backing->backingStoreMemoryEstimate();
     }
 
-    LOG(Compositing, "%*p %dx%d %.2fKB (%s) %s\n", 12 + depth * 2, layer, backing->compositedBounds().width(), backing->compositedBounds().height(),
-        backing->backingStoreMemoryEstimate() / 1024,
-        reasonForCompositing(layer), layer->backing()->nameForLayer().utf8().data());
+    LOG(Compositing, "%s", logLayerInfoString(layer, depth).ascii().data());
 }
 #endif
 
@@ -1222,6 +1231,53 @@ String RenderLayerCompositor::layerTreeAsText(LayerTreeFlags flags)
     return layerTreeText;
 }
 
+#if defined(__LB_SHELL__)
+
+String RenderLayerCompositor::RecursivelyPrintLayerBackingInfo(RenderLayer* layer, int depth) {
+    String retString;
+    if (layer->backing()) {
+        retString.append(logLayerInfoString(layer, depth));
+    }
+
+    if (layer->isStackingContext()) {
+        if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
+            size_t listSize = negZOrderList->size();
+            for (size_t i = 0; i < listSize; ++i) {
+                RenderLayer* curLayer = negZOrderList->at(i);
+                retString.append(RecursivelyPrintLayerBackingInfo(curLayer, depth + 1));
+            }
+        }
+    }
+
+    if (Vector<RenderLayer*>* normalFlowList = layer->normalFlowList()) {
+        size_t listSize = normalFlowList->size();
+        for (size_t i = 0; i < listSize; ++i) {
+            RenderLayer* curLayer = normalFlowList->at(i);
+            retString.append(RecursivelyPrintLayerBackingInfo(curLayer, depth + 1));
+        }
+    }
+
+    if (layer->isStackingContext()) {
+        if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
+            size_t listSize = posZOrderList->size();
+            for (size_t i = 0; i < listSize; ++i) {
+                RenderLayer* curLayer = posZOrderList->at(i);
+                retString.append(RecursivelyPrintLayerBackingInfo(curLayer, depth + 1));
+            }
+        }
+    }
+
+    return retString;
+}
+
+String RenderLayerCompositor::layerBackingsInfo() {
+    RenderLayer* root_layer = rootRenderLayer();
+
+    return RecursivelyPrintLayerBackingInfo(root_layer, 0);
+}
+
+#endif
+
 RenderLayerCompositor* RenderLayerCompositor::frameContentsCompositor(RenderPart* renderer)
 {
     if (!renderer->node()->isFrameOwnerElement())
@@ -1592,7 +1648,8 @@ bool RenderLayerCompositor::requiresCompositingLayer(const RenderLayer* layer, F
         || requiresCompositingForFilters(renderer)
         || requiresCompositingForPosition(renderer, layer, fixedPositionLayerNotCompositedReason)
         || requiresCompositingForOverflowScrolling(layer)
-        || requiresCompositingForBlending(renderer);
+        || requiresCompositingForBlending(renderer)
+        || requiresCompositingForSecondScreen(renderer);
 }
 
 bool RenderLayerCompositor::canBeComposited(const RenderLayer* layer) const
@@ -1626,7 +1683,8 @@ bool RenderLayerCompositor::requiresOwnBackingStore(const RenderLayer* layer, co
         || renderer->isTransparent()
         || renderer->hasMask()
         || renderer->hasReflection()
-        || renderer->hasFilter())
+        || renderer->hasFilter()
+        || requiresCompositingForSecondScreen(renderer))
         return true;
         
     
@@ -1641,7 +1699,6 @@ bool RenderLayerCompositor::requiresOwnBackingStore(const RenderLayer* layer, co
     return false;
 }
 
-#if !LOG_DISABLED
 const char* RenderLayerCompositor::reasonForCompositing(const RenderLayer* layer)
 {
     RenderObject* renderer = layer->renderer();
@@ -1683,6 +1740,9 @@ const char* RenderLayerCompositor::reasonForCompositing(const RenderLayer* layer
     if (requiresCompositingForOverflowScrolling(layer))
         return "-webkit-overflow-scrolling: touch";
 
+    if (requiresCompositingForSecondScreen(renderer))
+        return "-h5vcc-target-screen";
+
     if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForStacking)
         return "stacking";
 
@@ -1723,7 +1783,6 @@ const char* RenderLayerCompositor::reasonForCompositing(const RenderLayer* layer
 
     return "";
 }
-#endif
 
 // Return true if the given layer has some ancestor in the RenderLayer hierarchy that clips,
 // up to the enclosing compositing ancestor. This is required because compositing layers are parented
@@ -2014,6 +2073,14 @@ bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* rendere
 bool RenderLayerCompositor::requiresCompositingForOverflowScrolling(const RenderLayer* layer) const
 {
     return layer->needsCompositedScrolling();
+}
+
+bool RenderLayerCompositor::requiresCompositingForSecondScreen(RenderObject* renderer) const {
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    return renderer->parent() && (renderer->style()->h5vccTargetScreen() != renderer->parent()->style()->h5vccTargetScreen());
+#else
+    return false;
+#endif
 }
 
 bool RenderLayerCompositor::isRunningAcceleratedTransformAnimation(RenderObject* renderer) const
@@ -2776,27 +2843,6 @@ Page* RenderLayerCompositor::page() const
         return frame->page();
     
     return 0;
-}
-
-void RenderLayerCompositor::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addWeakPointer(m_renderView);
-    info.addMember(m_rootContentLayer);
-    info.addMember(m_updateCompositingLayersTimer);
-    info.addMember(m_clipLayer);
-    info.addMember(m_scrollLayer);
-    info.addMember(m_viewportConstrainedLayers);
-    info.addMember(m_viewportConstrainedLayersNeedingUpdate);
-    info.addMember(m_overflowControlsHostLayer);
-    info.addMember(m_layerForHorizontalScrollbar);
-    info.addMember(m_layerForVerticalScrollbar);
-    info.addMember(m_layerForScrollCorner);
-#if ENABLE(RUBBER_BANDING)
-    info.addMember(m_layerForOverhangAreas);
-    info.addMember(m_contentShadowLayer);
-#endif
-    info.addMember(m_layerUpdater);
 }
 
 } // namespace WebCore

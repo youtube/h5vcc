@@ -21,61 +21,78 @@
 #define SRC_LB_NETWORK_CONSOLE_H_
 
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
+
+#include "lb_console_values.h"
+#include "lb_console_connection.h"
 #include "lb_debug_console.h"
+#include "net/base/stream_listen_socket.h"
 
-// Manages a single network connection
 class LBNetworkConsole;
-class LBNetworkConnection {
-  friend class LBNetworkConsole;
- public:
-  void Output(const std::string &text) const;
-  void Close();
 
- private:
-  LBNetworkConnection(LBDebugConsole *console, int socket);
+// Manages buffering and state for a single network connection.
+// Also executes commands.
+class LBNetworkConnection : public LBConsoleConnection {
+ public:
+  LBNetworkConnection(LBDebugConsole *debug_console,
+                      LBNetworkConsole *network_console,
+                      scoped_refptr<net::StreamListenSocket> socket);
   ~LBNetworkConnection();
 
-  bool Poll();
+  void OnInput(const char *data, int len);
 
+  // LBConsoleConnection:
+  virtual void Output(const std::string& data) OVERRIDE;
+  virtual void Close() OVERRIDE;
+
+ private:
   LBDebugConsole *debug_console_;
-  int socket_;
+  LBNetworkConsole *network_console_;
+  scoped_refptr<net::StreamListenSocket> socket_;
   std::string command_;
-  bool request_close_;
 };
 
-// Listens for incoming connections and is responsible for creation
-// deletion of LBNetworkConnections
-class LBNetworkConsole {
+// Manages incoming connections and socket I/O.  Creates and destroys
+// LBNetworkConnections, which manage the state of each stream.
+class LBNetworkConsole : public net::StreamListenSocket::Delegate {
  public:
   static void Initialize(LBDebugConsole *console);
   static void Teardown();
   static LBNetworkConsole* GetInstance() { return instance_; }
 
-  void Poll();
   static void CaptureLogging(bool mode) {
     DCHECK(!logging::GetLogMessageHandler() ||
            logging::GetLogMessageHandler() == TelnetLogHandler);
     logging::SetLogMessageHandler(mode ? TelnetLogHandler : NULL);
   }
 
- private:
-  LBNetworkConsole(LBDebugConsole *console);
-  ~LBNetworkConsole();
+  // net::StreamListenSocket::Delegate implementation:
+  virtual void DidAccept(net::StreamListenSocket* listener,
+                         net::StreamListenSocket* client) OVERRIDE;
+  virtual void DidRead(net::StreamListenSocket* client,
+                       const char* data,
+                       int len) OVERRIDE;
+  virtual void DidClose(net::StreamListenSocket* client) OVERRIDE;
 
-  void ProcessIncomingConnections();
-  void SelectConnections();
+ private:
+  explicit LBNetworkConsole(LBDebugConsole *console);
+  virtual ~LBNetworkConsole();
 
   static bool TelnetLogHandler(int severity, const char* file, int line,
                                size_t message_start, const std::string& str);
+  bool GetTelnetPort(int* port);
 
-  LBDebugConsole *debug_console_;
   static LBNetworkConsole *instance_;
 
-  typedef std::map<int, LBNetworkConnection*> connection_map;
-  connection_map connections_;
-  int listen_socket_;
-  fd_set fds_;  // used by select() to query the read/write readiness of sockets
+  LBDebugConsole *debug_console_;
+  typedef std::map<net::StreamListenSocket *, LBNetworkConnection *>
+      ConnectionMap;
+  ConnectionMap connections_;
+  scoped_ptr<net::StreamListenSocketFactory> factory_;
+  scoped_refptr<net::StreamListenSocket> listen_socket_;
+
+  LB::CVal<std::string> console_display_;
 };
+
 #endif  // __LB_SHELL__ENABLE_CONSOLE__
 
 #endif  // SRC_LB_NETWORK_CONSOLE_H_

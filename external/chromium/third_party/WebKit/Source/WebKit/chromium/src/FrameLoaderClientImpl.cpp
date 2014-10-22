@@ -158,10 +158,12 @@ void FrameLoaderClientImpl::didExhaustMemoryAvailableForScript()
 void FrameLoaderClientImpl::didCreateScriptContext(v8::Handle<v8::Context> context, int extensionGroup, int worldId)
 {
     WebViewImpl* webview = m_webFrame->viewImpl();
+#if ENABLE(INSPECTOR)
     if (webview->devToolsAgentPrivate())
         webview->devToolsAgentPrivate()->didCreateScriptContext(m_webFrame, worldId);
     if (m_webFrame->client())
         m_webFrame->client()->didCreateScriptContext(m_webFrame, context, extensionGroup, worldId);
+#endif
 }
 
 void FrameLoaderClientImpl::willReleaseScriptContext(v8::Handle<v8::Context> context, int worldId)
@@ -1666,10 +1668,12 @@ void FrameLoaderClientImpl::dispatchIntent(PassRefPtr<WebCore::IntentRequest> in
 }
 #endif
 
+#if ENABLE(WEB_SOCKETS)
 void FrameLoaderClientImpl::dispatchWillOpenSocketStream(SocketStreamHandle* handle)
 {
     m_webFrame->client()->willOpenSocketStream(SocketStreamHandleInternal::toWebSocketStreamHandle(handle));
 }
+#endif
 
 #if ENABLE(MEDIA_STREAM)
 void FrameLoaderClientImpl::dispatchWillStartUsingPeerConnectionHandler(RTCPeerConnectionHandler* handler)

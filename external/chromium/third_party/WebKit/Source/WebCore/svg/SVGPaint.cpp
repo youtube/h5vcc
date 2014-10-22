@@ -26,7 +26,6 @@
 
 #include "SVGException.h"
 #include "SVGURIReference.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -110,12 +109,6 @@ SVGPaint::SVGPaint(const SVGPaint& cloneFrom)
 PassRefPtr<SVGPaint> SVGPaint::cloneForCSSOM() const
 {
     return adoptRef(new SVGPaint(*this));
-}
-
-void SVGPaint::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_uri);
 }
 
 }

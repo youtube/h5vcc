@@ -81,8 +81,6 @@ public:
     void append(CFDataRef);
 #endif
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     ResourceBuffer();
 

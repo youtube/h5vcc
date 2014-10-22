@@ -8,12 +8,24 @@
 #include "base/android/jni_android.h"
 #include "base/android/jni_registrar.h"
 
+#include "media/base/android/audio_focus_bridge.h"
+#include "media/base/android/audio_track_bridge.h"
+#include "media/base/android/media_codec_bridge.h"
+#include "media/base/android/media_drm_bridge.h"
 #include "media/base/android/media_player_bridge.h"
 #include "media/base/android/media_player_listener.h"
 
 namespace media {
 
 static base::android::RegistrationMethod kMediaRegisteredMethods[] = {
+  { "AudioFocusBridge",
+    AudioFocusBridge::RegisterAudioFocusBridge },
+  { "AudioTrackBridge",
+    AudioTrackBridge::RegisterAudioTrackBridge },
+  { "MediaCodecBridge",
+    MediaCodecBridge::RegisterMediaCodecBridge },
+  { "MediaDrmBridge",
+    MediaDrmBridge::RegisterMediaDrmBridge },
   { "MediaPlayerBridge",
     MediaPlayerBridge::RegisterMediaPlayerBridge },
   { "MediaPlayerListener",

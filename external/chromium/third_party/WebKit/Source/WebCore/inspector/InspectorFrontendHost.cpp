@@ -296,4 +296,20 @@ String InspectorFrontendHost::loadResourceSynchronously(const String& url)
 
 } // namespace WebCore
 
+#else
+
+#include "InspectorFrontendHost.h"
+
+namespace WebCore {
+
+void InspectorFrontendHost::disconnectClient()
+{
+}
+
+InspectorFrontendHost::~InspectorFrontendHost()
+{
+}
+
+} // namespace WebCore
+
 #endif // ENABLE(INSPECTOR)

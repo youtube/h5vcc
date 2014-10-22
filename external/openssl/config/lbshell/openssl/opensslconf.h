@@ -181,7 +181,7 @@
 /* If this is set to 'unsigned int' on a DEC Alpha, this gives about a
  * %20 speed up (longs are 8 bytes, int's are 4). */
 #ifndef DES_LONG
-#define DES_LONG unsigned long
+#define DES_LONG unsigned int
 #endif
 #endif
 
@@ -201,7 +201,7 @@
 #undef SIXTEEN_BIT
 #undef EIGHT_BIT
 
-#if defined(__LB_LINUX__)
+#if defined(__x86_64__)
 #undef BN_LLONG
 #define SIXTY_FOUR_BIT_LONG
 #else

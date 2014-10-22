@@ -4,7 +4,7 @@
 
 #include "ui/gl/egl_util.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include <EGL/egl.h>
 #else
 #include "third_party/angle/include/EGL/egl.h"

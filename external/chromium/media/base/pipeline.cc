@@ -21,6 +21,9 @@
 #include "media/base/clock.h"
 #include "media/base/filter_collection.h"
 #include "media/base/media_log.h"
+#if defined(__LB_SHELL__)
+#include "media/base/shell_media_statistics.h"
+#endif  // defined(__LB_SHELL__)
 #include "media/base/video_decoder.h"
 #include "media/base/video_decoder_config.h"
 #include "media/base/video_renderer.h"
@@ -62,6 +65,20 @@ media::PipelineStatus PipelineStatusNotification::status() {
   return status_;
 }
 
+#if defined(__LB_SHELL__)
+
+base::Lock s_instance_lock;
+Pipeline* s_pipeline_instance;
+
+// static
+base::TimeDelta Pipeline::GetCurrentTime() {
+  base::AutoLock auto_lock(s_instance_lock);
+  return s_pipeline_instance ? s_pipeline_instance->GetMediaTime() :
+                               base::TimeDelta();
+}
+
+#endif  // defined(__LB_SHELL__)
+
 Pipeline::Pipeline(const scoped_refptr<base::MessageLoopProxy>& message_loop,
                    MediaLog* media_log)
     : message_loop_(message_loop),
@@ -85,9 +102,20 @@ Pipeline::Pipeline(const scoped_refptr<base::MessageLoopProxy>& message_loop,
   media_log_->AddEvent(media_log_->CreatePipelineStateChangedEvent(kCreated));
   media_log_->AddEvent(
       media_log_->CreateEvent(MediaLogEvent::PIPELINE_CREATED));
+
+#if defined(__LB_SHELL__)
+  base::AutoLock auto_lock(s_instance_lock);
+  s_pipeline_instance = this;
+#endif  // defined(__LB_SHELL__)
 }
 
 Pipeline::~Pipeline() {
+#if defined(__LB_SHELL__)
+  {
+    base::AutoLock auto_lock(s_instance_lock);
+    s_pipeline_instance = NULL;
+  }
+#endif  // defined(__LB_SHELL__)
   // TODO(scherkus): Reenable after figuring out why this is firing, see
   // http://crbug.com/148405
 #if 0
@@ -106,7 +134,8 @@ void Pipeline::Start(scoped_ptr<FilterCollection> collection,
                      const PipelineStatusCB& ended_cb,
                      const PipelineStatusCB& error_cb,
                      const PipelineStatusCB& seek_cb,
-                     const BufferingStateCB& buffering_state_cb) {
+                     const BufferingStateCB& buffering_state_cb,
+                     const base::Closure& duration_change_cb) {
   base::AutoLock auto_lock(lock_);
   CHECK(!running_) << "Media pipeline is already running";
   DCHECK(!buffering_state_cb.is_null());
@@ -114,7 +143,7 @@ void Pipeline::Start(scoped_ptr<FilterCollection> collection,
   running_ = true;
   message_loop_->PostTask(FROM_HERE, base::Bind(
       &Pipeline::StartTask, this, base::Passed(&collection),
-      ended_cb, error_cb, seek_cb, buffering_state_cb));
+      ended_cb, error_cb, seek_cb, buffering_state_cb, duration_change_cb));
 }
 
 void Pipeline::Stop(const base::Closure& stop_cb) {
@@ -393,6 +422,8 @@ void Pipeline::SetDuration(TimeDelta duration) {
 
   base::AutoLock auto_lock(lock_);
   clock_->SetDuration(duration);
+  if (!duration_change_cb_.is_null())
+    duration_change_cb_.Run();
 }
 
 void Pipeline::SetTotalBytes(int64 total_bytes) {
@@ -497,6 +528,9 @@ void Pipeline::StateTransitionTask(PipelineStatus status) {
       return DoPlay(done_cb);
 
     case kStarted:
+#if defined(__LB_SHELL__)
+      ShellMediaStatistics::Instance().OnPlaybackBegin();
+#endif  // defined(__LB_SHELL__)
       {
         base::AutoLock l(lock_);
         // We use audio stream to update the clock. So if there is such a
@@ -700,7 +734,8 @@ void Pipeline::StartTask(scoped_ptr<FilterCollection> filter_collection,
                          const PipelineStatusCB& ended_cb,
                          const PipelineStatusCB& error_cb,
                          const PipelineStatusCB& seek_cb,
-                         const BufferingStateCB& buffering_state_cb) {
+                         const BufferingStateCB& buffering_state_cb,
+                         const base::Closure& duration_change_cb) {
   DCHECK(message_loop_->BelongsToCurrentThread());
   CHECK_EQ(kCreated, state_)
       << "Media pipeline cannot be started more than once";
@@ -710,6 +745,7 @@ void Pipeline::StartTask(scoped_ptr<FilterCollection> filter_collection,
   error_cb_ = error_cb;
   seek_cb_ = seek_cb;
   buffering_state_cb_ = buffering_state_cb;
+  duration_change_cb_ = duration_change_cb;
 
   StateTransitionTask(PIPELINE_OK);
 }
@@ -804,6 +840,7 @@ void Pipeline::SeekTask(TimeDelta time, const PipelineStatusCB& seek_cb) {
     base::AutoLock auto_lock(lock_);
     if (clock_->IsPlaying())
       clock_->Pause();
+    waiting_for_clock_update_ = false;
     clock_->SetTime(seek_timestamp, seek_timestamp);
   }
   DoSeek(seek_timestamp, base::Bind(&Pipeline::OnStateTransition, this));

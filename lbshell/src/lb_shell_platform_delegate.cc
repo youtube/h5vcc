@@ -16,27 +16,39 @@
 
 #include "lb_shell_platform_delegate.h"
 
+#include "lb_local_storage_database_adapter.h"
 #include "lb_shell.h"
+#include "media/base/shell_media_platform.h"
 #include "object_watcher_shell.h"
 
 // static
 void LBShellPlatformDelegate::Init() {
   PlatformInit();
 
-  PlatformMediaInit();
+#if !defined(__LB_SHELL_NO_CHROME__)
+  media::ShellMediaPlatform::Initialize();
+#endif
 
+  LBLocalStorageDatabaseAdapter::Register();
+
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__) && !defined(__LB_ANDROID__)
   // the objectwatcher makes a thread for polling sockets, in a lame
   // emulation of callback io.  start that thread now.  it will block
   // until it has something to watch.
   base::steel::ObjectWatcher::InitializeObjectWatcherSystem();
+#endif
 }
 
 // static
 void LBShellPlatformDelegate::Teardown() {
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__) && !defined(__LB_ANDROID__)
   // shutdown object polling thread
   base::steel::ObjectWatcher::TeardownObjectWatcherSystem();
+#endif
 
-  PlatformMediaTeardown();
+#if !defined(__LB_SHELL_NO_CHROME__)
+  media::ShellMediaPlatform::Terminate();
+#endif
 
   PlatformTeardown();
 }

@@ -27,4 +27,12 @@
     'command_buffer/common/time.h',
     'command_buffer/common/types.h',
   ],
+  'conditions': [
+    ['OS=="lb_shell"', {
+      'sources': [
+        '<(lbshell_root)/src/lb_gl_command_buffer.cc',
+        '<(lbshell_root)/src/lb_gl_command_buffer.h',
+      ],
+    }],
+  ],
 }

@@ -28,7 +28,7 @@ namespace WTF {
 class ShellPageAllocator {
  public:
   ~ShellPageAllocator() {
-    free(buffer_);
+    free(buffer_orig_);
     free(free_bitmap_);
   }
 
@@ -92,6 +92,27 @@ class ShellPageAllocator {
     return instance_;
   }
 
+  // Use the system allocator to get an aligned block.
+  void* allocateBlock(size_t alignment, size_t size) {
+    // Overallocate so we can guarantee an aligned block.
+    // We write the address of the original pointer just behind
+    // the block to be returned.
+    void* ptr = malloc(size + alignment + sizeof(void*));
+    void* aligned_ptr = alignPtr((void*)((uintptr_t)ptr + sizeof(void*)), alignment);
+
+    // Check that we have room to write the header
+    ASSERT((uintptr_t)aligned_ptr - (uintptr_t)ptr >= sizeof(void*));
+    void** orig_ptr = (void**)((uintptr_t)aligned_ptr - sizeof(void*));
+    *orig_ptr = ptr;
+    return aligned_ptr;
+  }
+
+  // Free a block that was allocated with allocateBlock()
+  void freeBlock(void* ptr) {
+    void* orig_ptr = *(void**)((uintptr_t)ptr - sizeof(void*));
+    free(orig_ptr);
+  }
+
   static bool instanceExists() {
     return instance_ != NULL;
   }
@@ -114,6 +135,7 @@ class ShellPageAllocator {
   static ShellPageAllocator* instance_;
 
   void* buffer_;
+  void* buffer_orig_;
   size_t buffer_size_;
   uint32_t* free_bitmap_;
   int bitmap_size_;
@@ -136,6 +158,10 @@ class ShellPageAllocator {
     return (value + align - 1) & ~(align - 1);
   }
 
+  static inline void* alignPtr(void* ptr, size_t alignment) {
+    return (void*)(((uintptr_t)ptr + alignment - 1) & ~(alignment - 1));
+  }
+
   void set_bit(uint32_t index, uint32_t bit) {
     ASSERT(index < bitmap_size_);
     free_bitmap_[index] |= (1 << bit);
@@ -155,7 +181,9 @@ ShellPageAllocator::ShellPageAllocator(size_t buffer_size) {
   const int page_count = align(buffer_size_, kPageSize) / kPageSize;
   bitmap_size_ = align(page_count, 32) / 32;
 
-  buffer_ = memalign(kPageSize, buffer_size_);
+  buffer_orig_ = malloc(buffer_size_ + kPageSize);
+  buffer_ = alignPtr(buffer_orig_, kPageSize);
+
   ASSERT(buffer_ != NULL);
   free_bitmap_ = (uint32_t*)malloc(bitmap_size_ * sizeof(uint32_t));
   ASSERT(free_bitmap_);
@@ -192,11 +220,8 @@ void* OSAllocator::reserveUncommitted(size_t vm_size, Usage usage, bool writable
     p = allocator->allocatePage();
   }
   if (!p) {
-    if (usage == JSUnalignedPages) {
-      return malloc(vm_size);
-    } else {
-      return memalign(ShellPageAllocator::kPageSize, vm_size);
-    }
+    const size_t alignment = usage == JSUnalignedPages ? 16 : ShellPageAllocator::kPageSize;
+    return allocator->allocateBlock(alignment, vm_size);
   }
   return p;
 }
@@ -208,11 +233,11 @@ void OSAllocator::releaseDecommitted(void* addr, size_t size)
   if (allocator->isValidPage(addr)) {
     allocator->freePage(addr);
   } else {
-    free(addr);
+    allocator->freeBlock(addr);
   }
 
 #if !defined(__LB_SHELL__FOR_RELEASE__)
-  allocator->updateAllocatedBytes(-size);
+  allocator->updateAllocatedBytes(-(int)size);
 #endif
 }
 

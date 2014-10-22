@@ -18,35 +18,41 @@
 
 #include "lb_request_context.h"
 
-#include "external/chromium/build/build_config.h"
-#include "external/chromium/base/compiler_specific.h"
-#include "external/chromium/base/file_path.h"
-#include "external/chromium/base/threading/worker_pool.h"
-#include "external/chromium/net/base/cert_verify_proc.h"
-#include "external/chromium/net/base/default_server_bound_cert_store.h"
-#include "external/chromium/net/base/host_resolver.h"
-#include "external/chromium/net/base/multi_threaded_cert_verifier.h"
-#include "external/chromium/net/base/server_bound_cert_service.h"
-#include "external/chromium/net/base/ssl_config_service_defaults.h"
-#include "external/chromium/net/cookies/cookie_monster.h"
-#include "external/chromium/net/http/http_auth_handler_factory.h"
-#include "external/chromium/net/http/http_network_session.h"
-#include "external/chromium/net/http/http_server_properties_impl.h"
-#include "external/chromium/net/proxy/proxy_config_service.h"
-#include "external/chromium/net/proxy/proxy_config_service_fixed.h"
-#include "external/chromium/net/proxy/proxy_service.h"
-#include "external/chromium/net/socket/client_socket_pool.h"
-#include "external/chromium/net/socket/client_socket_pool_manager.h"
-#include "external/chromium/net/url_request/url_request_job_factory.h"
-#include "external/chromium/net/url_request/url_request_job_factory_impl.h"
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebKit.h"
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/platform/WebKitPlatformSupport.h"
-#include "external/chromium/webkit/blob/blob_storage_controller.h"
-#include "external/chromium/webkit/glue/webkit_glue.h"
+#include "build/build_config.h"
+#include "base/command_line.h"
+#include "base/compiler_specific.h"
+#include "base/file_path.h"
+#include "base/threading/worker_pool.h"
+#include "net/base/cert_verify_proc.h"
+#include "net/base/default_server_bound_cert_store.h"
+#include "net/base/host_resolver.h"
+#include "net/base/multi_threaded_cert_verifier.h"
+#include "net/base/server_bound_cert_service.h"
+#include "net/base/ssl_config_service_defaults.h"
+#include "net/cookies/cookie_monster.h"
+#include "net/http/http_auth_handler_factory.h"
+#include "net/http/http_network_session.h"
+#include "net/http/http_server_properties_impl.h"
+#include "net/proxy/proxy_config_service.h"
+#include "net/proxy/proxy_config_service_fixed.h"
+#include "net/proxy/proxy_service.h"
+#include "net/socket/client_socket_pool.h"
+#include "net/socket/client_socket_pool_manager.h"
+#include "net/url_request/url_request_job_factory_impl.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/WebKit.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/platform/WebKitPlatformSupport.h"
+#include "webkit/blob/blob_storage_controller.h"
+#include "webkit/glue/webkit_glue.h"
 
-#include "lb_memory_manager.h"
-#include "lb_platform.h"
+#if __LB_ENABLE_NATIVE_HTTP_STACK__
+#include "net/http/shell/http_transaction_factory_shell.h"
+#endif
+
+#include "chromium/net/proxy/proxy_config_service_shell.h"
+#include "lb_network_helpers.h"
 #include "lb_resource_loader_bridge.h"
+#include "lb_shell_switches.h"
+#include "lb_webblobregistry_impl.h"
 
 LBRequestContext::LBRequestContext()
     : ALLOW_THIS_IN_INITIALIZER_LIST(storage_(this)) {
@@ -63,17 +69,38 @@ LBRequestContext::LBRequestContext(
 void LBRequestContext::Init(
     net::CookieMonster::PersistentCookieStore *persistent_cookie_store,
     bool no_proxy) {
-  storage_.set_cookie_store(LB_NEW net::CookieMonster(persistent_cookie_store,
+  persistent_cookie_store_ = persistent_cookie_store;
+  storage_.set_cookie_store(new net::CookieMonster(persistent_cookie_store,
       NULL));
-  storage_.set_server_bound_cert_service(LB_NEW net::ServerBoundCertService(
-      LB_NEW net::DefaultServerBoundCertStore(NULL),
+  storage_.set_server_bound_cert_service(new net::ServerBoundCertService(
+      new net::DefaultServerBoundCertStore(NULL),
       base::WorkerPool::GetTaskRunner(true)));
 
-  // Use the system proxy settings.
-  scoped_ptr<net::ProxyConfigService> proxy_config_service(
-      net::ProxyService::CreateSystemProxyConfigService(
-           NULL, MessageLoop::current()));
+  blob_storage_controller_.reset(new webkit_blob::BlobStorageController());
 
+  // LBRequestContext must be created on the I/O thread
+  LBWebBlobRegistryImpl::InitFromIOThread(blob_storage_controller_.get());
+
+  scoped_ptr<net::ProxyConfigService> proxy_config_service;
+
+  std::string address;
+#if !defined(__LB_SHELL__FOR_RELEASE__)
+  CommandLine *cl = CommandLine::ForCurrentProcess();
+  address = cl->GetSwitchValueASCII(LB::switches::kProxy);
+  if (!address.empty()) {
+    DLOG(INFO) << "Using fixed proxy address: " << address;
+    net::ProxyConfig pc;
+    pc.proxy_rules().ParseFromString(address);
+    proxy_config_service.reset(new net::ProxyConfigServiceFixed(pc));
+    LBResourceLoaderBridge::SetPerimeterCheckEnabled(false);
+    LBResourceLoaderBridge::SetPerimeterCheckLogging(false);
+  }
+#endif
+  if (address.empty()) {
+    proxy_config_service.reset(new net::ProxyConfigServiceShell());
+  }
+
+#if !__LB_ENABLE_NATIVE_HTTP_STACK__
   net::HostResolver::Options options;
   options.max_concurrent_resolves = net::HostResolver::kDefaultParallelism;
   options.max_retry_attempts = net::HostResolver::kDefaultRetryAttempts;
@@ -81,20 +108,20 @@ void LBRequestContext::Init(
   storage_.set_host_resolver(
       net::HostResolver::CreateSystemResolver(options, NULL));
 
-  storage_.set_cert_verifier(LB_NEW net::MultiThreadedCertVerifier(
+  storage_.set_cert_verifier(new net::MultiThreadedCertVerifier(
       net::CertVerifyProc::CreateDefault()));
-  storage_.set_proxy_service(net::ProxyService::CreateUsingSystemProxyResolver(
-      proxy_config_service.release(), 0, NULL));
   storage_.set_ssl_config_service(
-      LB_NEW net::SSLConfigServiceDefaults);
+      new net::SSLConfigServiceDefaults);
 
   storage_.set_http_auth_handler_factory(
       net::HttpAuthHandlerFactory::CreateDefault(host_resolver()));
   storage_.set_http_server_properties(
-      LB_NEW net::HttpServerPropertiesImpl);
-
+      new net::HttpServerPropertiesImpl);
+#endif
+  storage_.set_proxy_service(net::ProxyService::CreateUsingSystemProxyResolver(
+      proxy_config_service.release(), 0, NULL));
   net::HttpNetworkSession::Params params;
-  params.client_socket_factory = NULL; // TODO
+  params.client_socket_factory = NULL;  // TODO
   params.host_resolver = host_resolver();
   params.cert_verifier = cert_verifier();
   params.server_bound_cert_service = server_bound_cert_service();
@@ -112,17 +139,31 @@ void LBRequestContext::Init(
   LB::Platform::ConfigureSocketPools();
 #endif
 
+#if !__LB_ENABLE_NATIVE_HTTP_STACK__
   // disable caching
   net::HttpCache::DefaultBackend* backend = NULL;
-  net::HttpCache* cache = LB_NEW net::HttpCache(params, backend);
+  net::HttpCache* cache = new net::HttpCache(params, backend);
   cache->set_mode(net::HttpCache::DISABLE);
   storage_.set_http_transaction_factory(cache);
-
-  net::URLRequestJobFactory* job_factory = LB_NEW net::URLRequestJobFactoryImpl;
+#else
+  net::HttpTransactionFactory* transaction_factory =
+      new net::HttpTransactionFactoryShell(params);
+  storage_.set_http_transaction_factory(transaction_factory);
+#endif
+  net::URLRequestJobFactory* job_factory = new net::URLRequestJobFactoryImpl;
 
   storage_.set_job_factory(job_factory);
 }
 
+void LBRequestContext::ResetCookieMonster() {
+  storage_.set_cookie_store(
+      new net::CookieMonster(persistent_cookie_store_, NULL));
+}
+
 LBRequestContext::~LBRequestContext() {
+  if (blob_storage_controller_) {
+    // LBRequestContext must be destroyed on the I/O thread
+    LBWebBlobRegistryImpl::CleanUpFromIOThread();
+  }
 }
 

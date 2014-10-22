@@ -48,6 +48,8 @@ class WEBKIT_STORAGE_EXPORT DomStorageHost {
   bool ClearArea(int connection_id, const GURL& page_url);
   bool HasAreaOpen(int namespace_id, const GURL& origin) const;
 
+  void Flush();
+
  private:
   // Struct to hold references needed for areas that are open
   // within our associated client process.

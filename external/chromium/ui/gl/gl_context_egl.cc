@@ -8,8 +8,13 @@
 #include "base/logging.h"
 #include "base/memory/scoped_ptr.h"
 #include "build/build_config.h"
+#if defined(__LB_SHELL__)
+#include "../angle/include/EGL/egl.h"
+#include "../angle/include/EGL/eglext.h"
+#else
 #include "third_party/angle/include/EGL/egl.h"
 #include "third_party/angle/include/EGL/eglext.h"
+#endif
 #include "ui/gl/egl_util.h"
 #include "ui/gl/gl_surface_egl.h"
 

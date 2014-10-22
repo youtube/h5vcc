@@ -21,8 +21,8 @@
 #include "ui/gfx/rect_f.h"
 #include "ui/gfx/transform.h"
 
-#if defined(__LB_SHELL__)
-#include "base/shell_allocator.h"
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
+#include "cc/shell_allocator.h"
 #endif
 
 namespace cc {
@@ -123,7 +123,9 @@ class CC_EXPORT RenderPass {
 } // namespace cc
 
 namespace BASE_HASH_NAMESPACE {
-#if defined(COMPILER_MSVC) || defined(COMPILER_SNC) || defined(COMPILER_GHS)
+#if defined(COMPILER_MSVC) || \
+    (defined(__LB_SHELL__) && \
+        !(defined(__LB_ANDROID__) || defined(__LB_LINUX__)))
 template<>
 inline size_t hash_value<cc::RenderPass::Id>(const cc::RenderPass::Id& key) {
   return hash_value<std::pair<int, int> >(
@@ -144,7 +146,7 @@ struct hash<cc::RenderPass::Id> {
 
 namespace cc {
 typedef std::vector<RenderPass*> RenderPassList;
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
 static const int kMaxRenderPassIdReuseListCount = 16;
 class RenderPassIdReuseList :
     public base::ShellAllocatorBufferList<kMaxRenderPassIdReuseListCount> {

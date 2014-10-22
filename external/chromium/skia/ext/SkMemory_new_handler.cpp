@@ -91,7 +91,7 @@ void* sk_realloc_throw(void* addr, size_t size) {
 }
 
 void sk_free(void* p) {
-    gSkMemStats.updateBytes(-gSkMemStats.getBlockSize(p));
+    gSkMemStats.updateBytes(-(int)gSkMemStats.getBlockSize(p));
     if (p) {
         free(p);
     }

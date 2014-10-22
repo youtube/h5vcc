@@ -33,6 +33,22 @@ class BufferedDataSource : public media::DataSource {
  public:
   typedef base::Callback<void(bool)> DownloadingCB;
 
+  #if defined(__LB_XB1__) || defined(__LB_XB360__)
+  // On XB1 the network stack cannot handle download of large files. The maximum
+  // buffer value is currently set to 8M in
+  //   lbshell\src\platform\xb1\chromium\net\http\http_sequential_stream.cc
+  // Also, the current network stack cannot handle Abort properly so we have to
+  // set this value smaller than kMinBufferCapacity inside
+  //   external\chromium\webkit\media\buffered_resource_loader.cc
+  // which is set to 2M currently to avoid too many xhr aborts.
+  // By increasing kMinBufferCapacity to 8M and the below constant to 8M we can
+  // further decrease the amount of xhr aborts but will consume 6M more memory.
+
+  // TODO(iffy): Determine if this applies to xhttp on Xbox 360. Assuming it
+  // does for now.
+  static const int kMaximumRequestSize = 2 * 1024 * 1024;
+  #endif  // defined(__LB_XB1__) || defined(__LB_XB360__)
+
   // |downloading_cb| will be called whenever the downloading/paused state of
   // the source changes.
   BufferedDataSource(MessageLoop* render_loop,

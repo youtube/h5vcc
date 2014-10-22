@@ -54,7 +54,7 @@ void StringPrintStream::vprintf(const char* format, va_list argList)
     ASSERT(!m_buffer[m_next]);
     
     va_list firstPassArgList;
-#if OS(WINDOWS)
+#if OS(WINDOWS) || defined(__LB_XB1__) || defined(__LB_XB360__)
     firstPassArgList = argList;
 #else
     va_copy(firstPassArgList, argList);

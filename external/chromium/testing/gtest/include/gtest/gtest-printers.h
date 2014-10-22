@@ -100,6 +100,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
+
 #include "gtest/internal/gtest-port.h"
 #include "gtest/internal/gtest-internal.h"
 
@@ -323,14 +326,17 @@ void DefaultPrintTo(IsNotContainer /* dummy */,
       // even using reinterpret_cast, as earlier versions of gcc
       // (e.g. 3.4.5) cannot compile the cast when p is a function
       // pointer.  Casting to UInt64 first solves the problem.
-#if defined(__LB_PS3__)
+#if defined(__SNC__)
 #pragma diag_push
-#pragma diag_suppress=1067  // Suppress warning 1067
+#pragma diag_suppress=1067
+#elif defined(__ghs__)
+#pragma diag_push
+#pragma diag_suppress=1053
 #endif
       *os << reinterpret_cast<const void*>(
-          reinterpret_cast<internal::UInt64>(p));
-#if defined(__LB_PS3__)
-#pragma diag_pop  // Renable warning 1067
+          reinterpret_cast<uintptr_t>(p));
+#if defined(__SNC__) || defined (__ghs__)
+#pragma diag_pop  // Renable warnings
 #endif
     }
   }

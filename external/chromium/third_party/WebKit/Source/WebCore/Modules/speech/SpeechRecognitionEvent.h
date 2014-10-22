@@ -61,6 +61,9 @@ public:
     static PassRefPtr<SpeechRecognitionEvent> createResult(PassRefPtr<SpeechRecognitionResult>, short resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
 
     static PassRefPtr<SpeechRecognitionEvent> createResult(unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results);
+#if defined(__LB_SHELL__)
+    static PassRefPtr<SpeechRecognitionEvent> createResult(unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results, const String& interpretation);
+#endif
     static PassRefPtr<SpeechRecognitionEvent> createNoMatch(PassRefPtr<SpeechRecognitionResult>);
 
     unsigned long resultIndex() const { return m_resultIndex; }
@@ -70,6 +73,14 @@ public:
     SpeechRecognitionResult* result() const { return m_result.get(); }
     SpeechRecognitionResultList* resultHistory() const { return m_resultHistory.get(); }
 
+    // These two methods are here to satisfy the specification which requires these attrubutes to exist.
+#if defined(__LB_SHELL__)
+    const String& interpretation() { return m_interpretation; }
+#else
+    Document* interpretation() { return 0; }
+#endif
+    Document* emma() { return 0; }
+
     // Event
     virtual const AtomicString& interfaceName() const OVERRIDE;
 
@@ -78,6 +89,9 @@ private:
     SpeechRecognitionEvent(const AtomicString&, const SpeechRecognitionEventInit&);
     SpeechRecognitionEvent(const AtomicString& eventName, PassRefPtr<SpeechRecognitionResult>, short resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory); // FIXME: Remove.
     SpeechRecognitionEvent(const AtomicString& eventName, unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results);
+#if defined(__LB_SHELL__)
+    SpeechRecognitionEvent(const AtomicString& eventName, unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results, const String& interpretation);
+#endif
     explicit SpeechRecognitionEvent(PassRefPtr<SpeechRecognitionError>);
 
     unsigned long m_resultIndex;
@@ -86,6 +100,10 @@ private:
     // DEPRECATED
     RefPtr<SpeechRecognitionResult> m_result;
     RefPtr<SpeechRecognitionResultList> m_resultHistory;
+
+#if defined(__LB_SHELL__)
+    String m_interpretation;
+#endif
 };
 
 } // namespace WebCore

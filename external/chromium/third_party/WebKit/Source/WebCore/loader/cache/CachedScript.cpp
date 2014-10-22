@@ -32,7 +32,6 @@
 #include "CachedResourceClientWalker.h"
 #include "ResourceBuffer.h"
 #include "TextResourceDecoder.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/Vector.h>
 
 #if USE(JSC)  
@@ -123,16 +122,5 @@ void CachedScript::sourceProviderCacheSizeChanged(int delta)
     setDecodedSize(decodedSize() + delta);
 }
 #endif
-
-void CachedScript::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResourceScript);
-    CachedResource::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_script);
-    info.addMember(m_decoder);
-#if USE(JSC)
-    info.addMember(m_sourceProviderCache);
-#endif
-}
 
 } // namespace WebCore

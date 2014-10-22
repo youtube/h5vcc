@@ -108,7 +108,9 @@ public:
 #endif
     virtual WebDocument document() const;
     virtual WebAnimationController* animationController();
+#if ENABLE(PERFORMANCE_TIMELINE)
     virtual WebPerformance performance() const;
+#endif
     virtual NPObject* windowObject() const;
     virtual void bindToWindowObject(const WebString& name, NPObject*);
     virtual void executeScript(const WebScriptSource&);
@@ -137,6 +139,7 @@ public:
         int argc,
         v8::Handle<v8::Value> argv[]);
     virtual v8::Local<v8::Context> mainWorldScriptContext() const;
+#if ENABLE(FILE_SYSTEM)
     virtual v8::Handle<v8::Value> createFileSystem(WebFileSystem::Type,
                                                    const WebString& name,
                                                    const WebString& path);
@@ -148,6 +151,7 @@ public:
                                                   const WebString& fileSystemPath,
                                                   const WebString& filePath,
                                                   bool isDirectory);
+#endif
 #endif
     virtual void reload(bool ignoreCache);
     virtual void reloadWithOverrideURL(const WebURL& overrideUrl, bool ignoreCache);
@@ -250,6 +254,10 @@ public:
 
     virtual bool selectionStartHasSpellingMarkerFor(int from, int length) const;
     virtual WebString layerTreeAsText(bool showDebugInfo = false) const;
+
+#if defined(__LB_SHELL__)
+    virtual WebString layerBackingsInfo() const;
+#endif
 
     // WebCore::FrameDestructionObserver methods.
     virtual void willDetachPage();

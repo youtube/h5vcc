@@ -248,16 +248,24 @@ WebElement WebDocument::createElement(const WebString& tagName)
 
 WebAccessibilityObject WebDocument::accessibilityObject() const
 {
+#if HAVE(ACCESSIBILITY)
     const Document* document = constUnwrap<Document>();
     return WebAccessibilityObject(
         document->axObjectCache()->getOrCreate(document->renderer()));
+#else
+    return WebAccessibilityObject();
+#endif
 }
 
 WebAccessibilityObject WebDocument::accessibilityObjectFromID(int axID) const
 {
+#if HAVE(ACCESSIBILITY)
     const Document* document = constUnwrap<Document>();
     return WebAccessibilityObject(
         document->axObjectCache()->objectFromAXID(axID));
+#else
+    return WebAccessibilityObject();
+#endif
 }
 
 WebVector<WebDraggableRegion> WebDocument::draggableRegions() const

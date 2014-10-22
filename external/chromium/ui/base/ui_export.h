@@ -9,8 +9,7 @@
 // exported to consumers.
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
-
+#if defined(_MSC_VER)
 #if defined(UI_IMPLEMENTATION)
 #define UI_EXPORT __declspec(dllexport)
 #else

@@ -29,6 +29,7 @@ class WebMStreamParser : public StreamParser {
                     const NewMediaSegmentCB& new_segment_cb,
                     const base::Closure& end_of_segment_cb,
                     const LogCB& log_cb) OVERRIDE;
+
   virtual void Flush() OVERRIDE;
   virtual bool Parse(const uint8* buf, int size) OVERRIDE;
 

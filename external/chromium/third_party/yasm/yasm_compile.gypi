@@ -92,7 +92,11 @@
     {
       'rule_name': 'assemble',
       'extension': 'asm',
-      'inputs': [ '<(yasm_path)', ],
+      'conditions': [
+        [ 'use_system_yasm==0', {
+          'inputs': [ '<(yasm_path)', ],
+        }],
+      ],
       'outputs': [
         '<(yasm_output_path)/<(RULE_INPUT_ROOT).<(asm_obj_extension)',
       ],

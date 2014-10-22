@@ -19,7 +19,6 @@
 #include "base/stringprintf.h"
 #include "lb_platform.h"
 #include "media/base/shell_buffer_factory.h"
-#include "media/base/shell_filter_graph_log.h"
 #include "media/filters/shell_au.h"
 #include "media/filters/shell_rbsp_stream.h"
 #include "media/mp4/aac.h"
@@ -32,9 +31,8 @@ static const int kAVCConfigMinSize = 8;
 static const uint8 kSPSNALType = 7;
 
 ShellAVCParser::ShellAVCParser(
-    scoped_refptr<ShellDataSourceReader> reader,
-    scoped_refptr<ShellFilterGraphLog> filter_graph_log)
-    : ShellParser(reader, filter_graph_log)
+    scoped_refptr<ShellDataSourceReader> reader)
+    : ShellParser(reader)
     , nal_header_size_(0)
     , video_prepend_size_(0) {
 }
@@ -58,6 +56,11 @@ bool ShellAVCParser::Prepend(scoped_refptr<ShellAU> au,
     if (au->AddPrepend())
       memcpy(prepend_buffer, video_prepend_, video_prepend_size_);
   } else if (au->GetType() == DemuxerStream::AUDIO) {
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+    // We use raw AAC instead of ADTS on XB1.
+    DCHECK(audio_prepend_.empty());
+    return true;
+#endif  // defined(__LB_XB1__) || defined(__LB_XB360__)
     if (audio_prepend_.empty())  // valid ADTS header not available
       return false;
     // audio, need to copy ADTS header and then add buffer size
@@ -84,7 +87,7 @@ bool ShellAVCParser::Prepend(scoped_refptr<ShellAU> au,
 bool ShellAVCParser::DownloadAndParseAVCConfigRecord(uint64 offset,
                                                      uint32 size) {
   scoped_refptr<ShellScopedArray> record_buffer =
-      ShellBufferFactory::Instance()->AllocateArray(size, filter_graph_log_);
+      ShellBufferFactory::Instance()->AllocateArray(size);
   // It's possible that the size of this record buffer may exceed the
   // memory available to the media stack, in which case we skip it.
   if (!record_buffer || !record_buffer->Get()) {
@@ -476,12 +479,22 @@ void ShellAVCParser::ParseAudioSpecificConfig(uint8 b0, uint8 b1) {
   audio_prepend_[4] = 0;
   audio_prepend_[5] &= 0x1f;
 
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+  // We use raw AAC instead of ADTS on XB1.
+  audio_prepend_.clear();
+#endif  // defined(__LB_XB1__) || defined(__LB_XB360__)
+
   audio_config_.Initialize(kCodecAAC,
                            16,   // AAC is always 16 bit
                            aac.channel_layout(),
                            aac.GetOutputSamplesPerSecond(false),
+#if defined(__LB_XB1__) || defined(__LB_XB360__) || defined(__LB_ANDROID__)
+                           &aac.raw_data().front(),
+                           aac.raw_data().size(),
+#else  // defined(__LB_XB1__) || defined(__LB_XB360__) || defined(__LB_ANDROID__)
                            NULL,
                            0,
+#endif  // defined(__LB_XB1__) || defined(__LB_XB360__) || defined(__LB_ANDROID__)
                            false,
                            false);
 }

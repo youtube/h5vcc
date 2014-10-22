@@ -233,6 +233,9 @@ bool IsLocalePartiallyPopulated(const std::string& locale_name) {
 
 #if !defined(OS_MACOSX)
 bool IsLocaleAvailable(const std::string& locale) {
+#if defined(__LB_SHELL__)
+  return false;
+#else
   // If locale has any illegal characters in it, we don't want to try to
   // load it because it may be pointing outside the locale data file directory.
   if (!file_util::IsFilenameLegal(ASCIIToUTF16(locale)))
@@ -247,6 +250,7 @@ bool IsLocaleAvailable(const std::string& locale) {
     return false;
 
   return ResourceBundle::GetSharedInstance().LocaleDataPakExists(locale);
+#endif
 }
 
 bool CheckAndResolveLocale(const std::string& locale,
@@ -340,7 +344,8 @@ bool CheckAndResolveLocale(const std::string& locale,
 // if "foo bar" is RTL. So this function prepends the necessary RLM in such
 // cases.
 void AdjustParagraphDirectionality(string16* paragraph) {
-#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_ANDROID)
+#if defined(OS_POSIX) \
+    && !defined(OS_MACOSX) && !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
   if (base::i18n::IsRTL() &&
       base::i18n::StringContainsStrongRTLChars(*paragraph)) {
     paragraph->insert(0, 1, static_cast<char16>(base::i18n::kRightToLeftMark));
@@ -805,7 +810,7 @@ void SortStrings16(const std::string& locale,
                    std::vector<string16>* strings) {
   SortVectorWithStringKey(locale, strings, false);
 }
-
+#if !defined (__LB_SHELL__)
 const std::vector<std::string>& GetAvailableLocales() {
   CR_DEFINE_STATIC_LOCAL(std::vector<std::string>, locales, ());
   if (locales.empty()) {
@@ -839,6 +844,7 @@ const std::vector<std::string>& GetAvailableLocales() {
   }
   return locales;
 }
+#endif
 
 void GetAcceptLanguagesForLocale(const std::string& display_locale,
                                  std::vector<std::string>* locale_codes) {

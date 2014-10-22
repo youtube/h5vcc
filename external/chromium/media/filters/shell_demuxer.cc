@@ -19,6 +19,7 @@
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/callback_helpers.h"
+#include "base/debug/trace_event.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/message_loop.h"
 #include "base/stringprintf.h"
@@ -26,7 +27,6 @@
 #include "base/time.h"
 #include "media/base/bind_to_loop.h"
 #include "media/base/data_source.h"
-#include "media/base/shell_filter_graph_log_constants.h"
 
 #include <inttypes.h>
 
@@ -38,29 +38,33 @@ ShellDemuxerStream::ShellDemuxerStream(ShellDemuxer* demuxer,
     , type_(type)
     , last_buffer_timestamp_(kNoTimestamp())
     , stopped_(false) {
+  TRACE_EVENT0("media_stack", "ShellDemuxerStream::ShellDemuxerStream()");
   DCHECK(demuxer_);
-  filter_graph_log_ = demuxer->filter_graph_log();
-  filter_graph_log_->LogEvent(GraphLogObjectId(), kEventConstructor);
 }
 
-scoped_refptr<ShellFilterGraphLog> ShellDemuxerStream::filter_graph_log() {
-  return filter_graph_log_;
+bool ShellDemuxerStream::StreamWasEncrypted() const {
+  if (type_ == VIDEO)
+    return demuxer_->VideoConfig().is_encrypted();
+  else if (type_ == AUDIO)
+    return demuxer_->AudioConfig().is_encrypted();
+
+  NOTREACHED();
+  return false;
 }
 
 void ShellDemuxerStream::Read(const ReadCB& read_cb) {
+  TRACE_EVENT0("media_stack", "ShellDemuxerStream::Read()");
   DCHECK(!read_cb.is_null());
-  filter_graph_log_->LogEvent(GraphLogObjectId(), kEventRead);
 
   base::AutoLock auto_lock(lock_);
 
   // Don't accept any additional reads if we've been told to stop.
   // The demuxer_ may have been destroyed in the pipleine thread.
   if (stopped_) {
-    filter_graph_log_->LogEvent(GraphLogObjectId(), kEventEndOfStreamSent);
+    TRACE_EVENT0("media_stack", "ShellDemuxerStream::Read() EOS sent.");
     read_cb.Run(DemuxerStream::kOk,
                 scoped_refptr<ShellBuffer>(
-                    ShellBuffer::CreateEOSBuffer(kNoTimestamp(),
-                                                 filter_graph_log_)));
+                    ShellBuffer::CreateEOSBuffer(kNoTimestamp())));
     return;
   }
 
@@ -70,13 +74,15 @@ void ShellDemuxerStream::Read(const ReadCB& read_cb) {
   if (!buffer_queue_.empty()) {
     // Send the oldest buffer back.
     scoped_refptr<ShellBuffer> buffer = buffer_queue_.front();
-    buffer_queue_.pop_front();
     if (buffer->IsEndOfStream()) {
-      filter_graph_log_->LogEvent(GraphLogObjectId(), kEventEndOfStreamSent);
+      TRACE_EVENT0("media_stack", "ShellDemuxerStream::Read() EOS sent.");
+    } else {
+      // Do not pop EOS buffers, so that subsequent read requests also get EOS
+      buffer_queue_.pop_front();
     }
     read_cb.Run(DemuxerStream::kOk, buffer);
   } else {
-    filter_graph_log_->LogEvent(GraphLogObjectId(), kEventRequestInterrupt);
+    TRACE_EVENT0("media_stack", "ShellDemuxerStream::Read() request queued.");
     read_queue_.push_back(read_cb);
   }
 }
@@ -103,9 +109,8 @@ void ShellDemuxerStream::EnableBitstreamConverter() {
 }
 
 void ShellDemuxerStream::EnqueueBuffer(scoped_refptr<ShellBuffer> buffer) {
-  filter_graph_log_->LogEvent(GraphLogObjectId(),
-                              kEventEnqueue,
-                              buffer->GetTimestamp().InMilliseconds());
+  TRACE_EVENT1("media_stack", "ShellDemuxerStream::EnqueueBuffer()",
+               "timestamp", buffer->GetTimestamp().InMicroseconds());
   base::AutoLock auto_lock(lock_);
   if (stopped_) {
     // it's possible due to pipelining both downstream and within the
@@ -116,7 +121,8 @@ void ShellDemuxerStream::EnqueueBuffer(scoped_refptr<ShellBuffer> buffer) {
   }
 
   if (buffer->IsEndOfStream()) {
-    filter_graph_log_->LogEvent(GraphLogObjectId(), kEventEndOfStreamReceived);
+    TRACE_EVENT0("media_stack",
+                 "ShellDemuxerStream::EnqueueBuffer() EOS received.");
   } else if (buffer->GetTimestamp() != kNoTimestamp()) {
     if (last_buffer_timestamp_ != kNoTimestamp() &&
         last_buffer_timestamp_ < buffer->GetTimestamp()) {
@@ -146,7 +152,7 @@ base::TimeDelta ShellDemuxerStream::GetLastBufferTimestamp() const {
 }
 
 void ShellDemuxerStream::FlushBuffers() {
-  filter_graph_log_->LogEvent(GraphLogObjectId(), kEventFlush);
+  TRACE_EVENT0("media_stack", "ShellDemuxerStream::FlushBuffers()");
   base::AutoLock auto_lock(lock_);
   DCHECK(read_queue_.empty()) << "Read requests should be empty";
   buffer_queue_.clear();
@@ -154,27 +160,21 @@ void ShellDemuxerStream::FlushBuffers() {
 }
 
 void ShellDemuxerStream::Stop() {
+  TRACE_EVENT0("media_stack", "ShellDemuxerStream::Stop()");
   DCHECK(demuxer_->MessageLoopBelongsToCurrentThread());
-  filter_graph_log_->LogEvent(GraphLogObjectId(), kEventStop);
   base::AutoLock auto_lock(lock_);
   buffer_queue_.clear();
   last_buffer_timestamp_ = kNoTimestamp();
   // fulfill any pending callbacks with EOS buffers set to end timestamp
   for (ReadQueue::iterator it = read_queue_.begin();
        it != read_queue_.end(); ++it) {
-    filter_graph_log_->LogEvent(GraphLogObjectId(), kEventEndOfStreamSent);
+    TRACE_EVENT0("media_stack", "ShellDemuxerStream::Stop() EOS sent.");
     it->Run(DemuxerStream::kOk,
             scoped_refptr<ShellBuffer>(
-                ShellBuffer::CreateEOSBuffer(kNoTimestamp(),
-                                             filter_graph_log_)));
+                ShellBuffer::CreateEOSBuffer(kNoTimestamp())));
   }
   read_queue_.clear();
   stopped_ = true;
-}
-
-const uint32 ShellDemuxerStream::GraphLogObjectId() const {
-  return type_ == DemuxerStream::AUDIO ? kObjectIdAudioDemuxerStream :
-                                         kObjectIdVideoDemuxerStream;
 }
 
 //
@@ -204,10 +204,9 @@ ShellDemuxer::~ShellDemuxer() {
 
 void ShellDemuxer::Initialize(DemuxerHost* host,
                               const PipelineStatusCB& status_cb) {
+  TRACE_EVENT0("media_stack", "ShellDemuxer::Initialize()");
   DCHECK(MessageLoopBelongsToCurrentThread());
   DCHECK(reader_);
-  DCHECK(filter_graph_log_);
-  filter_graph_log_->LogEvent(kObjectIdDemuxer, kEventInitialize);
 
   DLOG(INFO) << "this is a PROGRESSIVE playback.";
 
@@ -215,7 +214,7 @@ void ShellDemuxer::Initialize(DemuxerHost* host,
   data_source_->set_host(host);
 
   // construct stream parser with error callback
-  parser_ = ShellParser::Construct(reader_, status_cb, filter_graph_log_);
+  parser_ = ShellParser::Construct(reader_, status_cb);
   // if we can't construct a parser for this stream it's a fatal error, return
   if (!parser_) {
     status_cb.Run(DEMUXER_ERROR_COULD_NOT_PARSE);
@@ -300,19 +299,16 @@ void ShellDemuxer::RequestTask(DemuxerStream::Type type) {
   // make sure we got back an AU of the correct type
   DCHECK(au->GetType() == type);
 
-  uint32 event_id = type == DemuxerStream::AUDIO ? kEventRequestAudio :
-                                                   kEventRequestVideo;
-  filter_graph_log_->LogEvent(kObjectIdDemuxer,
-                              event_id,
-                              au->GetTimestamp().InMilliseconds());
+  const char* event_type = type == DemuxerStream::AUDIO ? "audio" : "video";
+  TRACE_EVENT2("media_stack", "ShellDemuxer::RequestTask()", "type", event_type,
+               "timestamp", au->GetTimestamp().InMicroseconds());
 
   // don't issue allocation requests for EOS AUs
   if (au->IsEndOfStream()) {
-    filter_graph_log_->LogEvent(kObjectIdDemuxer, kEventEndOfStreamSent);
+    TRACE_EVENT0("media_stack", "ShellDemuxer::RequestTask() EOS sent");
     // enqueue EOS buffer with correct stream
     scoped_refptr<ShellBuffer> eos_buffer =
-        ShellBuffer::CreateEOSBuffer(au->GetTimestamp(),
-                                     filter_graph_log_);
+        ShellBuffer::CreateEOSBuffer(au->GetTimestamp());
     if (type == DemuxerStream::AUDIO) {
       audio_reached_eos_ = true;
       audio_demuxer_stream_->EnqueueBuffer(eos_buffer);
@@ -331,8 +327,7 @@ void ShellDemuxer::RequestTask(DemuxerStream::Type type) {
   // than the maximum limit for a single buffer.
   if (!ShellBufferFactory::Instance()->AllocateBuffer(
       au->GetMaxSize(),
-      base::Bind(&ShellDemuxer::BufferAllocated, this),
-      filter_graph_log_)) {
+      base::Bind(&ShellDemuxer::BufferAllocated, this))) {
     DLOG(ERROR) << "buffer allocation failed.";
     host_->OnDemuxerError(PIPELINE_ERROR_COULD_NOT_RENDER);
     return;
@@ -352,11 +347,11 @@ void ShellDemuxer::DownloadTask(scoped_refptr<ShellBuffer> buffer) {
   // are buffering to a new location for this to make sense
   DCHECK(requested_au_);
 
-  uint32 event_id = requested_au_->GetType() == DemuxerStream::AUDIO ?
-      kEventDownloadAudio : kEventDownloadVideo;
-  filter_graph_log_->LogEvent(kObjectIdDemuxer,
-                              event_id,
-                              requested_au_->GetTimestamp().InMilliseconds());
+  const char* event_type =
+      requested_au_->GetType() == DemuxerStream::AUDIO ? "audio" : "video";
+  TRACE_EVENT2("media_stack", "ShellDemuxer::DownloadTask()",
+               "type", event_type,
+               "timestamp", requested_au_->GetTimestamp().InMicroseconds());
   // do nothing if stopped
   if (stopped_) {
     DLOG(INFO) << "aborting download task, stopped";
@@ -460,8 +455,8 @@ void ShellDemuxer::Stop(const base::Closure &callback) {
 }
 
 void ShellDemuxer::DataSourceStopped(const base::Closure& callback) {
+  TRACE_EVENT0("media_stack", "ShellDemuxer::DataSourceStopped()");
   DCHECK(MessageLoopBelongsToCurrentThread());
-  filter_graph_log_->LogEvent(kObjectIdDemuxer, kEventStop);
   // stop the download thread
   blocking_thread_.Stop();
 
@@ -479,11 +474,10 @@ void ShellDemuxer::Seek(base::TimeDelta time, const PipelineStatusCB& cb) {
 
 // runs on blocking thread
 void ShellDemuxer::SeekTask(base::TimeDelta time, const PipelineStatusCB& cb) {
-  filter_graph_log_->LogEvent(kObjectIdDemuxer,
-                              kEventSeek,
-                              time.InMilliseconds());
+  TRACE_EVENT1("media_stack", "ShellDemuxer::SeekTask()",
+               "timestamp", time.InMicroseconds());
   DLOG(INFO) << base::StringPrintf(
-      "seek to: %"PRId64" ms", time.InMilliseconds());
+      "seek to: %" PRId64" ms", time.InMilliseconds());
   // clear any enqueued buffers on demuxer streams
   audio_demuxer_stream_->FlushBuffers();
   video_demuxer_stream_->FlushBuffers();
@@ -539,15 +533,6 @@ const VideoDecoderConfig& ShellDemuxer::VideoConfig() {
 
 bool ShellDemuxer::MessageLoopBelongsToCurrentThread() const {
   return message_loop_->BelongsToCurrentThread();
-}
-
-void ShellDemuxer::SetFilterGraphLog(
-    scoped_refptr<ShellFilterGraphLog> filter_graph_log) {
-  filter_graph_log_ = filter_graph_log;
-}
-
-scoped_refptr<ShellFilterGraphLog> ShellDemuxer::filter_graph_log() {
-  return filter_graph_log_;
 }
 
 }  // namespace media

@@ -52,11 +52,7 @@
 #include "SchemeRegistry.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/Assertions.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/Unicode.h>
@@ -298,6 +294,11 @@ void DocumentLoader::finishedLoading()
     if (!m_mainDocumentError.isNull())
         return;
     clearMainResourceLoader();
+
+    // m_writer.end() can sometimes trash m_frame, making frameLoader() return NULL.
+    if (!frameLoader())
+        return;
+
     if (!frameLoader()->stateMachine()->creatingInitialEmptyDocument())
         frameLoader()->checkLoadComplete();
 }
@@ -356,31 +357,6 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
     }
     ASSERT(m_frame->document()->parsing());
     m_writer.addData(bytes, length);
-}
-
-void DocumentLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_frame);
-    info.addMember(m_mainResourceLoader);
-    info.addMember(m_subresourceLoaders);
-    info.addMember(m_multipartSubresourceLoaders);
-    info.addMember(m_plugInStreamLoaders);
-    info.addMember(m_substituteData);
-    info.addMember(m_pageTitle.string());
-    info.addMember(m_overrideEncoding);
-    info.addMember(m_responses);
-    info.addMember(m_originalRequest);
-    info.addMember(m_originalRequestCopy);
-    info.addMember(m_request);
-    info.addMember(m_response);
-    info.addMember(m_lastCheckedRequest);
-    info.addMember(m_responses);
-    info.addMember(m_pendingSubstituteResources);
-    info.addMember(m_resourcesClientKnowsAbout);
-    info.addMember(m_resourcesLoadedFromMemoryCacheForClientNotification);
-    info.addMember(m_clientRedirectSourceForHistory);
-    info.addMember(m_mainResourceData);
 }
 
 void DocumentLoader::receivedData(const char* data, int length)
@@ -453,7 +429,7 @@ void DocumentLoader::clearMainResourceLoader()
     }
     m_loadingEmptyDocument = false;
 
-    if (this == frameLoader()->activeDocumentLoader())
+    if (frameLoader() && this == frameLoader()->activeDocumentLoader())
         checkLoadComplete();
 }
 

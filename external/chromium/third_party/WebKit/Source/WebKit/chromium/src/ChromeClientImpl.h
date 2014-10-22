@@ -195,7 +195,9 @@ public:
                              const WebCore::IntRect& bounds,
                              bool handleExternally);
     virtual void popupClosed(WebCore::PopupContainer* popupContainer);
+#if HAVE(ACCESSIBILITY)
     virtual void postAccessibilityNotification(WebCore::AccessibilityObject*, WebCore::AXObjectCache::AXNotification);
+#endif
 
     // PageClientChromium methods:
     virtual WebScreenInfo screenInfo();

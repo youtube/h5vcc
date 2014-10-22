@@ -78,6 +78,16 @@ const unsigned* LLIntOffsetsExtractor::dummy()
 
 } // namespace JSC
 
+#if defined (__LB_XB1__)
+#undef main
+#endif
+
+// This file is built for the target, but parsed by the host.  On
+// __LB_ANDROID__ it is getting pulled into the .so, where it conflicts with
+// another main().  This file is never run on the host or the target, it's just
+// parsed to get the assembly offsets.  So excluding main()
+#if !defined(__LB_ANDROID__)
+
 int main(int, char**)
 {
     // Out of an abundance of caution, make sure that LLIntOffsetsExtractor::dummy() is live,
@@ -86,4 +96,4 @@ int main(int, char**)
     return 0;
 }
 
-
+#endif

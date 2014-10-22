@@ -468,6 +468,7 @@ PassRefPtr<DateTimeChooser> Chrome::openDateTimeChooser(DateTimeChooserClient* c
 }
 #endif
 
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__)
 void Chrome::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> fileChooser)
 {
 #if ENABLE(FILE_CHOOSER)
@@ -475,6 +476,7 @@ void Chrome::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> fileChooser)
     m_client->runOpenPanel(frame, fileChooser);
 #endif
 }
+#endif
 
 void Chrome::loadIconForFiles(const Vector<String>& filenames, FileIconLoader* loader)
 {

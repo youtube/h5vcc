@@ -27,7 +27,7 @@ class SoftwareOutputDevice;
 //      From here on, it will only be used on the compositor thread.
 //   3. If the 3D context is lost, then the compositor will delete the output
 //      surface (on the compositor thread) and go back to step 1.
-class CC_EXPORT OutputSurface : public WebKit::WebCompositorOutputSurface {
+class OutputSurface : public WebKit::WebCompositorOutputSurface {
  public:
   virtual ~OutputSurface() {}
 

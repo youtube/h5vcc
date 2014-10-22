@@ -28,7 +28,9 @@ ContentLayerUpdater::~ContentLayerUpdater()
 
 void ContentLayerUpdater::paintContents(SkCanvas* canvas, const gfx::Rect& contentRect, float contentsWidthScale, float contentsHeightScale, gfx::Rect& resultingOpaqueRect, RenderingStats& stats)
 {
-    TRACE_EVENT0("cc", "ContentLayerUpdater::paintContents");
+    TRACE_EVENT2("cc", "ContentLayerUpdater::paintContents",
+                 "width", contentRect.width(),
+                 "height", contentRect.height());
     canvas->save();
     canvas->translate(SkFloatToScalar(-contentRect.x()), SkFloatToScalar(-contentRect.y()));
 
@@ -45,12 +47,18 @@ void ContentLayerUpdater::paintContents(SkCanvas* canvas, const gfx::Rect& conte
     paint.setAntiAlias(false);
     paint.setXfermodeMode(SkXfermode::kClear_Mode);
     SkRect layerSkRect = SkRect::MakeXYWH(layerRect.x(), layerRect.y(), layerRect.width(), layerRect.height());
-    canvas->drawRect(layerSkRect, paint);
+    {
+      TRACE_EVENT0("cc", "Fill");
+      canvas->drawRect(layerSkRect, paint);
+    }
     canvas->clipRect(layerSkRect);
 
     gfx::RectF opaqueLayerRect;
     base::TimeTicks paintBeginTime = base::TimeTicks::Now();
-    m_painter->paint(canvas, layerRect, opaqueLayerRect);
+    {
+      TRACE_EVENT0("cc", "Paint");
+      m_painter->paint(canvas, layerRect, opaqueLayerRect);
+    }
     stats.totalPaintTimeInSeconds += (base::TimeTicks::Now() - paintBeginTime).InSecondsF();
     canvas->restore();
 

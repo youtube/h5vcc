@@ -23,12 +23,10 @@
 #include "external/chromium/base/synchronization/lock.h"
 #include "external/chromium/webkit/dom_storage/dom_storage_database_adapter.h"
 
-namespace JSC {
-class DebuggerTTYInterface;
-};
+class LBConsoleConnection;
 
-class LBLocalStorageDatabaseAdapter :
-      public dom_storage::DomStorageDatabaseAdapter {
+class LBLocalStorageDatabaseAdapter
+    : public dom_storage::DomStorageDatabaseAdapter {
  public:
   // We will be fed an ID that is backward-compatible with that of our
   // original localstorage implementation.
@@ -39,19 +37,27 @@ class LBLocalStorageDatabaseAdapter :
                              const dom_storage::ValuesMap& changes) OVERRIDE;
   virtual void Reset() OVERRIDE;
 
-#if !defined(__LB_SHELL__FOR_RELEASE__)
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
   // For the debug console's use:
   static void ClearAll();
-  static void Dump(JSC::DebuggerTTYInterface* tty);
+  static void Dump(LBConsoleConnection *connection);
 #endif
+
+  static void Flush();
+
+  static void Register();
+
+  static dom_storage::DomStorageDatabaseAdapter* Create(const std::string& id);
+
+  // Re-initialize the tables in the savegame database needed for localStorage
+  static void Reinitialize();
 
  private:
   static void Init();
 
   static base::Lock init_lock_;
   static bool initialized_;
-
   std::string id_;
 };
 
-#endif  // SRC_LB_LOCAL_STORAGE_H_
+#endif  // SRC_LB_LOCAL_STORAGE_DATABASE_ADAPTER_H_

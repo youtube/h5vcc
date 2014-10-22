@@ -65,6 +65,10 @@
     !defined(NETWARE_CLIB)
 # include <strings.h>
 #endif
+#if defined(__LB_PS4__)
+// strncasecmp is in string.h on PS4.
+#include <string.h>
+#endif
 
 int OPENSSL_strncasecmp(const char *str1, const char *str2, size_t n)
 	{

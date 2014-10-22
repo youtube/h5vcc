@@ -31,11 +31,9 @@
 #ifndef DOMWrapperMap_h
 #define DOMWrapperMap_h
 
-#include "WebCoreMemoryInstrumentation.h"
 #include "WrapperTypeInfo.h"
 #include <v8.h>
 #include <wtf/HashMap.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
 
 namespace WebCore {
 
@@ -71,12 +69,6 @@ public:
             wrapper.Clear();
         }
         m_map.clear();
-    }
-
-    void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-    {
-        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Binding);
-        info.addMember(m_map);
     }
 
     void remove(KeyType* key, v8::Persistent<v8::Object> wrapper)

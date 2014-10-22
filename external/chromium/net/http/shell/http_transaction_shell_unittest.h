@@ -38,7 +38,8 @@ class MockStreamShellLoader : public HttpStreamShellLoader {
         reading_headers_(false) {}
 
   virtual int Open(const HttpRequestInfo* info,
-                   const BoundNetLog& net_log) OVERRIDE {
+                   const BoundNetLog& net_log,
+                   const CompletionCallback& callback) OVERRIDE {
     net_log_ = net_log;
     return OK;
   }

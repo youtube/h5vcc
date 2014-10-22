@@ -132,7 +132,11 @@ TEST(StackContainer, BufferAlignment) {
   // non-POD data on the stack, even though ALIGNOF(aligned256) == 256.
   StackVector<AlignedData<256>, 1> aligned256;
   aligned256->push_back(AlignedData<256>());
+#if !defined(__LB_XB360__)
   EXPECT_ALIGNED(&aligned256[0], 256);
+#else
+  EXPECT_ALIGNED(aligned256[0].data_.void_data(), 256);
+#endif
 #endif
 }
 

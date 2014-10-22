@@ -723,8 +723,6 @@ public:
     bool isInTopLayerSubtree() const;
 #endif
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 private:
     void updateZOrderLists();
     void rebuildZOrderLists();
@@ -1046,6 +1044,10 @@ protected:
     // Currently cells do not need to update their repaint rectangles when scrolling. This also
     // saves a lot of time when scrolling on a table.
     const bool m_canSkipRepaintRectsUpdateOnScroll : 1;
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    H5VCCTargetScreen m_h5vccTargetScreen : 2;
+#endif
 
 #if ENABLE(CSS_FILTERS)
     bool m_hasFilterInfo : 1;

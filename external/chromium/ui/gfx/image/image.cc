@@ -131,7 +131,7 @@ ImageSkia* ImageSkiaFromPNG(
     const std::vector<gfx::ImagePNGRep>& image_png_reps);
 scoped_refptr<base::RefCountedMemory> Get1xPNGBytesFromImageSkia(
     const ImageSkia* skia);
-#else
+#elif !defined(__LB_SHELL__)
 // Returns a 16x16 red image to visually show error in decoding PNG.
 // Caller takes ownership of returned ImageSkia.
 ImageSkia* GetErrorImageSkia() {
@@ -506,6 +506,7 @@ const ImageSkia* Image::ToImageSkia() const {
   internal::ImageRep* rep = GetRepresentation(kImageRepSkia, false);
   if (!rep) {
     switch (DefaultRepresentationType()) {
+#if !defined(__LB_SHELL__)
       case kImageRepPNG: {
         internal::ImageRepPNG* png_rep =
             GetRepresentation(kImageRepPNG, true)->AsImageRepPNG();
@@ -513,6 +514,7 @@ const ImageSkia* Image::ToImageSkia() const {
             internal::ImageSkiaFromPNG(png_rep->image_reps()));
         break;
       }
+#endif
 #if defined(TOOLKIT_GTK)
       case kImageRepGdk: {
         internal::ImageRepGdk* native_rep =
@@ -689,12 +691,14 @@ scoped_refptr<base::RefCountedMemory> Image::As1xPNGBytes() const {
       break;
     }
 #endif
+#if !defined(__LB_SHELL__)
     case kImageRepSkia: {
       internal::ImageRepSkia* skia_rep =
           GetRepresentation(kImageRepSkia, true)->AsImageRepSkia();
       png_bytes = internal::Get1xPNGBytesFromImageSkia(skia_rep->image());
       break;
     }
+#endif
     default:
       NOTREACHED();
   }

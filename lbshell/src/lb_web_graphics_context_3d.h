@@ -24,8 +24,8 @@
 // operations.  When prepareTexture() is called this object actually is telling
 // the hardware to swap this texture from the back buffer to the front.
 
-#ifndef _LB_WEB_GRAPHICS_CONTEXT_3D_H_
-#define _LB_WEB_GRAPHICS_CONTEXT_3D_H_
+#ifndef SRC_LB_WEB_GRAPHICS_CONTEXT_3D_H_
+#define SRC_LB_WEB_GRAPHICS_CONTEXT_3D_H_
 
 // Defining this as 1 enables detailed instrumentation about what commands are
 // inserted into the WebKit graphics command buffer.
@@ -48,6 +48,12 @@
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/platform/WebString.h"
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebView.h"
 
+// Follow suite with how GraphicsContext3D.h deals with the NO_ERROR name
+// conflict.
+#ifdef NO_ERROR
+#undef NO_ERROR
+#endif
+
 using WebKit::WGC3Dchar;
 using WebKit::WGC3Denum;
 using WebKit::WGC3Dboolean;
@@ -67,29 +73,25 @@ using WebKit::WebView;
 
 using WebKit::WebGraphicsContext3D;
 
-// Multiple inheritance to bring in platform-specific functions
-// and member variables.
 class LBWebGraphicsContext3D : public WebKit::WebGraphicsContext3D {
  public:
-  LBWebGraphicsContext3D() {}
-  virtual ~LBWebGraphicsContext3D() {}
-
+#if defined(__LB_WIIU__) || defined(__LB_PS3__) || defined(__LB_PS4__)
   // Support for loading shaders by binary instead of source code
   virtual void shaderBinary(WGC3Dsizei n,
                             const WGC3Duint* shaders,
                             WGC3Denum binaryFormat,
                             const void* binary,
                             WGC3Dsizei length) = 0;
+#endif
 };
-
-
 
 
 // __LB_PS3__FIX_ME__
 // This enum was copied from
-// external/chromium/third_party/WebKit/Source/WebCore/platform/graphics/GraphicsContext3D.h
-// Which we'd like to include but that brings in a whole rat's nest of
-// dependencies. Figure out a less rebase-brittle way to do this.
+// external/chromium/third_party/WebKit/Source/WebCore/platform/graphics/
+// GraphicsContext3D.h, which we'd like to include but that brings in a
+// whole rat's nest of dependencies. Figure out a less rebase-brittle way to
+// do this.
 namespace GraphicsContext3D {
   enum {
     DEPTH_BUFFER_BIT = 0x00000100,
@@ -407,32 +409,44 @@ namespace GraphicsContext3D {
 
 class LBWebViewHost;
 
+#if !defined(__LB_DISABLE_SKIA_GPU__)
+
+#define GRAPHICS_CONTEXT_3D_SKIA_METHOD_OVERRIDES \
+virtual GrGLInterface* onCreateGrGLInterface() OVERRIDE; \
+
+#else
+
+#define GRAPHICS_CONTEXT_3D_SKIA_METHOD_OVERRIDES
+
+#endif
+
+
 #define GRAPHICS_CONTEXT_3D_METHOD_OVERRIDES \
 virtual bool makeContextCurrent() OVERRIDE; \
- \
+  \
 virtual int width() OVERRIDE; \
 virtual int height() OVERRIDE; \
- \
+  \
 virtual void reshape(int width, int height) OVERRIDE; \
- \
+  \
 virtual bool isGLES2Compliant() OVERRIDE; \
- \
+  \
 virtual bool setParentContext(WebGraphicsContext3D* parentContext) OVERRIDE; \
- \
+  \
 virtual bool readBackFramebuffer(unsigned char* pixels, \
                                  size_t bufferSize, \
                                  WebGLId framebuffer, \
                                  int width, \
                                  int height) OVERRIDE; \
- \
+  \
 virtual WebGLId getPlatformTextureId() OVERRIDE; \
- \
+  \
 virtual void prepareTexture() OVERRIDE; \
- \
+  \
 virtual void synthesizeGLError(WGC3Denum) OVERRIDE; \
- \
+  \
 virtual bool isContextLost() OVERRIDE; \
- \
+  \
 virtual void* mapBufferSubDataCHROMIUM(WGC3Denum target, \
                                        WGC3Dintptr offset, \
                                        WGC3Dsizeiptr size, \
@@ -448,10 +462,10 @@ virtual void* mapTexSubImage2DCHROMIUM(WGC3Denum target, \
                                        WGC3Denum type, \
                                        WGC3Denum access) OVERRIDE; \
 virtual void unmapTexSubImage2DCHROMIUM(const void*) OVERRIDE; \
- \
+  \
 virtual WebString getRequestableExtensionsCHROMIUM() OVERRIDE; \
 virtual void requestExtensionCHROMIUM(const char*) OVERRIDE; \
- \
+  \
 virtual void blitFramebufferCHROMIUM(WGC3Dint srcX0, \
                                      WGC3Dint srcY0, \
                                      WGC3Dint srcX1, \
@@ -468,12 +482,12 @@ virtual void renderbufferStorageMultisampleCHROMIUM( \
     WGC3Denum internalformat, \
     WGC3Dsizei width, \
     WGC3Dsizei height) OVERRIDE; \
- \
+  \
 virtual void setSwapBuffersCompleteCallbackCHROMIUM( \
   WebGraphicsSwapBuffersCompleteCallbackCHROMIUM* callback) OVERRIDE; \
- \
-virtual void rateLimitOffscreenContextCHROMIUM() OVERRIDE { } \
- \
+  \
+virtual void rateLimitOffscreenContextCHROMIUM() OVERRIDE; \
+  \
 virtual void activeTexture(WGC3Denum texture); \
 virtual void attachShader(WebGLId program, WebGLId shader) OVERRIDE; \
 virtual void bindAttribLocation(WebGLId program, \
@@ -499,7 +513,7 @@ virtual void blendFuncSeparate(WGC3Denum srcRGB, \
                                WGC3Denum dstRGB, \
                                WGC3Denum srcAlpha, \
                                WGC3Denum dstAlpha) OVERRIDE; \
- \
+  \
 virtual void bufferData(WGC3Denum target, \
                         WGC3Dsizeiptr size, \
                         const void* data, \
@@ -508,7 +522,7 @@ virtual void bufferSubData(WGC3Denum target, \
                            WGC3Dintptr offset, \
                            WGC3Dsizeiptr size, \
                            const void* data) OVERRIDE; \
- \
+  \
 virtual WGC3Denum checkFramebufferStatus(WGC3Denum target) OVERRIDE; \
 virtual void clear(WGC3Dbitfield mask) OVERRIDE; \
 virtual void clearColor(WGC3Dclampf red, \
@@ -522,7 +536,7 @@ virtual void colorMask(WGC3Dboolean red, \
                        WGC3Dboolean blue, \
                        WGC3Dboolean alpha) OVERRIDE; \
 virtual void compileShader(WebGLId shader) OVERRIDE; \
- \
+  \
 virtual void compressedTexImage2D(WGC3Denum target, \
                                   WGC3Dint level, \
                                   WGC3Denum internalformat, \
@@ -570,7 +584,7 @@ virtual void drawElements(WGC3Denum mode, \
                           WGC3Dsizei count, \
                           WGC3Denum type, \
                           WGC3Dintptr offset) OVERRIDE; \
- \
+  \
 virtual void enable(WGC3Denum cap) OVERRIDE; \
 virtual void enableVertexAttribArray(WGC3Duint index) OVERRIDE; \
 virtual void finish() OVERRIDE; \
@@ -586,7 +600,7 @@ virtual void framebufferTexture2D(WGC3Denum target, \
                                   WGC3Dint level) OVERRIDE; \
 virtual void frontFace(WGC3Denum mode) OVERRIDE; \
 virtual void generateMipmap(WGC3Denum target) OVERRIDE; \
- \
+  \
 virtual bool getActiveAttrib(WebGLId program, \
                              WGC3Duint index, \
                              ActiveInfo&) OVERRIDE; \
@@ -627,7 +641,7 @@ virtual void getShaderPrecisionFormat(WGC3Denum shadertype, \
                                       WGC3Denum precisiontype, \
                                       WGC3Dint* range, \
                                       WGC3Dint* precision) OVERRIDE; \
- \
+  \
 virtual WebString getShaderSource(WebGLId shader) OVERRIDE; \
 virtual WebString getString(WGC3Denum name) OVERRIDE; \
 virtual void getTexParameterfv(WGC3Denum target, \
@@ -652,7 +666,7 @@ virtual void getVertexAttribiv(WGC3Duint index, \
                                WGC3Dint* value) OVERRIDE; \
 virtual WGC3Dsizeiptr getVertexAttribOffset(WGC3Duint index, \
                                             WGC3Denum pname) OVERRIDE; \
- \
+  \
 virtual void hint(WGC3Denum target, WGC3Denum mode) OVERRIDE; \
 virtual WGC3Dboolean isBuffer(WebGLId buffer) OVERRIDE; \
 virtual WGC3Dboolean isEnabled(WGC3Denum cap) OVERRIDE; \
@@ -665,7 +679,7 @@ virtual void lineWidth(WGC3Dfloat) OVERRIDE; \
 virtual void linkProgram(WebGLId program) OVERRIDE; \
 virtual void pixelStorei(WGC3Denum pname, WGC3Dint param) OVERRIDE; \
 virtual void polygonOffset(WGC3Dfloat factor, WGC3Dfloat units) OVERRIDE; \
- \
+  \
 virtual void readPixels(WGC3Dint x, \
                         WGC3Dint y, \
                         WGC3Dsizei width, \
@@ -673,9 +687,9 @@ virtual void readPixels(WGC3Dint x, \
                         WGC3Denum format, \
                         WGC3Denum type, \
                         void* pixels) OVERRIDE; \
- \
+  \
 virtual void releaseShaderCompiler() OVERRIDE; \
- \
+  \
 virtual void renderbufferStorage(WGC3Denum target, \
                                  WGC3Denum internalformat, \
                                  WGC3Dsizei width, \
@@ -704,7 +718,7 @@ virtual void stencilOpSeparate(WGC3Denum face, \
                                WGC3Denum fail, \
                                WGC3Denum zfail, \
                                WGC3Denum zpass) OVERRIDE; \
- \
+  \
 virtual void texImage2D(WGC3Denum target, \
                         WGC3Dint level, \
                         WGC3Denum internalformat, \
@@ -714,14 +728,14 @@ virtual void texImage2D(WGC3Denum target, \
                         WGC3Denum format, \
                         WGC3Denum type, \
                         const void* pixels) OVERRIDE; \
- \
+  \
 virtual void texParameterf(WGC3Denum target, \
                            WGC3Denum pname, \
                            WGC3Dfloat param) OVERRIDE; \
 virtual void texParameteri(WGC3Denum target, \
                            WGC3Denum pname, \
                            WGC3Dint param) OVERRIDE; \
- \
+  \
 virtual void texSubImage2D(WGC3Denum target, \
                            WGC3Dint level, \
                            WGC3Dint xoffset, \
@@ -731,7 +745,7 @@ virtual void texSubImage2D(WGC3Denum target, \
                            WGC3Denum format, \
                            WGC3Denum type, \
                            const void* pixels) OVERRIDE; \
- \
+  \
 virtual void uniform1f(WGC3Dint location, WGC3Dfloat x) OVERRIDE; \
 virtual void uniform1fv(WGC3Dint location, \
                       WGC3Dsizei count, \
@@ -794,10 +808,10 @@ virtual void uniformMatrix4fv(WGC3Dint location, \
                               WGC3Dsizei count, \
                               WGC3Dboolean transpose, \
                               const WGC3Dfloat* value) OVERRIDE; \
- \
+  \
 virtual void useProgram(WebGLId program) OVERRIDE; \
 virtual void validateProgram(WebGLId program) OVERRIDE; \
- \
+  \
 virtual void vertexAttrib1f(WGC3Duint index, \
                             WGC3Dfloat x) OVERRIDE; \
 virtual void vertexAttrib1fv(WGC3Duint index, \
@@ -826,33 +840,33 @@ virtual void vertexAttribPointer(WGC3Duint index, \
                                  WGC3Dboolean normalized, \
                                  WGC3Dsizei stride, \
                                  WGC3Dintptr offset) OVERRIDE; \
- \
+  \
 virtual void viewport(WGC3Dint x, \
                       WGC3Dint y, \
                       WGC3Dsizei width, \
                       WGC3Dsizei height) OVERRIDE; \
- \
+  \
 virtual WebGLId createBuffer() OVERRIDE; \
 virtual WebGLId createFramebuffer() OVERRIDE; \
 virtual WebGLId createProgram() OVERRIDE; \
 virtual WebGLId createRenderbuffer() OVERRIDE; \
 virtual WebGLId createShader(WGC3Denum) OVERRIDE; \
 virtual WebGLId createTexture() OVERRIDE; \
- \
+  \
 virtual void deleteBuffer(WebGLId) OVERRIDE; \
 virtual void deleteFramebuffer(WebGLId) OVERRIDE; \
 virtual void deleteProgram(WebGLId) OVERRIDE; \
 virtual void deleteRenderbuffer(WebGLId) OVERRIDE; \
 virtual void deleteShader(WebGLId) OVERRIDE; \
 virtual void deleteTexture(WebGLId) OVERRIDE; \
- \
+  \
 virtual void setVisibilityCHROMIUM(bool visible) OVERRIDE; \
 virtual void postSubBufferCHROMIUM(int x, \
                                    int y, \
                                    int width, \
                                    int height) OVERRIDE; \
- \
- \
+  \
+  \
 virtual void setMemoryAllocationChangedCallbackCHROMIUM( \
 WebGraphicsMemoryAllocationChangedCallbackCHROMIUM* callback) OVERRIDE; \
 virtual void sendManagedMemoryStatsCHROMIUM( \
@@ -934,28 +948,30 @@ virtual void asyncTexSubImage2DCHROMIUM(WGC3Denum target, \
                                         WGC3Denum format, \
                                         WGC3Denum type, \
                                         const void* pixels) OVERRIDE; \
- \
+  \
 virtual void setContextLostCallback(WebGraphicsContextLostCallback* callback) \
-OVERRIDE {} \
- \
+OVERRIDE; \
+  \
 virtual WGC3Denum getGraphicsResetStatusARB() \
-OVERRIDE { return 0; /* GL_NO_ERROR; */ } \
- \
+OVERRIDE; \
+  \
 /* LB_Shell specific. */ \
- \
+  \
 /* Chromium often wishes to load a subimage from a skia buffer into */ \
 /* a part of a texture. It does this by first copying the subimage into */ \
 /* its own buffer (unless the strides align) and then calling */ \
 /* texSubImage2D.  The strides almost never align. Since we are doing a */ \
 /* simple memcpy to upload to our textures anyway, let's skip the */ \
 /* allocation of the buffer and just upload from the sub image directly. */ \
-virtual void texSubImageSub(int dstOffX,  /* destination offset */ \
-                          int dstOffY, \
-                          int dstWidth, /* destination subtexture width */ \
-                          int dstHeight, \
-                          int srcX,     /* source offset */ \
-                          int srcY, \
-                          int srcWidth, /* source image stride (packed pxs) */ \
-                          const void* image) OVERRIDE; \
+virtual void texSubImageSub(WGC3Denum format, \
+                            int dstOffX,  /* destination offset */ \
+                            int dstOffY, \
+                            int dstWidth, /* destination subtexture width */ \
+                            int dstHeight, \
+                            int srcX,     /* source offset */ \
+                            int srcY, \
+                            int srcWidth, /* source image stride (pixels) */ \
+                            const void* image) OVERRIDE; \
+GRAPHICS_CONTEXT_3D_SKIA_METHOD_OVERRIDES
 
-#endif  // _LB_WEB_GRAPHICS_CONTEXT_3D_H_
+#endif  // SRC_LB_WEB_GRAPHICS_CONTEXT_3D_H_

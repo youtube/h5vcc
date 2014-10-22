@@ -981,6 +981,10 @@ bool FrameSelection::modify(EAlteration alter, SelectionDirection direction, Tex
     switch (alter) {
     case AlterationMove:
         moveTo(position, userTriggered);
+#if defined(__LB_SHELL__)
+        if (m_frame && m_frame->editor() && m_frame->editor()->client())
+            m_frame->editor()->client()->didMoveCursor();
+#endif
         break;
     case AlterationExtend:
 

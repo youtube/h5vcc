@@ -11,7 +11,7 @@ using namespace std;
 
 namespace cc {
 
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
 static LayerTilingData::LayerTilingDataReuseList s_layer_tiling_data_reuse_list;
 LayerTilingData::LayerTilingDataReuseList*
       LayerTilingData::LayerTilingDataReuseList::get_instance() {

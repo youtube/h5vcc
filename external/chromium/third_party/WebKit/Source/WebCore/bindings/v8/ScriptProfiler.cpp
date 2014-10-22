@@ -40,7 +40,6 @@
 #include "V8DOMWindow.h"
 #include "V8DOMWrapper.h"
 #include "V8Node.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WrapperTypeInfo.h"
 
 #include <v8-profiler.h>
@@ -250,12 +249,6 @@ void ScriptProfiler::visitExternalArrays(ExternalArrayVisitor* visitor)
     } wrapperVisitor(visitor);
 
     v8::V8::VisitHandlesWithClassIds(&wrapperVisitor);
-}
-
-void ScriptProfiler::collectBindingMemoryInfo(MemoryInstrumentation* instrumentation)
-{
-    V8PerIsolateData* data = V8PerIsolateData::current();
-    instrumentation->addRootObject(data);
 }
 
 size_t ScriptProfiler::profilerSnapshotsSize()

@@ -1,33 +1,48 @@
-import subprocess
-import optparse
-import sys
+"""Specify the list of tests that we run."""
+
 import os
+import sys
+
 import run_layout_tests
 
 # This file specifies the list of tests that we will run, and
 # forwards them to run_layout_tests.py
 
-layout_tests_dir = "../../external/chromium/third_party/WebKit/LayoutTests"
+layout_tests_dir = '../../external/chromium/third_party/WebKit/LayoutTests'
 
 
-# Open up the appropriate TestExpectations file and prune the expected
-# failures from the tests that will be run.  Note that this is a simple
-# version of the layout test expectations parser found in
-# external/chromium/third_party/WebKit/Tools/Scripts/webkitpy/layout_tests
-#   /models/test_expectations.py
-# The language defined by this simple parser is a very small subset of the
-# language defined by the WebKit Test Expectations parser.
-# The reason we don't simply use that is because we don't have a WebKit port
-# framework setup for Steel, which is a dependency of the WebKit test
-# expectations parser, and what seems to be a fair bit of work to implement.
 def FilterTestsByExpectationsFile(tests_to_run, expected_output_dir):
+  """Filter tests against a file.
+
+  Open up the appropriate TestExpectations file and prune the expected
+  failures from the tests that will be run.  Note that this is a simple
+  version of the layout test expectations parser found in
+  external/chromium/third_party/WebKit/Tools/Scripts/webkitpy/layout_tests
+    /models/test_expectations.py
+  The language defined by this simple parser is a very small subset of the
+  language defined by the WebKit Test Expectations parser.
+  The reason we don't simply use that is because we don't have a WebKit port
+  framework setup for Steel, which is a dependency of the WebKit test
+  expectations parser, and what seems to be a fair bit of work to implement.
+
+  Args:
+    tests_to_run: List of tests to run.
+    expected_output_dir: Path to TestExpectations.txt
+
+  Raises:
+    ParseError: Expectations file was invalid.
+
+  Returns:
+    List of tests to run.
+  """
+
   class ParseError(Exception):
     pass
 
   tests_to_run_set = set(tests_to_run)
 
   expectations_file_name = os.path.join(expected_output_dir,
-    'TestExpectations.txt')
+                                        'TestExpectations.txt')
 
   if not os.path.exists(expectations_file_name):
     # If the file doesn't exist, there is no filtering to be done
@@ -36,14 +51,14 @@ def FilterTestsByExpectationsFile(tests_to_run, expected_output_dir):
   expectations_file = open(expectations_file_name, 'r')
   for line in expectations_file:
     line = line.strip()
-    if line == '':
+    if not line:
       continue
 
     space_pos = line.find(' ')
     if space_pos == -1:
       raise ParseError
     test_name = os.path.splitext(line[:space_pos])[0]
-    expected_results = line[space_pos+1:]
+    expected_results = line[space_pos + 1:]
     if expected_results.upper().find('FAILURE') != -1:
       # This test is expected to fail, remove it from the set of tests to
       # run.
@@ -54,12 +69,15 @@ def FilterTestsByExpectationsFile(tests_to_run, expected_output_dir):
 
   return list(tests_to_run_set)
 
+
 def GetTestsToRun(expected_output_dir):
+  """Get a list of tests to run."""
+
   tests_to_run = []
 
   # Determine which tests to run by looking at what expected output files
   # are available to us.
-  for (dir_path, dir_names, file_names) in os.walk(expected_output_dir):
+  for dir_path, _, file_names in os.walk(expected_output_dir):
     for file_name in file_names:
       # Look for files that end with -expected.png
       find_substr = '-EXPECTED.PNG'
@@ -74,7 +92,7 @@ def GetTestsToRun(expected_output_dir):
 
   # Prune the expected failures from the tests that will be run.
   return sorted(
-    FilterTestsByExpectationsFile(tests_to_run, expected_output_dir))
+      FilterTestsByExpectationsFile(tests_to_run, expected_output_dir))
 
 
 # Parse the 'run_layout_tests' options here and then just pass them through
@@ -85,11 +103,11 @@ parser = run_layout_tests.GetOptionsParser()
 if len(args) != 1:
   print 'Usage: ' + sys.argv[0] + ' PLATFORM [options]\n'
   print run_layout_tests.GetSupportedPlatformsStr(
-          run_layout_tests.GetSupportedPlatforms())
+      run_layout_tests.GetSupportedPlatforms())
   exit(-1)
 
 ret = run_layout_tests.main(
-  options,
-  args + GetTestsToRun(options.expected_output_dir))
+    options,
+    args + GetTestsToRun(options.expected_output_dir))
 
 sys.exit(ret)

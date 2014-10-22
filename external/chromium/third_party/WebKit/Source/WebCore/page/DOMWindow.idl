@@ -804,5 +804,9 @@
     // window.toString() requires special handling in V8
     [V8DoNotCheckSignature, DoNotCheckSecurity, Custom, NotEnumerable] DOMString toString();
 #endif // defined(V8_BINDING)
+
+    // Work-around for a compilation error.
+    // See comments in DOMWindow.h for an explanation.
+    const int __HACK = 0;
 };
 

@@ -38,13 +38,9 @@
 #include "MessagePort.h"
 #include "PublicURLManager.h"
 #include "Settings.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WorkerContext.h"
 #include "WorkerThread.h"
 #include <wtf/MainThread.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
@@ -53,13 +49,6 @@
 #include "JSDOMWindow.h"
 #endif
 
-namespace WTF {
-
-template<> struct SequenceMemoryInstrumentationTraits<WebCore::ContextDestructionObserver*> {
-    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
-};
-
-}
 namespace WebCore {
 
 class ProcessMessagesSoonTask : public ScriptExecutionContext::Task {
@@ -405,21 +394,6 @@ void ScriptExecutionContext::didChangeTimerAlignmentInterval()
 double ScriptExecutionContext::timerAlignmentInterval() const
 {
     return Settings::defaultDOMTimerAlignmentInterval();
-}
-
-void ScriptExecutionContext::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    SecurityContext::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_messagePorts);
-    info.addMember(m_destructionObservers);
-    info.addMember(m_activeDOMObjects);
-    info.addMember(m_timeouts);
-    info.addMember(m_pendingExceptions);
-#if ENABLE(BLOB)
-    info.addMember(m_publicURLManager);
-    info.addMember(m_fileThread);
-#endif
 }
 
 ScriptExecutionContext::Task::~Task()

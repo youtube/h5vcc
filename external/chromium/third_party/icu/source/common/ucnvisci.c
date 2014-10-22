@@ -27,6 +27,12 @@
 #include "unicode/uset.h"
 #include "cstring.h"
 
+#if defined(__LB_XB360__)
+// TODO(iffy): This is a result of windows.h being included somehow. We need to
+// audit where windows.h is being included from and remove it.
+# undef CALLBACK
+#endif
+
 #define UCNV_OPTIONS_VERSION_MASK 0xf
 #define NUKTA               0x093c
 #define HALANT              0x094d

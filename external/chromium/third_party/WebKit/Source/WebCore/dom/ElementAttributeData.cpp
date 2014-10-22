@@ -26,9 +26,6 @@
 #include "config.h"
 #include "ElementAttributeData.h"
 
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
-
 namespace WebCore {
 
 struct SameSizeAsElementAttributeData : public RefCounted<SameSizeAsElementAttributeData> {
@@ -159,21 +156,6 @@ bool ElementAttributeData::isEquivalent(const ElementAttributeData* other) const
     }
 
     return true;
-}
-
-void ElementAttributeData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    size_t actualSize = m_isMutable ? sizeof(ElementAttributeData) : sizeForImmutableElementAttributeDataWithAttributeCount(m_arraySize);
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM, actualSize);
-    info.addMember(m_inlineStyle);
-    info.addMember(m_classNames);
-    info.addMember(m_idForStyleResolution);
-    if (m_isMutable) {
-        info.addMember(presentationAttributeStyle());
-        info.addMember(mutableAttributeVector());
-    }
-    for (unsigned i = 0, len = length(); i < len; i++)
-        info.addMember(*attributeItem(i));
 }
 
 size_t ElementAttributeData::getAttributeItemIndexSlowCase(const AtomicString& name, bool shouldIgnoreAttributeCase) const

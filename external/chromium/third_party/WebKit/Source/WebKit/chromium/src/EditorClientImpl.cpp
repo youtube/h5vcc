@@ -244,6 +244,14 @@ bool EditorClientImpl::shouldChangeSelectedRange(Range* fromRange,
     return true;
 }
 
+#if defined(__LB_SHELL__)
+void EditorClientImpl::didMoveCursor() {
+    if (m_webView->client()) {
+        m_webView->client()->didMoveCursor();
+    }
+}
+#endif
+
 bool EditorClientImpl::shouldApplyStyle(StylePropertySet* style, Range* range)
 {
     if (m_webView->client()) {

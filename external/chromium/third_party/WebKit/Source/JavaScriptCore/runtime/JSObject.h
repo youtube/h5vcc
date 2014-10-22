@@ -504,15 +504,15 @@ public:
     JSValue getDirect(JSGlobalData& globalData, PropertyName propertyName) const
     {
         PropertyOffset offset = structure()->get(globalData, propertyName);
-        checkOffset(offset, structure()->typeInfo().type());
-        return offset != invalidOffset ? getDirectOffset(offset) : JSValue();
+        checkOffset(offset, structure()->inlineCapacity());
+        return offset != invalidOffset ? getDirect(offset) : JSValue();
     }
 
-    WriteBarrierBase<Unknown>* getDirectLocation(JSGlobalData& globalData, PropertyName propertyName)
+    PropertyOffset getDirectOffset(JSGlobalData& globalData, PropertyName propertyName)
     {
         PropertyOffset offset = structure()->get(globalData, propertyName);
-        checkOffset(offset, structure()->typeInfo().type());
-        return isValidOffset(offset) ? locationForOffset(offset) : 0;
+        checkOffset(offset, structure()->inlineCapacity());
+        return offset;
     }
 
     WriteBarrierBase<Unknown>* getDirectLocation(JSGlobalData& globalData, PropertyName propertyName, unsigned& attributes)
@@ -562,18 +562,6 @@ public:
         return &outOfLineStorage()[offsetInOutOfLineStorage(offset)];
     }
 
-    PropertyOffset offsetForLocation(WriteBarrierBase<Unknown>* location) const
-    {
-        PropertyOffset result;
-        size_t offsetInInlineStorage = location - inlineStorageUnsafe();
-        if (offsetInInlineStorage < static_cast<size_t>(firstOutOfLineOffset))
-            result = offsetInInlineStorage;
-        else
-            result = outOfLineStorage() - location + (firstOutOfLineOffset - 1);
-        validateOffset(result, structure()->typeInfo().type());
-        return result;
-    }
-
     void transitionTo(JSGlobalData&, Structure*);
 
     bool removeDirect(JSGlobalData&, PropertyName); // Return true if anything is removed.
@@ -588,9 +576,9 @@ public:
     bool putOwnDataProperty(JSGlobalData&, PropertyName, JSValue, PutPropertySlot&);
 
     // Fast access to known property offsets.
-    JSValue getDirectOffset(PropertyOffset offset) const { return locationForOffset(offset)->get(); }
-    void putDirectOffset(JSGlobalData& globalData, PropertyOffset offset, JSValue value) { locationForOffset(offset)->set(globalData, this, value); }
-    void putUndefinedAtDirectOffset(PropertyOffset offset) { locationForOffset(offset)->setUndefined(); }
+    JSValue getDirect(PropertyOffset offset) const { return locationForOffset(offset)->get(); }
+    void putDirect(JSGlobalData& globalData, PropertyOffset offset, JSValue value) { locationForOffset(offset)->set(globalData, this, value); }
+    void putDirectUndefined(PropertyOffset offset) { locationForOffset(offset)->setUndefined(); }
 
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool shouldThrow);
 
@@ -1196,7 +1184,7 @@ ALWAYS_INLINE bool JSObject::inlineGetOwnPropertySlot(ExecState* exec, PropertyN
 {
     PropertyOffset offset = structure()->get(exec->globalData(), propertyName);
     if (LIKELY(isValidOffset(offset))) {
-        JSValue value = getDirectOffset(offset);
+        JSValue value = getDirect(offset);
         if (structure()->hasGetterSetterProperties() && value.isGetterSetter())
             fillGetterPropertySlot(slot, offset);
         else
@@ -1304,7 +1292,7 @@ inline bool JSObject::putDirectInternal(JSGlobalData& globalData, PropertyName p
             if ((mode == PutModePut) && currentAttributes & ReadOnly)
                 return false;
 
-            putDirectOffset(globalData, offset, value);
+            putDirect(globalData, offset, value);
             // At this point, the objects structure only has a specific value set if previously there
             // had been one set, and if the new value being specified is the same (otherwise we would
             // have despecified, above).  So, if currentSpecificFunction is not set, or if the new
@@ -1327,7 +1315,7 @@ inline bool JSObject::putDirectInternal(JSGlobalData& globalData, PropertyName p
 
         validateOffset(offset);
         ASSERT(structure()->isValidOffset(offset));
-        putDirectOffset(globalData, offset, value);
+        putDirect(globalData, offset, value);
         // See comment on setNewProperty call below.
         if (!specificFunction)
             slot.setNewProperty(this, offset);
@@ -1346,7 +1334,7 @@ inline bool JSObject::putDirectInternal(JSGlobalData& globalData, PropertyName p
         validateOffset(offset);
         ASSERT(structure->isValidOffset(offset));
         setButterfly(globalData, newButterfly, structure);
-        putDirectOffset(globalData, offset, value);
+        putDirect(globalData, offset, value);
         // This is a new property; transitions with specific values are not currently cachable,
         // so leave the slot in an uncachable state.
         if (!specificFunction)
@@ -1373,7 +1361,7 @@ inline bool JSObject::putDirectInternal(JSGlobalData& globalData, PropertyName p
         if (currentSpecificFunction) {
             // case (1) Do the put, then return leaving the slot uncachable.
             if (specificFunction == currentSpecificFunction) {
-                putDirectOffset(globalData, offset, value);
+                putDirect(globalData, offset, value);
                 return true;
             }
             // case (2) Despecify, fall through to (3).
@@ -1382,7 +1370,7 @@ inline bool JSObject::putDirectInternal(JSGlobalData& globalData, PropertyName p
 
         // case (3) set the slot, do the put, return.
         slot.setExistingProperty(this, offset);
-        putDirectOffset(globalData, offset, value);
+        putDirect(globalData, offset, value);
         return true;
     }
 
@@ -1395,7 +1383,7 @@ inline bool JSObject::putDirectInternal(JSGlobalData& globalData, PropertyName p
     ASSERT(structure->isValidOffset(offset));
     setStructureAndReallocateStorageIfNecessary(globalData, structure);
 
-    putDirectOffset(globalData, offset, value);
+    putDirect(globalData, offset, value);
     // This is a new property; transitions with specific values are not currently cachable,
     // so leave the slot in an uncachable state.
     if (!specificFunction)
@@ -1455,7 +1443,7 @@ inline void JSObject::putDirectWithoutTransition(JSGlobalData& globalData, Prope
         newButterfly = growOutOfLineStorage(globalData, structure()->outOfLineCapacity(), structure()->suggestedNewOutOfLineStorageCapacity());
     PropertyOffset offset = structure()->addPropertyWithoutTransition(globalData, propertyName, attributes, getCallableObject(value));
     setButterfly(globalData, newButterfly, structure());
-    putDirectOffset(globalData, offset, value);
+    putDirect(globalData, offset, value);
 }
 
 inline JSValue JSObject::toPrimitive(ExecState* exec, PreferredPrimitiveType preferredType) const

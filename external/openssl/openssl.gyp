@@ -675,6 +675,7 @@
             'OPENSSL_NO_MDC2',
             'OPENSSL_NO_SCTP',
             'OPENSSL_NO_WHIRLPOOL',
+            'OPENSSL_NO_HEARTBEATS', # Workaround for CVE-2014-0160.
           ],
           'variables': {
             'openssl_config_path': 'config/lbshell',

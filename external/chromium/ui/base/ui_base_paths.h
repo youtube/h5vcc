@@ -21,7 +21,7 @@ enum {
   // Valid only in development environment; TODO(darin): move this
   DIR_TEST_DATA,            // Directory where unit test data resides.
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
   DIR_RESOURCE_PAKS_ANDROID,
 #endif
 

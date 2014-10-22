@@ -12,6 +12,9 @@
 #include "base/callback_helpers.h"
 #include "base/location.h"
 #include "base/logging.h"
+#if defined(_DEBUG)
+#include "base/string_number_conversions.h"
+#endif
 #include "media/base/audio_decoder_config.h"
 #if !defined(__LB_SHELL__)
 #include "media/base/decoder_buffer.h"
@@ -33,10 +36,6 @@
 #include "webkit/media/crypto/ppapi_decryptor.h"
 #include "webkit/plugins/ppapi/ppapi_plugin_instance.h"
 #include "webkit/plugins/ppapi/ppapi_webplugin_impl.h"
-#endif
-
-#if defined(__LB_SHELL__)
-#include "media/base/shell_filter_graph_log.h"
 #endif
 
 namespace webkit_media {
@@ -136,6 +135,10 @@ void ProxyDecryptor::AddKey(const std::string& key_system,
                             int init_data_length,
                             const std::string& session_id) {
   DVLOG(1) << "AddKey()";
+#if defined(_DEBUG)
+  std::string hex = base::HexEncode(key, key_length);
+  DLOG(INFO) << "DRM Key Response: " << hex;
+#endif
 
   // WebMediaPlayerImpl ensures GenerateKeyRequest() has been called.
   decryptor_->AddKey(key_system, key, key_length, init_data, init_data_length,
@@ -172,7 +175,10 @@ void ProxyDecryptor::Decrypt(
 #endif
 
 void ProxyDecryptor::CancelDecrypt(StreamType stream_type) {
-  NOTREACHED() << "ProxyDecryptor does not support decryption";
+  base::AutoLock auto_lock(lock_);
+
+  if (decryptor_)
+    decryptor_->CancelDecrypt(stream_type);
 }
 
 void ProxyDecryptor::InitializeAudioDecoder(

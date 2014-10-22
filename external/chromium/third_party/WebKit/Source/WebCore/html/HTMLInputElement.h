@@ -296,7 +296,6 @@ public:
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
 #endif
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
 protected:
     HTMLInputElement(const QualifiedName&, Document*, HTMLFormElement*, bool createdByParser);

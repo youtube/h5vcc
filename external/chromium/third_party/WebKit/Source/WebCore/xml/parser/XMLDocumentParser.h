@@ -38,6 +38,10 @@
 
 #if USE(QXMLSTREAM)
 #include <qxmlstream.h>
+#elif USE(LB_SHELL_XML_PARSER)
+#include "shell/XMLDocumentParserShellDelegate.h"
+#include "shell/XMLDocumentParserShellPendingEvents.h"
+#include "shell/XMLDocumentParserShellStream.h"
 #else
 #include <libxml/tree.h>
 #include <libxml/xmlstring.h>
@@ -54,8 +58,9 @@ class Element;
 class FrameView;
 class PendingCallbacks;
 class Text;
+class XMLEvent;
 
-#if !USE(QXMLSTREAM)
+#if !USE(QXMLSTREAM) && !USE(LB_SHELL_XML_PARSER)
     class XMLParserContext : public RefCounted<XMLParserContext> {
     public:
         static PassRefPtr<XMLParserContext> createMemoryParser(xmlSAXHandlerPtr, void* userData, const CString& chunk);
@@ -79,10 +84,12 @@ class Text;
         {
             return adoptRef(new XMLDocumentParser(document, view));
         }
+#if !USE(LB_SHELL_XML_PARSER)
         static PassRefPtr<XMLDocumentParser> create(DocumentFragment* fragment, Element* element, FragmentScriptingPermission permission)
         {
             return adoptRef(new XMLDocumentParser(fragment, element, permission));
         }
+#endif
 
         ~XMLDocumentParser();
 
@@ -91,9 +98,9 @@ class Text;
 
         void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
         bool isXHTMLDocument() const { return m_isXHTMLDocument; }
-
+#if !USE(LB_SHELL_XML_PARSER)
         static bool parseDocumentFragment(const String&, DocumentFragment*, Element* parent = 0, FragmentScriptingPermission = AllowScriptingContent);
-
+#endif
         // Used by the XMLHttpRequest to check if the responseXML was well formed.
         virtual bool wellFormed() const { return !m_sawError; }
 
@@ -103,7 +110,9 @@ class Text;
 
     private:
         XMLDocumentParser(Document*, FrameView* = 0);
+#if !USE(LB_SHELL_XML_PARSER)
         XMLDocumentParser(DocumentFragment*, Element*, FragmentScriptingPermission);
+#endif
 
         // From DocumentParser
         virtual void insert(const SegmentedString&);
@@ -139,6 +148,14 @@ private:
         void endDocument();
         void parseDtd();
         bool hasError() const;
+#elif USE(LB_SHELL_XML_PARSER)
+public:
+        // callback from delegate
+        void appendEvent(XMLEventBase* event);
+        void executeParsing();
+private:
+        friend class XMLEvent;
+        friend class XMLDocumentParserShellDelegate;
 #else
 public:
         // callbacks from parser SAX
@@ -182,6 +199,11 @@ public:
 #if USE(QXMLSTREAM)
         QXmlStreamReader m_stream;
         bool m_wroteText;
+#elif USE(LB_SHELL_XML_PARSER)
+        XMLDocumentParserShellStream m_stream;
+        RefPtr<XMLDocumentParserShellDelegate> m_delegate;
+        XMLPendingEvents m_pendingEvents;
+        String m_bufferedText;
 #else
         xmlParserCtxtPtr context() const { return m_context ? m_context->context() : 0; };
         RefPtr<XMLParserContext> m_context;
@@ -223,7 +245,7 @@ public:
 void* xmlDocPtrForString(CachedResourceLoader*, const String& source, const String& url);
 #endif
 
-HashMap<String, String> parseAttributes(const String&, bool& attrsOK);
+    HashMap<String, String> parseAttributes(const String&, bool& attrsOK);
 
 } // namespace WebCore
 

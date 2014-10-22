@@ -28,12 +28,24 @@
 #   include "unicode/pandroid.h"
 #elif defined(__linux__)
 #   include "unicode/plinux.h"
-#elif defined(__LB_PS3__)
-#   include "unicode/pps3.h"
-#elif defined(__LB_WIIU__)
-#   include "unicode/pwiiu.h"
-#elif defined(__LB_LINUX__)
-#   include "unicode/plinux.h"
+#elif defined(__LB_SHELL__)
+#   if defined(__LB_ANDROID__)
+#       include "unicode/pandroid.h"
+#   elif defined(__LB_LINUX__)
+#       include "unicode/plinux.h"
+#   elif defined(__LB_PS3__)
+#       include "unicode/pps3.h"
+#   elif defined(__LB_PS4__)
+#       include "unicode/pps4.h"
+#   elif defined(__LB_WIIU__)
+#       include "unicode/pwiiu.h"
+#   elif defined(__LB_XB1__)
+#       include "unicode/pxb1.h"
+#   elif defined(__LB_XB360__)
+#       include "unicode/pxb360.h"
+#   else
+#       error "Undefined Platform"
+#   endif
 #elif defined(__FreeBSD__)
 #   include "unicode/pfreebsd.h"
 #elif defined(__OpenBSD__)

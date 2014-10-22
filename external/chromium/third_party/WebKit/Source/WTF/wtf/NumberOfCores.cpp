@@ -48,6 +48,10 @@ namespace WTF {
 int numberOfProcessorCores()
 {
     const int defaultIfUnavailable = 1;
+
+#if defined(__LB_SHELL__)
+    return defaultIfUnavailable;
+#else
     static int s_numberOfCores = -1;
 
     if (s_numberOfCores > 0)
@@ -81,6 +85,7 @@ int numberOfProcessorCores()
     s_numberOfCores = defaultIfUnavailable;
 #endif
     return s_numberOfCores;
+#endif // defined(__LB_SHELL__)
 }
 
 }

@@ -10,8 +10,22 @@
       'sources': [
         'dlmalloc.c',
       ],
-
       'include_dirs': [
+      ],
+      'conditions': [
+        ['target_arch=="xb1" or target_arch=="xb360"', {
+          # Compile dlmalloc.c as C++ on MSVC.
+          'msvs_settings': {
+            'VCCLCompilerTool': {
+              'AdditionalOptions': ['/TP'],
+            },
+          },
+        },],
+        ['target_arch=="android"', {
+          'cflags': [
+            '-std=c99',
+          ],
+        }],
       ],
     },
   ],

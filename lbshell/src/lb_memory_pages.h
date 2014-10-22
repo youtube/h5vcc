@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef _LB_MEMORY_PAGES_H_
-#define _LB_MEMORY_PAGES_H_
+#ifndef SRC_LB_MEMORY_PAGES_H_
+#define SRC_LB_MEMORY_PAGES_H_
 
 #include "lb_platform.h"
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 lb_virtual_mem_t lb_allocate_virtual_address(size_t size,
                                              size_t page_size);
 void lb_free_virtual_address(lb_virtual_mem_t address);
@@ -32,7 +34,22 @@ int lb_map_memory(lb_virtual_mem_t virtual_address,
 void lb_unmap_memory(lb_virtual_mem_t virtual_address,
                      lb_physical_mem_t* physical_address);
 
+// Amount of physical memory available.
 size_t lb_get_total_system_memory();
-size_t lb_get_unallocated_memory();
+// How big of a virtual region should dlmalloc allocate.
+// Note that it allocates two such regions on some platforms.
+size_t lb_get_virtual_region_size();
+ssize_t lb_get_unallocated_memory();
 
-#endif // _LB_MEMORY_PAGES_H_
+#if defined(__LB_PS4__)
+// return 0 on success.
+int lb_get_physical_address(
+    const lb_virtual_mem_t virtual_address,
+    lb_physical_mem_t* out_phys_addr);
+#endif  // defined(__LB_PS4__)
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+
+#endif  // SRC_LB_MEMORY_PAGES_H_

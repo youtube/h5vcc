@@ -9,7 +9,7 @@
 // can be exported to consumers.
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(MEDIA_IMPLEMENTATION)
 #define MEDIA_EXPORT __declspec(dllexport)

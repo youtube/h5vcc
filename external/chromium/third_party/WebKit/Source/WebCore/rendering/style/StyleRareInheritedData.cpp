@@ -28,8 +28,6 @@
 #include "RenderStyleConstants.h"
 #include "ShadowData.h"
 #include "StyleImage.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryObjectInfo.h>
 
 namespace WebCore {
 
@@ -117,6 +115,9 @@ StyleRareInheritedData::StyleRareInheritedData()
 #if ENABLE(TOUCH_EVENTS)
     , tapHighlightColor(RenderStyle::initialTapHighlightColor())
 #endif    
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    , m_h5vccTargetScreen(RenderStyle::initialH5vccTargetScreen())
+#endif
 {
 #if ENABLE(CSS_VARIABLES)
     m_variables.init();
@@ -192,6 +193,9 @@ StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
 #endif
 #if ENABLE(CSS_VARIABLES)
     , m_variables(o.m_variables)
+#endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    , m_h5vccTargetScreen(o.m_h5vccTargetScreen)
 #endif
 {
 }
@@ -276,6 +280,9 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
 #if ENABLE(CSS_VARIABLES)
         && m_variables == o.m_variables
 #endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+        && m_h5vccTargetScreen == o.m_h5vccTargetScreen
+#endif
         && m_lineAlign == o.m_lineAlign
         && StyleImage::imagesEquivalent(listStyleImage.get(), o.listStyleImage.get());
 }
@@ -287,22 +294,6 @@ bool StyleRareInheritedData::shadowDataEquivalent(const StyleRareInheritedData& 
     if (textShadow && o.textShadow && (*textShadow != *o.textShadow))
         return false;
     return true;
-}
-
-void StyleRareInheritedData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(textShadow);
-    info.addMember(highlight);
-    info.addMember(cursorData);
-    info.addMember(hyphenationString);
-    info.addMember(locale);
-    info.addMember(textEmphasisCustomMark);
-    info.addMember(quotes);
-    info.addMember(m_lineGrid);
-#if ENABLE(CSS_VARIABLES)
-    info.addMember(m_variables);
-#endif
 }
 
 } // namespace WebCore

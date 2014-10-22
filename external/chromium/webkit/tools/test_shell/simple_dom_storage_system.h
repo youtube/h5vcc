@@ -37,6 +37,14 @@ class SimpleDomStorageSystem
   WebKit::WebStorageNamespace* CreateLocalStorageNamespace();
   WebKit::WebStorageNamespace* CreateSessionStorageNamespace();
 
+  void Flush();
+
+#if defined(__LB_SHELL__)
+  // Destroy and re-create the context_ and host_, effectively flushing all
+  // storage from memory. Storage will be re-loaded from disk as needed
+  void Reset();
+#endif
+
  private:
   // Inner classes that implement the WebKit WebStorageNamespace and
   // WebStorageArea interfaces in terms of dom_storage classes.

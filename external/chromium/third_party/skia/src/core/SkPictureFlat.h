@@ -333,20 +333,20 @@ public:
     }
 
     // returns true if fTopBot[] has been recorded
-    bool isTopBotValid() const {
-        return fTopBot[0] < fTopBot[1];
+    bool isTopBotWritten() const {
+        return !SkScalarIsNaN(fTopBot[0]);
     }
 
     // Returns fTopBot array, so it can be passed to a routine to compute them.
     // For efficiency, we assert that fTopBot have not been recorded yet.
-    SkScalar* writableTopBot() {
-        SkASSERT(!this->isTopBotValid());
+    SkScalar* writableTopBot() const {
+        SkASSERT(!this->isTopBotWritten());
         return fTopBot;
     }
 
     // return the topbot[] after it has been recorded
     const SkScalar* topBot() const {
-        SkASSERT(this->isTopBotValid());
+        SkASSERT(this->isTopBotWritten());
         return fTopBot;
     }
 
@@ -355,10 +355,15 @@ private:
     int fIndex;
 
     // Cache of paint's FontMetrics fTop,fBottom
-    // initialied to [0,0] as a sentinel that they have not been recorded yet
+    // initialied to [NaN,NaN] as a sentinel that they have not been recorded yet
     //
     // This is *not* part of the key for search/sort
-    SkScalar fTopBot[2];
+    mutable SkScalar fTopBot[2];
+
+    // marks fTopBot[] as unrecorded
+    void setTopBotUnwritten() {
+        this->fTopBot[0] = this->fTopBot[1] = SK_ScalarNaN; // initial to sentinel values
+    }
 
     // From here down is the data we look at in the search/sort. We always begin
     // with the checksum and then length.
@@ -489,29 +494,6 @@ public:
         return array;
     }
 
-protected:
-    void (*fFlattenProc)(SkOrderedWriteBuffer&, const void*);
-    void (*fUnflattenProc)(SkOrderedReadBuffer&, void*);
-
-private:
-    void unflattenIntoArray(T* array) const {
-        const int count = fData.count();
-        const SkFlatData** iter = fData.begin();
-        for (int i = 0; i < count; ++i) {
-            const SkFlatData* element = iter[i];
-            int index = element->index() - 1;
-            SkASSERT((unsigned)index < (unsigned)count);
-            element->unflatten(&array[index], fUnflattenProc,
-                               fController->getBitmapHeap(),
-                               fController->getTypefacePlayback());
-        }
-    }
-
-
-    SkFlatController * const     fController;
-    int                          fNextIndex;
-    SkTDArray<const SkFlatData*> fData;
-
     const SkFlatData* findAndReturnFlat(const T& element) {
         SkFlatData* flat = SkFlatData::Create(fController, &element, fNextIndex, fFlattenProc);
 
@@ -540,6 +522,27 @@ private:
         return flat;
     }
 
+protected:
+    void (*fFlattenProc)(SkOrderedWriteBuffer&, const void*);
+    void (*fUnflattenProc)(SkOrderedReadBuffer&, void*);
+
+private:
+    void unflattenIntoArray(T* array) const {
+        const int count = fData.count();
+        const SkFlatData** iter = fData.begin();
+        for (int i = 0; i < count; ++i) {
+            const SkFlatData* element = iter[i];
+            int index = element->index() - 1;
+            SkASSERT((unsigned)index < (unsigned)count);
+            element->unflatten(&array[index], fUnflattenProc,
+                               fController->getBitmapHeap(),
+                               fController->getTypefacePlayback());
+        }
+    }
+
+    SkFlatController * const     fController;
+    int                          fNextIndex;
+    SkTDArray<const SkFlatData*> fData;
 
     enum {
         // Determined by trying diff values on picture-recording benchmarks
@@ -648,10 +651,6 @@ class SkPaintDictionary : public SkFlatDictionary<SkPaint> {
     : SkFlatDictionary<SkPaint>(controller) {
         fFlattenProc = &SkFlattenObjectProc<SkPaint>;
         fUnflattenProc = &SkUnflattenObjectProc<SkPaint>;
-    }
-
-    SkFlatData* writableFlatData(int index) {
-        return const_cast<SkFlatData*>((*this)[index]);
     }
 };
 

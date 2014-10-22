@@ -39,16 +39,6 @@ const char kLoadSavegame[] = "load-savegame";
 // Override the User Agent string
 const char kUserAgent[] = "user-agent";
 
-// Turn on shell filter graph logging
-const char kFilterGraphLog[] = "filter-graph-log";
-
-#if defined(__LB_WIIU__)
-// Test the error viewer by continuously reloading and displaying an error
-// message.  Pass the error message ID as a value.
-const char kErrorTest[] = "error-test";
-
-#endif
-
 // Override the system language.  This is a two-letter language code with an
 // optional country code, such as "de" or "pt-BR".
 const char kLang[] = "lang";
@@ -56,9 +46,29 @@ const char kLang[] = "lang";
 // Ignore platform specific authentication (PSN, Miiverse, etc).
 const char kIgnorePlatformAuthentication[] = "ignore-platform-authentication";
 
+// Set HTTP and HTTPS proxy address.
+const char kProxy[] = "proxy";
+
+// Hide the splash screen as soon as possible
+const char kHideSplashScreenAtInit[] = "hide-splash-screen-at-init";
+
+#if defined(__LB_WIIU__)
+// Test the error viewer by continuously reloading and displaying an error
+// message.  Pass the error message ID as a value.
+const char kErrorTest[] = "error-test";
+#endif
+
 #if defined(__LB_LINUX__)
 // Print the version number and exit.
 const char kVersion[] = "version";
+
+// Print a list of options and exit.
+const char kHelp[] = "help";
+#endif
+
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+// Draw bright yellow borders around everything marked with '-h5vcc-gesturable'.
+const char kDrawGestureRecognizerBorder[] = "draw-gesture-recognizer-border";
 #endif
 
 }  // namespace switches

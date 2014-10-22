@@ -32,7 +32,7 @@
 #endif  // OS_IOS
 #endif  // OS_MACOSX
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include "base/test/test_support_android.h"
 #endif
 
@@ -101,7 +101,25 @@ void TestSuite::PreInitialize(int argc, char** argv,
 #endif
   base::EnableTerminationOnHeapCorruption();
   initialized_command_line_ = CommandLine::Init(argc, argv);
+#if defined(__LB_XB360__)
+  assert(argc == 0 && argv == NULL);
+  CommandLine *line = CommandLine::ForCurrentProcess();
+  const CommandLine::StringVector& argv_vec = line->argv();
+  argc = argv_vec.size();
+  argv = reinterpret_cast<char**>(malloc(sizeof(argv[0]) * argc));
+  for (int i = 0; i < argc; ++i) {
+    argv[i] = strdup(argv_vec[i].c_str());
+  }
+#endif
   testing::InitGoogleTest(&argc, argv);
+#if defined(__LB_XB360__)
+  for (int i = 0; i < argc; ++i) {
+    free(argv[i]);
+  }
+  free(argv);
+  argc = 0;
+  argv = NULL;
+#endif
 #if defined (__LB_LINUX__)
   setlocale(LC_ALL, "");
 #elif defined(OS_LINUX) && defined(USE_AURA)
@@ -115,7 +133,11 @@ void TestSuite::PreInitialize(int argc, char** argv,
 
   // On Android, AtExitManager is created in
   // testing/android/native_test_wrapper.cc before main() is called.
-#if !defined(OS_ANDROID)
+#if defined(__LB_SHELL__)
+  if (create_at_exit_manager) {
+    at_exit_manager_.reset(new base::ShadowingAtExitManager);
+  }
+#elif !defined(OS_ANDROID)
   if (create_at_exit_manager)
     at_exit_manager_.reset(new base::AtExitManager);
 #endif
@@ -255,7 +277,7 @@ void TestSuite::Initialize() {
   InitIOSTestMessageLoop();
 #endif  // OS_IOS
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
   InitAndroidTest();
 #else
   // Initialize logging.

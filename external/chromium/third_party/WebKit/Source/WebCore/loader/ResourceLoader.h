@@ -148,8 +148,6 @@ public:
 
     void setShouldBufferData(DataBufferingPolicy);
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
 #if PLATFORM(MAC)
     // FIXME (NetworkProcess): This is temporary to allow WebKit to directly set the identifier on a ResourceLoader.
     // More permanently we want the identifier to be piped through ResourceLoader::init/start so

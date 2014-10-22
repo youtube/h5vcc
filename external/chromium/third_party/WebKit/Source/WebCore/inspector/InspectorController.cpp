@@ -73,8 +73,6 @@
 #include "Page.h"
 #include "ScriptObject.h"
 #include "Settings.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
@@ -381,32 +379,6 @@ void InspectorController::resume()
 void InspectorController::setResourcesDataSizeLimitsFromInternals(int maximumResourcesContentSize, int maximumSingleResourceContentSize)
 {
     m_resourceAgent->setResourcesDataSizeLimitsFromInternals(maximumResourcesContentSize, maximumSingleResourceContentSize);
-}
-
-void InspectorController::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::InspectorController);
-    info.addMember(m_inspectorAgent);
-    info.addMember(m_instrumentingAgents);
-    info.addMember(m_injectedScriptManager);
-    info.addMember(m_state);
-    info.addMember(m_overlay);
-
-    info.addMember(m_inspectorAgent);
-    info.addMember(m_domAgent);
-    info.addMember(m_resourceAgent);
-    info.addMember(m_pageAgent);
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    info.addMember(m_debuggerAgent);
-    info.addMember(m_profilerAgent);
-#endif
-
-    info.addMember(m_inspectorBackendDispatcher);
-    info.addMember(m_inspectorFrontendClient);
-    info.addMember(m_inspectorFrontend);
-    info.addMember(m_page);
-    info.addWeakPointer(m_inspectorClient);
-    info.addMember(m_agents);
 }
 
 void InspectorController::willProcessTask()

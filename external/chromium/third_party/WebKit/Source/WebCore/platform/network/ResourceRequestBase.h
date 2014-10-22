@@ -164,10 +164,8 @@ namespace WebCore {
         {
         }
 
-        void updatePlatformRequest() const; 
-        void updateResourceRequest() const; 
-
-        void reportMemoryUsageBase(MemoryObjectInfo*) const;
+        void updatePlatformRequest() const;
+        void updateResourceRequest() const;
 
         // The ResourceRequest subclass may "shadow" this method to compare platform specific fields
         static bool platformCompare(const ResourceRequest&, const ResourceRequest&) { return true; }

@@ -31,7 +31,6 @@
 #ifndef ScriptWrappable_h
 #define ScriptWrappable_h
 
-#include "WebCoreMemoryInstrumentation.h"
 #include <v8.h>
 
 namespace WebCore {
@@ -64,12 +63,6 @@ public:
         ASSERT(!m_wrapper.IsEmpty());
         m_wrapper.Dispose();
         m_wrapper.Clear();
-    }
-
-    void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-    {
-        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-        info.addWeakPointer(const_cast<v8::Persistent<v8::Object>*>(&m_wrapper));
     }
 
 private:

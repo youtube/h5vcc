@@ -544,7 +544,6 @@
             ['exclude', 'ext/SkThread_chrome.cc'],
             ['exclude', '../third_party/skia/src/core/SkMMapStream\\.(cpp|h)'],
             ['exclude', '../third_party/skia/src/ports/SkTime_Unix.cpp'],
-            ['exclude', '../third_party/skia/src/opts/opts_check_SSE2.cpp'],
             ['exclude', '_(linux|gtk)\\.(cc|cpp)$'],
             ['include', '../third_party/skia/src/ports/SkFontHost_linux.cpp'],
           ],
@@ -557,14 +556,44 @@
           'dependencies': [
             '../third_party/freetype/freetype.gyp:ft2',
             '../third_party/harfbuzz/harfbuzz.gyp:harfbuzz',
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
           ],
           'conditions': [
-            ['target_arch=="ps3" or target_arch=="blue"', {
+            ['target_arch != "ps4"', {
+              'sources/': [
+                ['exclude', '../third_party/skia/src/opts/opts_check_SSE2.cpp'],
+              ],
+            }],
+            ['target_arch!="android"', {
+              # Some platforms have custom fast paths for low level Skia functions.
+              # These are located in the lbshell repo.
+              # Android uses the existing Skia opts for ARM/NEON.
+              'sources': [
+                '<!@(find <(lbshell_root)/src/platform/<(target_arch)/skia/opts -type f)',
+              ],
+            }],
+            ['target_arch=="ps3"', {
               'defines': [
                 'SK_CPU_BENDIAN'
               ]
-            }]
-          ]
+            }],
+            ['target_arch == "linux"', {
+              'sources/': [
+                # "_linux.cpp" is excluded above. Re-include them.
+                ['include', '<(lbshell_root)/src/platform/<(target_arch)/skia/opts/opts_check_<(target_arch).cpp'],
+              ],
+            }],
+            ['target_arch=="xb1"', {
+              'defines': [
+                'SK_ANGLE',
+              ],
+              'direct_dependent_settings': {
+                'defines': [
+                  'SK_ANGLE',
+                ],
+              },
+            }],
+          ],
         }, { # os is not lb_shell
           'dependencies': [
             '../third_party/sfntly/sfntly.gyp:sfntly',
@@ -684,12 +713,16 @@
             '-msse2',
           ],
         }],
-        [ 'OS=="lb_shell"', {
+        [ 'OS=="lb_shell" and target_arch!="ps4"', {
           'cflags!': [
             '-msse2',
           ],
           'sources/' : [
             ['exclude', 'SSE2'],
+          ],
+        }],
+        ['OS=="lb_shell" and target_arch!="android"', {
+          'sources/' : [
             ['exclude', 'arm'],
           ],
         }],
@@ -698,7 +731,7 @@
             'SK_BUILD_FOR_ANDROID_NDK',
           ],
         }],
-        [ 'target_arch != "arm" and target_arch != "mipsel" and OS != "lb_shell"', {
+        [ 'target_arch != "arm" and target_arch != "mipsel" and (OS != "lb_shell" or target_arch=="ps4")', {
           'sources': [
             '../third_party/skia/src/opts/SkBitmapProcState_opts_SSE2.cpp',
             '../third_party/skia/src/opts/SkBlitRect_opts_SSE2.cpp',
@@ -714,7 +747,7 @@
             }],
           ],
         }],
-        [ 'target_arch == "arm"', {
+        [ 'target_arch == "arm" or (OS=="lb_shell" and target_arch=="android")', {
           'conditions': [
             [ 'armv7 == 1', {
               'defines': [
@@ -772,7 +805,7 @@
             '../third_party/skia/src/opts/SkUtils_opts_none.cpp',
           ],
         }],
-        [ 'target_arch == "arm" and armv7 == 1', {
+        [ 'armv7 == 1', {
           'sources': [
             '../third_party/skia/src/opts/SkBlitRow_opts_arm.cpp',
             '../third_party/skia/src/opts/SkBlitRow_opts_arm.h',
@@ -829,7 +862,7 @@
             ],
           },
         }],
-        [ 'target_arch != "arm" and OS != "lb_shell"', {
+        [ 'target_arch != "arm" and (OS != "lb_shell" or target_arch=="ps4")', {
           'sources': [
             '../third_party/skia/src/opts/SkBitmapProcState_opts_SSSE3.cpp',
           ],

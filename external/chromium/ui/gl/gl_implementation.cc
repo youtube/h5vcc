@@ -76,7 +76,7 @@ WGLApi* g_current_wgl_context;
 EGLApi* g_current_egl_context;
 GLXApi* g_current_glx_context;
 
-#elif defined(OS_ANDROID)
+#elif defined(OS_ANDROID) || defined(__LB_ANDROID__)
 
 EGLApi* g_current_egl_context;
 

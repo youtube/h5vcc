@@ -23,15 +23,16 @@
 #include "SkTSearch.h"
 
 #ifdef __LB_SHELL__
+#include "lb_globals.h"
 
 #include <string>
-extern std::string *global_game_content_path;
 // This is only as complicated as it is because the consumers of
 // SK_FONT_FILE_PREFIX expect a static C string.
 static std::string shell_font_path_;
 static const char *shell_font_path() {
   if (shell_font_path_.length() == 0) {
-    shell_font_path_ = *global_game_content_path + "/fonts/";
+    const std::string game_content_path(GetGlobalsPtr()->game_content_path);
+    shell_font_path_ = game_content_path + "/fonts/";
   }
   return shell_font_path_.c_str();
 }

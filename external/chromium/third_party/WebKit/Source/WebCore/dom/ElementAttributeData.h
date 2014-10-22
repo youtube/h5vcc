@@ -79,8 +79,6 @@ public:
 
     bool isEquivalent(const ElementAttributeData* other) const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
     bool isMutable() const { return m_isMutable; }
     const Attribute* immutableAttributeArray() const;
 

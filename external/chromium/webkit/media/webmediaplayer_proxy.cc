@@ -7,6 +7,9 @@
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/message_loop_proxy.h"
+#if defined(_DEBUG)
+#include "base/string_number_conversions.h"
+#endif
 #include "media/base/pipeline_status.h"
 #include "media/filters/video_renderer_base.h"
 #include "webkit/media/webmediaplayer_impl.h"
@@ -127,6 +130,11 @@ void WebMediaPlayerProxy::KeyMessage(const std::string& key_system,
                                      const std::string& session_id,
                                      const std::string& message,
                                      const std::string& default_url) {
+#if defined(_DEBUG)
+  std::string hex = base::HexEncode(message.data(), message.size());
+  DLOG(INFO) << "DRM Key Request: " << hex;
+#endif
+
   render_loop_->PostTask(FROM_HERE, base::Bind(
       &WebMediaPlayerProxy::KeyMessageTask, this, key_system, session_id,
       message, default_url));

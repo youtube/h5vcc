@@ -253,7 +253,7 @@ namespace JSC {
     typedef OpcodeID Opcode;
 #endif
 
-#define PADDING_STRING "                                "
+#define PADDING_STRING (const char*)("                                ")
 #define PADDING_STRING_LENGTH static_cast<unsigned>(strlen(PADDING_STRING))
 
     extern const char* const opcodeNames[];

@@ -665,13 +665,6 @@ void Frame::dispatchVisibilityStateChangeEvent()
 }
 #endif
 
-void Frame::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_doc.get());
-    info.addMember(m_loader);
-}
-
 void Frame::willDetachPage()
 {
     if (Frame* parent = tree()->parent())
@@ -890,6 +883,16 @@ String Frame::trackedRepaintRectsAsText() const
         return String();
     return m_view->trackedRepaintRectsAsText();
 }
+
+#if defined(__LB_SHELL__)
+String Frame::layerBackingsInfo() const {
+    if (!contentRenderer()) {
+        return String();
+    }
+
+    return contentRenderer()->compositor()->layerBackingsInfo();
+}
+#endif
 
 void Frame::setPageZoomFactor(float factor)
 {

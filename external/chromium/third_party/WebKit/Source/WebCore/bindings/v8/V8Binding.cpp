@@ -46,14 +46,12 @@
 #include "V8ObjectConstructor.h"
 #include "V8WorkerContext.h"
 #include "V8XPathNSResolver.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WorkerContext.h"
 #include "WorkerScriptController.h"
 #include "WorldContextHandle.h"
 #include "XPathNSResolver.h"
 #include <wtf/MathExtras.h>
 #include <wtf/MainThread.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Threading.h>
 #include <wtf/text/AtomicString.h>
@@ -61,14 +59,6 @@
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
-
-namespace WTF {
-
-template<> struct SequenceMemoryInstrumentationTraits<v8::String*> {
-    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
-};
-
-}
 
 namespace WebCore {
 
@@ -188,12 +178,6 @@ v8::Persistent<v8::FunctionTemplate> createRawTemplate()
     v8::HandleScope scope;
     v8::Local<v8::FunctionTemplate> result = v8::FunctionTemplate::New(V8ObjectConstructor::isValidConstructorMode);
     return v8::Persistent<v8::FunctionTemplate>::New(result);
-}        
-
-void StringCache::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Binding);
-    info.addMember(m_stringCache);
 }
     
 PassRefPtr<DOMStringList> toDOMStringList(v8::Handle<v8::Value> value, v8::Isolate* isolate)

@@ -110,7 +110,12 @@ private:
 
     void setShaderOpacity(float opacity, int alphaLocation);
     void setShaderQuadF(const gfx::QuadF&, int quadLocation);
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    // This override allows callers to choose which screen to render to.
+    void drawQuadGeometry(const DrawingFrame&, const gfx::Transform& drawTransform, const gfx::RectF& quadRect, int matrixLocation, WebKit::H5VCCTargetScreen target_screen);
+#endif
     void drawQuadGeometry(const DrawingFrame&, const gfx::Transform& drawTransform, const gfx::RectF& quadRect, int matrixLocation);
+
     void setBlendEnabled(bool enabled);
     void setUseProgram(unsigned program);
 

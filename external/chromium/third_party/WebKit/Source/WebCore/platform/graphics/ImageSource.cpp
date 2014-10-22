@@ -33,7 +33,6 @@
 
 #include "ImageOrientation.h"
 #include "NotImplemented.h"
-#include "PlatformMemoryInstrumentation.h"
 
 #if PLATFORM(CHROMIUM)
 #include "DeferredImageDecoder.h"
@@ -205,12 +204,6 @@ unsigned ImageSource::frameBytesAtIndex(size_t index) const
     if (!m_decoder)
         return 0;
     return m_decoder->frameBytesAtIndex(index);
-}
-
-void ImageSource::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-    info.addMember(m_decoder);
 }
 
 }

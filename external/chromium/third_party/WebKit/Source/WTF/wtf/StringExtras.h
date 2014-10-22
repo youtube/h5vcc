@@ -34,7 +34,7 @@
 #include <strings.h> 
 #endif 
 
-#if COMPILER(MSVC)
+#if COMPILER(MSVC) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 // FIXME: why a COMPILER check instead of OS? also, these should be HAVE checks
 
 inline int snprintf(char* buffer, size_t count, const char* format, ...) 

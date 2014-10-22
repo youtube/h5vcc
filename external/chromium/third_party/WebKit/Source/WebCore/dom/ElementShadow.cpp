@@ -253,18 +253,6 @@ void ElementShadow::collectSelectFeatureSetFrom(ShadowRoot* root)
     }
 }
 
-void ElementShadow::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_shadowRoots);
-    ShadowRoot* shadowRoot = m_shadowRoots.head();
-    while (shadowRoot) {
-        info.addMember(shadowRoot);
-        shadowRoot = shadowRoot->next();
-    }
-    info.addMember(m_distributor);
-}
-
 void invalidateParentDistributionIfNecessary(Element* element, SelectRuleFeatureSet::SelectRuleFeatureMask updatedFeatures)
 {
     ElementShadow* elementShadow = shadowOfParentForDistribution(element);

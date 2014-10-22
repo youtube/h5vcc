@@ -64,7 +64,11 @@ void GregorianDateTime::setToCurrentLocalTime()
 #else
     tm localTM;
     time_t localTime = time(0);
+#if defined(__STDC_LIB_EXT1__)
+    localtime_s(&localTime, &localTM);
+#else
     localtime_r(&localTime, &localTM);
+#endif
 
     m_year = localTM.tm_year + 1900;
     m_month = localTM.tm_mon;

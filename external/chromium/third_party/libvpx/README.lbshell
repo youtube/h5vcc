@@ -1,0 +1,13 @@
+Name: libvpx
+URL: http://www.webmproject.org
+Version: v1.3.0
+License: BSD
+License File: source/libvpx/LICENSE
+Security Critical: yes
+
+Date: Thursday July 24 2014
+Branch: master
+Commit: 374c8859199ca9edc07d8a0cf66ea8ff8aec015f
+
+This is the version used in the public Chrome release.
+See: [chromium] //src/third_party/libvpx/README.chromium

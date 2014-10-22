@@ -52,9 +52,6 @@
 #include "ResourceLoadScheduler.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationListHashSet.h>
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -430,7 +427,15 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::requestResource(Cache
     if (Frame* f = frame())
         f->loader()->client()->dispatchWillRequestResource(&request);
 
-    if (memoryCache()->disabled()) {
+    bool skipCache = false;
+#if defined(__LB_SHELL__)
+    // Leanback webpage generates many unique JavaScript code fragment over
+    // time. Since the cache is only cleared during a navigation event, this
+    // causes it to grow indefinitely.
+    if (type == CachedResource::Script)
+      skipCache = true;
+#endif
+    if (skipCache || memoryCache()->disabled()) {
         DocumentResourceMap::iterator it = m_documentResources.find(url.string());
         if (it != m_documentResources.end()) {
             it->value->setOwningCachedResourceLoader(0);
@@ -529,7 +534,15 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::loadResource(CachedRe
 
     CachedResourceHandle<CachedResource> resource = createResource(type, request.mutableResourceRequest(), charset);
 
-    if (!memoryCache()->add(resource.get()))
+    bool skipCache = false;
+#if defined(__LB_SHELL__)
+    // Leanback webpage generates many unique JavaScript code fragment over
+    // time. Since the cache is only cleared during a navigation event, this
+    // causes it to grow indefinitely.
+    if (type == CachedResource::Script)
+        skipCache = true;
+#endif
+    if (skipCache || !memoryCache()->add(resource.get()))
         resource->setOwningCachedResourceLoader(this);
 #if ENABLE(RESOURCE_TIMING)
     InitiatorInfo info = { request.initiatorName(), monotonicallyIncreasingTime() };
@@ -957,15 +970,6 @@ void CachedResourceLoader::printPreloadStats()
         printf("IMAGES:  %d (%d hits, hit rate %d%%)\n", images, images - imageMisses, (images - imageMisses) * 100 / images);
 }
 #endif
-
-void CachedResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_documentResources);
-    info.addMember(m_validatedURLs);
-    info.addMember(m_preloads);
-    info.addMember(m_pendingPreloads);
-}
 
 const ResourceLoaderOptions& CachedResourceLoader::defaultCachedResourceOptions()
 {

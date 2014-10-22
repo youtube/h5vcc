@@ -35,12 +35,8 @@
 #include "RenderTableRow.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <limits>
 #include <wtf/HashSet.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/Vector.h>
 
 using namespace std;
@@ -1124,6 +1120,22 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
                     for (unsigned c = dirtiedColumns.start(); c < dirtiedColumns.end(); c++) {
                         CellStruct& current = cellAt(r, c);
                         RenderTableCell* cell = current.primaryCell();
+#ifdef WTF_COMPILER_MSVC
+                        // It seems that the compiler cannot handle this case correctly without the following if
+                        // block. The compile is trying to get the current cell in the beginning of the loop
+                        // body. So the code inside the loop utilise this cell to calculate the cell to the top
+                        // or to the left of it by minusing the row size or cell size from the pointer to
+                        // current cell. However, the offset calculation of the cell above it is incorrect,
+                        // which leads to a crash. The added code inside the following if is a work around, it
+                        // makes the compiler call the cellAt function directly without any optimization.
+                        // See https://b.corp.google.com/issue?id=11052040 for further details.
+                        if (r == 1 && c == 0) {
+                            if (!cell || (r > dirtiedRows.start() && primaryCellAt(0, 0) == cell))
+                                continue;
+                            paintCell(cell, paintInfo, paintOffset);
+                            continue;
+                        }
+#endif  // WTF_COMPILER_MSVC
                         if (!cell || (r > dirtiedRows.start() && primaryCellAt(r - 1, c) == cell) || (c > dirtiedColumns.start() && primaryCellAt(r, c - 1) == cell))
                             continue;
                         paintCell(cell, paintInfo, paintOffset);
@@ -1439,30 +1451,6 @@ void RenderTableSection::setLogicalPositionForCell(RenderTableCell* cell, unsign
 
     cell->setLogicalLocation(cellLocation);
     view()->addLayoutDelta(oldCellLocation - cell->location());
-}
-
-void RenderTableSection::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    RenderBox::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_children);
-    info.addMember(m_grid);
-    info.addMember(m_rowPos);
-    info.addMember(m_overflowingCells);
-    info.addMember(m_cellsCollapsedBorders);
-}
-
-void RenderTableSection::RowStruct::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addMember(row);
-    info.addMember(rowRenderer);
-}
-
-void RenderTableSection::CellStruct::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addMember(cells);
 }
 
 } // namespace WebCore

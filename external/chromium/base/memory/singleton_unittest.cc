@@ -283,7 +283,13 @@ TEST_F(SingletonTest, Alignment) {
       AlignedTestSingleton<AlignedMemory<4096, 4096> >::GetInstance();
 
   EXPECT_ALIGNED(align4, 4);
+#if !defined(__LB_XB360__)
   EXPECT_ALIGNED(align32, 32);
   EXPECT_ALIGNED(align128, 128);
   EXPECT_ALIGNED(align4096, 4096);
+#else
+  EXPECT_ALIGNED(align32->type_.void_data(), 32);
+  EXPECT_ALIGNED(align128->type_.void_data(), 128);
+  EXPECT_ALIGNED(align4096->type_.void_data(), 4096);
+#endif
 }

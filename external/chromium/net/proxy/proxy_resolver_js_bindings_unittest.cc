@@ -23,6 +23,16 @@ namespace net {
 
 namespace {
 
+#if defined(__LB_PS4__)
+#define MAYBE_MyIpAddress DISABLED_MyIpAddress
+#define MAYBE_RestrictAddressFamily DISABLED_RestrictAddressFamily
+#define MAYBE_ExFunctionsReturnList DISABLED_ExFunctionsReturnList
+#else
+#define MAYBE_MyIpAddress MyIpAddress
+#define MAYBE_RestrictAddressFamily RestrictAddressFamily
+#define MAYBE_ExFunctionsReturnList ExFunctionsReturnList
+#endif
+
 // This is a HostResolver that synchronously resolves all hosts to the
 // following address list of length 3:
 //     192.168.1.1
@@ -116,7 +126,7 @@ TEST(ProxyResolverJSBindingsTest, DnsResolve) {
   // won't work on all systems.
 }
 
-TEST(ProxyResolverJSBindingsTest, MyIpAddress) {
+TEST(ProxyResolverJSBindingsTest, MAYBE_MyIpAddress) {
   MockSyncHostResolver* host_resolver = new MockSyncHostResolver;
 
   // Get a hold of a DefaultJSBindings* (it is a hidden impl class).
@@ -143,7 +153,7 @@ TEST(ProxyResolverJSBindingsTest, MyIpAddress) {
 //   Unrestricted address family:
 //     myIpAddressEx()
 //     dnsResolveEx()
-TEST(ProxyResolverJSBindingsTest, RestrictAddressFamily) {
+TEST(ProxyResolverJSBindingsTest, MAYBE_RestrictAddressFamily) {
   MockSyncHostResolver* host_resolver = new MockSyncHostResolver;
 
   // Get a hold of a DefaultJSBindings* (it is a hidden impl class).
@@ -199,7 +209,7 @@ TEST(ProxyResolverJSBindingsTest, RestrictAddressFamily) {
 // Test that myIpAddressEx() and dnsResolveEx() both return a semi-colon
 // separated list of addresses (as opposed to the non-Ex versions which
 // just return the first result).
-TEST(ProxyResolverJSBindingsTest, ExFunctionsReturnList) {
+TEST(ProxyResolverJSBindingsTest, MAYBE_ExFunctionsReturnList) {
   SyncHostResolver* host_resolver =
       new MockHostResolverWithMultipleResults;
 

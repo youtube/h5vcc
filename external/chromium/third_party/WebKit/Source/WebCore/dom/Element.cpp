@@ -76,7 +76,6 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "VoidCallback.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include "htmlediting.h"
@@ -1668,7 +1667,7 @@ bool Element::parseAttributeName(QualifiedName& out, const AtomicString& namespa
 
 void Element::setAttributeNS(const AtomicString& namespaceURI, const AtomicString& qualifiedName, const AtomicString& value, ExceptionCode& ec)
 {
-    QualifiedName parsedName = anyName;
+    QualifiedName parsedName = anyQName();
     if (!parseAttributeName(parsedName, namespaceURI, qualifiedName, ec))
         return;
     setAttribute(parsedName, value);
@@ -2686,14 +2685,6 @@ void Element::createMutableAttributeData()
         m_attributeData = ElementAttributeData::create();
     else
         m_attributeData = m_attributeData->makeMutableCopy();
-}
-
-void Element::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    ContainerNode::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_tagName);
-    info.addMember(m_attributeData);
 }
 
 } // namespace WebCore

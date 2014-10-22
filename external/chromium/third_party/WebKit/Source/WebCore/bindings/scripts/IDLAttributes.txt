@@ -84,6 +84,7 @@ JSLegacyParent=*
 JSNoStaticTables
 JSWindowEventListener
 MasqueradesAsUndefined
+Namespace=*
 NamedConstructor=*
 NamedGetter
 NotEnumerable

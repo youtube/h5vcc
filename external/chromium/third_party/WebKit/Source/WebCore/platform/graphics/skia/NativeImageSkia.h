@@ -85,8 +85,6 @@ public:
     // Rectangle of the subset in the scaled image.
     SkBitmap resizedBitmap(const SkISize& scaledImageSize, const SkIRect& scaledImageSubset) const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     // CachedImageInfo is used to uniquely identify cached or requested image
     // resizes.

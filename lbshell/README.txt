@@ -2,6 +2,7 @@ To build from Linux:
 
 Ninja is used to build.
 Install depot_tools as per http://www.chromium.org/developers/how-tos/install-depot-tools
+Make sure depot_tools is in your PATH environment variable.
 
 ./lbshell/build/gyp_driver lb_shell linux
 ninja -C out/lb_shell/Linux_[Debug|Devel|QA|Gold]

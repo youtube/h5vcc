@@ -114,13 +114,7 @@ public:
     //      }
     unsigned getSomeData(const char*& data, unsigned position = 0) const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
     void createPurgeableBuffer() const;
-
-#if defined(__LB_SHELL__)
-    char* releaseBuffer();
-#endif
 
 private:
     SharedBuffer();

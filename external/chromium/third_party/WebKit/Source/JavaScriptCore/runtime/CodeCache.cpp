@@ -65,6 +65,11 @@ UnlinkedCodeBlockType* CodeCache::getCodeBlock(JSGlobalData& globalData, Executa
 {
     CodeBlockKey key = makeCodeBlockKey(source, CacheTypes<UnlinkedCodeBlockType>::codeType, strictness);
     bool storeInCache = false;
+
+    // Leanback webpage generates many unique JavaScript code fragment over
+    // time. Since the cache is only cleared during a navigation event, this
+    // causes it to grow indefinitely.
+#if !defined(__LB_SHELL__)
     if (debuggerMode == DebuggerOff && profilerMode == ProfilerOff) {
         const Strong<UnlinkedCodeBlock>* result = m_cachedCodeBlocks.find(key);
         if (result) {
@@ -75,6 +80,7 @@ UnlinkedCodeBlockType* CodeCache::getCodeBlock(JSGlobalData& globalData, Executa
         }
         storeInCache = true;
     }
+#endif
 
     typedef typename CacheTypes<UnlinkedCodeBlockType>::RootNode RootNode;
     RefPtr<RootNode> rootNode = parse<RootNode>(&globalData, source, 0, Identifier(), strictness, JSParseProgramCode, error);

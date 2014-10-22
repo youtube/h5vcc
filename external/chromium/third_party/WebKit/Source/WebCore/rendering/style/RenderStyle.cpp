@@ -39,9 +39,6 @@
 #if ENABLE(TOUCH_EVENTS)
 #include "RenderTheme.h"
 #endif
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
-#include <wtf/MemoryObjectInfo.h>
 #include <wtf/StdLibExtras.h>
 #include <algorithm>
 
@@ -597,6 +594,23 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
 
     if (!QuotesData::equals(rareInheritedData->quotes.get(), other->rareInheritedData->quotes.get()))
         return StyleDifferenceLayout;
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    // TODO: Investigate and return the smallest possible change required for
+    // this. From WebKit's terms, the layout doesn't really change, so we can
+    // get away with a possible repaint only.
+    // Note that when changing the return type the order in which this
+    // check is performed needs to be adjusted depending on the severity.
+    if (h5vccTargetScreen() != other->h5vccTargetScreen()) {
+      return StyleDifferenceLayout;
+    }
+
+    // Issue a relayout so that the ObjectPositionReporter walks again on the
+    // RenderLayer tree.
+    if (h5vccGesturable() != other->h5vccGesturable()) {
+      return StyleDifferenceLayout;
+    }
+#endif
 
 #if ENABLE(SVG)
     // SVGRenderStyle::diff() might have returned StyleDifferenceRepaint, eg. if fill changes.
@@ -1581,25 +1595,6 @@ LayoutBoxExtent RenderStyle::imageOutsets(const NinePieceImage& image) const
                            NinePieceImage::computeOutset(image.outset().right(), borderRightWidth()),
                            NinePieceImage::computeOutset(image.outset().bottom(), borderBottomWidth()),
                            NinePieceImage::computeOutset(image.outset().left(), borderLeftWidth()));
-}
-
-void RenderStyle::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_box);
-    info.addMember(visual);
-    // FIXME: m_background contains RefPtr<StyleImage> that might need to be instrumented.
-    info.addMember(m_background);
-    // FIXME: surrond contains some fields e.g. BorderData that might need to be instrumented.
-    info.addMember(surround);
-    info.addMember(rareNonInheritedData);
-    info.addMember(rareInheritedData);
-    // FIXME: inherited contains StyleImage and Font fields that might need to be instrumented.
-    info.addMember(inherited);
-    info.addMember(m_cachedPseudoStyles);
-#if ENABLE(SVG)
-    info.addMember(m_svgStyle);
-#endif
 }
 
 } // namespace WebCore

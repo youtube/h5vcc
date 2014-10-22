@@ -35,7 +35,6 @@
 #include "DOMImplementation.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
-#include <wtf/MemoryInstrumentationHashMap.h>
 
 namespace {
 // 100MB
@@ -65,15 +64,6 @@ XHRReplayData::XHRReplayData(const String &method, const KURL& url, bool async, 
     , m_formData(formData)
     , m_includeCredentials(includeCredentials)
 {
-}
-
-void XHRReplayData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-    info.addMember(m_method);
-    info.addMember(m_url);
-    info.addMember(m_formData);
-    info.addMember(m_headers);
 }
 
 // ResourceData
@@ -145,22 +135,6 @@ size_t NetworkResourcesData::ResourceData::decodeDataToContent()
     m_content.append(m_decoder->flush());
     m_dataBuffer = nullptr;
     return contentSizeInBytes(m_content) - dataLength;
-}
-
-void NetworkResourcesData::ResourceData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-    info.addMember(m_requestId);
-    info.addMember(m_loaderId);
-    info.addMember(m_frameId);
-    info.addMember(m_url);
-    info.addMember(m_content);
-    info.addMember(m_xhrReplayData);
-    info.addMember(m_dataBuffer);
-    info.addMember(m_textEncodingName);
-    info.addMember(m_decoder);
-    info.addMember(m_buffer);
-    info.addMember(m_cachedResource);
 }
 
 // NetworkResourcesData
@@ -406,14 +380,6 @@ bool NetworkResourcesData::ensureFreeSpace(size_t size)
             m_contentSize -= resourceData->evictContent();
     }
     return true;
-}
-
-void NetworkResourcesData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-    info.addMember(m_requestIdsDeque);
-    info.addMember(m_reusedXHRReplayDataRequestIds);
-    info.addMember(m_requestIdToResourceDataMap);
 }
 
 } // namespace WebCore

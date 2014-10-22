@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _LB_PLATFORM_H
-#define _LB_PLATFORM_H
+#ifndef SRC_PLATFORM_LINUX_LB_PLATFORM_H_
+#define SRC_PLATFORM_LINUX_LB_PLATFORM_H_
 
 // Some of the platform code is implementing chromium APIs, some of it is
 // emulating POSIX APIs, and this file is for everything else.
 
 #include <byteswap.h>
-#include <errno.h>
 #include <inttypes.h>  // uint64_t
-#include <netinet/in.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,9 +58,6 @@ static inline int BeingDebugged() {
 #endif
 }
 
-int GetLocalIpAddress(struct in_addr* addr);
-int GetSocketError(int);
-
 static inline uint32_t atomic_inc_32(uint32_t *addend) {
   return __sync_add_and_fetch(addend, 1);
 }
@@ -98,36 +93,6 @@ static inline uint32_t atomic_conditional_inc(uint32_t *addend) {
   }
 }
 
-static inline int close_socket(int s) {
-  return close(s);
-}
-
-static inline int NetWouldBlock() {
-  return errno == EWOULDBLOCK || errno == EAGAIN;
-}
-
-static inline void get_random_bytes(char *buf, int num_bytes) {
-  FILE* r = fopen("/dev/urandom", "r");
-  if (r) {
-    fread(buf, 1, num_bytes, r);
-    fclose(r);
-  }
-}
-
-static inline int net_errno() {
-  return errno;
-}
-
-#define LB_NET_EADDRNOTAVAIL EADDRNOTAVAIL
-#define LB_NET_EBADF EBADF
-#define LB_NET_EINPROGRESS EINPROGRESS
-#define LB_NET_EINVAL EINVAL
-#define LB_NET_EMFILE EMFILE
-#define LB_NET_ENOPROTOOPT ENOPROTOOPT
-#define LB_NET_ERROR_ECONNRESET ECONNRESET
-#define LB_NET_EWOULDBLOCK EWOULDBLOCK
-
-
 // === compiler intrinsics for quick and readable byte (re)-ordering
 
 // load bytes pointed to by p and return as value
@@ -136,7 +101,7 @@ static inline uint16_t load_uint16_big_endian(const uint8_t* p) {
 }
 
 static inline uint32_t load_uint32_big_endian(const uint8_t* p) {
- return bswap_32(*(uint32_t*)p);
+  return bswap_32(*(uint32_t*)p);
 }
 
 static inline uint64_t load_uint64_big_endian(const uint8_t* p) {
@@ -204,12 +169,25 @@ static inline void store_uint64_little_endian(uint64_t d, uint8_t* p) {
   *(uint64_t*)p = d;
 }
 
+#ifdef __cplusplus
+}  // namespace Platform
+}  // namespace LB
+#endif
+
 typedef void* lb_physical_mem_t;
 typedef uintptr_t lb_virtual_mem_t;
 
-#ifdef __cplusplus
-} // namespace Platform
-} // namespace LB
-#endif
+#if defined(__cplusplus)
+// Copied from chromium: base/basictypes.h
+#if !defined(COMPILE_ASSERT)
+template<bool> struct LBCompileAssert { };
 
+#define COMPILE_ASSERT(expr, msg)                    \
+  typedef LBCompileAssert<(static_cast<bool>(expr))> \
+          msg[static_cast<bool>(expr) ? 1 : -1]
 #endif
+#endif  // defined (__cplusplus)
+
+#define LB_ALWAYS_INLINE __attribute__((always_inline))
+
+#endif  // SRC_PLATFORM_LINUX_LB_PLATFORM_H_

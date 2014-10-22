@@ -435,6 +435,9 @@ public:
     virtual bool shouldInsertNode(Node*, Range*, EditorInsertAction) { return false; }
     virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) { return false; }
     virtual bool shouldChangeSelectedRange(Range*, Range*, EAffinity, bool) { return false; }
+#if defined(__LB_SHELL__)
+    virtual void didMoveCursor() { }
+#endif
 
     virtual bool shouldApplyStyle(StylePropertySet*, Range*) { return false; }
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) { return false; }

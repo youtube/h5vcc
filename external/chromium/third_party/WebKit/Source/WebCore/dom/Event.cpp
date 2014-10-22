@@ -27,7 +27,6 @@
 #include "EventNames.h"
 #include "EventTarget.h"
 #include "UserGestureIndicator.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/text/AtomicString.h>
 
@@ -154,15 +153,6 @@ bool Event::isBeforeTextInsertedEvent() const
 
 void Event::storeResult(const String&)
 {
-}
-
-void Event::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_type);
-    info.addMember(m_currentTarget);
-    info.addMember(m_target);
-    info.addMember(m_underlyingEvent);
 }
 
 PassRefPtr<Event> Event::cloneFor(HTMLIFrameElement*) const

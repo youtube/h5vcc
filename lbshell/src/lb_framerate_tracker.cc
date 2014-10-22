@@ -27,7 +27,6 @@ LBFramerateTracker::Stats::Stats()
 
 LBFramerateTracker::LBFramerateTracker()
     : total_frames_(0)
-    , first_frame_time_(0.0)
     , last_frame_time_(0.0)
     , sample_set_start_time_(0.0)
     , longest_frame_time_(0.0)
@@ -49,7 +48,7 @@ LBFramerateTracker::Stats ComputeStatsFromSampleSet(
 
   return stats;
 }
-}
+}  // namespace
 
 void LBFramerateTracker::Tick() {
   base::AutoLock auto_lock(monitor_lock_);
@@ -59,7 +58,6 @@ void LBFramerateTracker::Tick() {
 
   // If this is the first frame, initialize the timers
   if (total_frames_ == 1) {
-    first_frame_time_ = cur_time;
     last_frame_time_ = cur_time;
     sample_set_start_time_ = cur_time;
   } else {
@@ -94,11 +92,5 @@ void LBFramerateTracker::Tick() {
 
     last_frame_time_ = cur_time;
   }
-}
-
-int LBFramerateTracker::GetLifetime() const {
-  base::AutoLock auto_lock(monitor_lock_);
-  double cur_time = base::Time::Now().ToDoubleT();
-  return cur_time - first_frame_time_;
 }
 

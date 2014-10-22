@@ -280,12 +280,18 @@ static const char* const common_media_types[] = {
   // Wav.
   "audio/wav",
   "audio/x-wav",
-#else
+#else  // !defined(__LB_SHELL__)
+
+#if defined(__LB_ANDROID__) || defined(__LB_PS4__)
+  // WebM.
+  "video/webm",
+#endif  // defined(__LB_ANDROID__) || defined(__LB_PS4__)
+
   // currently lbshell supports flv and mp4
   "video/mp4",
   "audio/mp4",
   "video/x-flv",
-#endif
+#endif  // !defined(__LB_SHELL__)
 };
 
 // List of proprietary types only supported by Google Chrome.
@@ -318,10 +324,20 @@ static const char* const common_media_codecs[] = {
   "vorbis",
   "vp8",
   "1"  // WAVE_FORMAT_PCM.
-#else
+#else  // !defined(__LB_SHELL__)
+
+#if defined(__LB_ANDROID__) || defined(__LB_PS4__)
+  "vp9",
+#endif  // defined(__LB_ANDROID__) || defined(__LB_PS4__)
+
   "avc1",
   "mp4a",
-#endif
+
+#if defined(__LB_PS3__) || defined(__LB_PS4__) || defined(__LB_WIIU__)
+  "aac51",
+#endif  // defined(__LB_PS3__) || defined(__LB_PS4__) || defined(__LB_WIIU__)
+
+#endif  // !defined(__LB_SHELL__)
 };
 
 // List of proprietary codecs only supported by Google Chrome.
@@ -433,9 +449,20 @@ struct MediaFormatStrict {
 };
 
 static const MediaFormatStrict format_codec_mappings[] = {
+#if defined(__LB_ANDROID__)  // Assume Android supports everything.
+  { "video/webm", "vorbis,vp8,vp8.0,vp9" },
+  { "audio/webm", "vorbis" },
+#elif defined(__LB_PS4__)  // PS4 only supports vp9.
+  { "video/webm", "vp9" },
+  { "audio/webm", "" },
+#elif defined(__LB_SHELL__) // All other Steel platforms doesn't support webm.
+  { "video/webm", "" },
+  { "audio/webm", "" },
+#else  // Default Chrome codec mappings.
   { "video/webm", "vorbis,vp8,vp8.0" },
   { "audio/webm", "vorbis" },
   { "audio/wav", "1" }
+#endif
 };
 
 MimeUtil::MimeUtil() {

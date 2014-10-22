@@ -117,8 +117,6 @@ public:
         m_wrapperMap.set(object, wrapper);
     }
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     static DOMDataStore* mainWorldStore();
 

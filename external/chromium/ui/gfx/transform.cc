@@ -347,7 +347,7 @@ void Transform::TransformPointInternal(const SkMatrix44& xform,
 
   xform.mapMScalars(p);
 
-  if (p[3] != 1 && abs(p[3]) > 0) {
+  if (p[3] != 1 && std::abs(p[3]) > 0) {
     point.SetPoint(p[0] / p[3], p[1] / p[3], p[2]/ p[3]);
   } else {
     point.SetPoint(p[0], p[1], p[2]);

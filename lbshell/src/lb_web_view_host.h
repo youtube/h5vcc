@@ -18,22 +18,31 @@
 
 #include <string>
 
-#include "external/chromium/base/base_export.h"
-#include "external/chromium/base/memory/scoped_ptr.h"
-#include "external/chromium/base/message_loop.h"
-#include "external/chromium/base/message_pump_shell.h"
-#include "external/chromium/base/synchronization/lock.h"
-#include "external/chromium/base/synchronization/waitable_event.h"
-#include "external/chromium/base/threading/simple_thread.h"
-#include "external/chromium/third_party/WebKit/Source/JavaScriptCore/debugger/DebuggerShell.h"
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebInputEvent.h"
-#include "external/chromium/webkit/glue/webpreferences.h"
-#include "lb_shell/lb_web_view_host_impl.h"
+#include "Platform.h"
+
+#include "base/base_export.h"
+#include "base/memory/scoped_ptr.h"
+#include "base/message_loop.h"
+#include "base/message_pump_shell.h"
+#include "base/synchronization/lock.h"
+#include "base/synchronization/waitable_event.h"
+#include "base/threading/simple_thread.h"
+#include "base/time.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/WebInputEvent.h"
+#include "third_party/WebKit/Source/WTF/config.h"
+#include "third_party/WebKit/Source/WTF/wtf/Platform.h"
+#include "webkit/glue/webpreferences.h"
+
+#include "lb_debug_console.h"
+#include "lb_input_fuzzer.h"
+#include "lb_splash_screen.h"
+#include "lb_system_stats_tracker.h"
+#include "lb_user_input_device.h"
 
 class LBWebViewDelegate;
 
 namespace WebKit {
-  class WebWidget;
+class WebWidget;
 }
 
 class LBNetworkConnection;
@@ -41,16 +50,11 @@ class LBDebugConsole;
 class LBShell;
 
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
-const int kInputRecordBufferSize = 50;
+class LBInputRecorder;
+class LBPlaybackInputDevice;
 #endif
 
-class LBWebViewHost
-    : public base::SimpleThread,
-      public LBWebViewHostImpl
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    , public JSC::DebuggerTTYInterface
-#endif
-{
+class LBWebViewHost {
  public:
   // borrowing heavily from
   // external/chromium/webkit/tools/test_shell/webview_host.h
@@ -62,11 +66,9 @@ class LBWebViewHost
   static LBWebViewHost* Get() { return web_view_host_; }
   void Destroy();
 
-  virtual void Start() OVERRIDE;
-
   WebKit::WebView* webview() const;
   WebKit::WebWidget* webwidget() const;
-  MessageLoop* main_message_loop() const;
+  MessageLoop* webkit_message_loop() const;
 
   // sends a key event to the browser.
   // may be trapped by on-screen console if is_console_eligible.
@@ -75,6 +77,9 @@ class LBWebViewHost
                     wchar_t char_code,
                     WebKit::WebKeyboardEvent::Modifiers modifiers,
                     bool is_console_eligible);
+
+  // sends a mouse event to the browser.
+  void SendMouseEvent(const WebKit::WebMouseEvent& event);
 
   // this is a simple wrapper around SendKeyEvent
   // that simulates press & release in one call.
@@ -92,43 +97,46 @@ class LBWebViewHost
   void InjectJS(const char * code);
 
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
-  // from JSC::DebuggerTTYInterface:
-  virtual void output(std::string data) OVERRIDE;
-  virtual void output_popup(std::string data) OVERRIDE;
   // toggle WebKit paused state. Returns true if WK was paused by this call.
   bool toggleWebKitWedged();
   // call me with NULL to start/stop record/playback
   void RecordKeyInput(const char* file_name);
   void PlaybackKeyInput(const char* file_name, bool repeat);
-  inline void SetTelnetConnection(LBNetworkConnection *connection) {
-    telnet_connection_ = connection;
-  }
-  inline LBNetworkConnection* GetTelnetConnection() const {
-    return telnet_connection_;
-  }
-  // send a mouse down event followed by a mouse up to webkit.
-  // x and y are pixel coordinates.
-  void SendMouseClick(WebKit::WebMouseEvent::Button button,
-                      int x, int y);
-#endif
+
+  void FuzzerStart(const std::string& file_name, float time_mean,
+                   float time_std, LBInputFuzzer::FuzzedKeys fuzzed_keys);
+  void FuzzerStop();
+  bool FuzzerActive() const;
+#endif  // __LB_SHELL__ENABLE_CONSOLE__
 
   bool IsExiting() { return exit_; }
 
+  void InputEventTask(const WebKit::WebInputEvent& event);
+
   // will pause the WebKit thread if paused is true
   void SetWebKitPaused(bool paused);
+  static void PauseApplicationTask(LBWebViewHost* web_view_host);
+
+  // Called when the WebKit thread enters and leaves a paused state due to
+  // PauseApplicationTask
+  virtual void OnApplicationPaused() {}
+  virtual void OnApplicationUnpaused() {}
+  virtual void OnKeySentEvent() {}
 
   // will pause/resume any active video players
   void SetPlayersPaused(bool paused);
 
-  void StartApp();
-
   void SendNavigateTask(const GURL& url);
+  void SendNavigateTask(const GURL& url, const base::Closure& nav_complete);
+  void SendNavigateToAboutBlankTask();
+  void SendNavigateToAboutBlankTask(const base::Closure& nav_complete);
 
-  void ShowNetworkFailure();
+  virtual void ShowNetworkFailure();
 
   // Called when a non-read-only text input gains/loses focus
-  void TextInputFocusEvent();
-  void TextInputBlurEvent();
+  virtual void TextInputFocusEvent() {}
+  virtual void TextInputBlurEvent() {}
+
   LBShell* shell() const { return shell_; }
 
   // a polite request to quit the application.
@@ -137,24 +145,44 @@ class LBWebViewHost
   // the application cleans up and shuts down.
   void RequestQuit();
 
+  static void CreateWebWidget(LBWebViewDelegate* delegate,
+                              const webkit_glue::WebPreferences& prefs,
+                              WebKit::WebWidget** out_web_widget);
+  static void DestroyWebWidget(WebKit::WebWidget* web_widget);
+
+  // UI thread run loop
+  virtual void RunLoop() = 0;
+
+  // Called when the user moves the input cursor
+  virtual void CursorChangedEvent() {}
+
+  // Clear cookies and contents of localStorage from memory, and reload
+  // from disk.
+  void ClearAndReloadUserData(const base::Closure& userdata_cleared_cb);
+
+  // Call to hide the splash screen. Returns true if possible and splash screen
+  // was hidden.
+  bool HideSplashScreen();
+  void DrawSplashScreen();
+
+  virtual ~LBWebViewHost();
+
  protected:
   static LBWebViewHost* web_view_host_;
 
-  LBWebViewHost(LBShell* shell);
+  explicit LBWebViewHost(LBShell* shell);
 
   WebKit::WebWidget* webwidget_;
 
   // we store a weak reference to the main message loop, which it is
   // assumed is running on the same thread as what called Create()
   // (and therefore the ctor)
-  MessageLoop * main_message_loop_;
+  MessageLoop* webkit_message_loop_;
 
-  // main thread run loop
-  virtual void Run() OVERRIDE;
-  void UpdateIO();
+  // Called after a key is sent to WebKit through SendKeyEvent
+  virtual void OnSentKeyEvent() {}
 
- private:
-  bool FilterKeyEvent(WebKit::WebKeyboardEvent::Type type,
+  virtual bool FilterKeyEvent(WebKit::WebKeyboardEvent::Type type,
                       int key_code,
                       wchar_t char_code,
                       WebKit::WebKeyboardEvent::Modifiers modifiers,
@@ -165,24 +193,41 @@ class LBWebViewHost
   // not owned:
   LBShell* shell_;
 
+  bool pause_application_task_done_;
+
+  scoped_ptr<LB::SplashScreen> splash_screen_;
+
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
   void clearInput();
-  static void MouseEventTask(WebKit::WebInputEvent::Type type,
-                             WebKit::WebMouseEvent::Button button,
-                             int x,
-                             int y,
-                             LBWebViewHost* host);
+  void UpdatePlaybackController();
 
   // owned by us:
-  LBDebugConsole * console_;
-  LBNetworkConnection *telnet_connection_;
+  LBDebugConsole *console_;
   std::string console_buffer_;
   // toggle behavior
   bool webkit_wedged_;
-  int input_record_fd_;
-  int64_t input_record_start_time_;
-  char input_record_buffer_[kInputRecordBufferSize];
+
+  scoped_ptr<LBPlaybackInputDevice> playback_;
+  scoped_ptr<LBInputRecorder> input_recorder_;
+  scoped_ptr<LBInputFuzzer> fuzzer_;
 #endif
+
+#if !defined(__LB_SHELL__FOR_RELEASE__)
+  scoped_ptr<LB::StatsUpdateThread> stats_update_thread_;
+  scoped_ptr<LB::SystemStatsTracker> system_stats_tracker_;
+#endif
+
+ private:
+  static void NavTask(LBWebViewHost *view_host,
+                      LBShell *shell,
+                      const GURL& url,
+                      const base::Closure& nav_complete);
+
+  static void NavToBlankTask(LBWebViewHost *view_host,
+                             LBShell *shell,
+                             const base::Closure& nav_complete);
+  void ClearDomStorage(const base::Closure& storage_cleared_cb);
+  void ReloadDatabase(const base::Closure& reloaded_cb);
 };
 
 #endif  // SRC_LB_WEB_VIEW_HOST_H_

@@ -228,7 +228,9 @@ public:
 
     virtual WebAnimationController* animationController() = 0;
 
+#if ENABLE_PERFORMANCE_TIMELINE
     virtual WebPerformance performance() const = 0;
+#endif
 
 
     // Scripting ----------------------------------------------------------
@@ -311,6 +313,7 @@ public:
     // be calling this API.
     virtual v8::Local<v8::Context> mainWorldScriptContext() const = 0;
 
+#if ENABLE_FILE_SYSTEM
     // Creates an instance of file system object.
     virtual v8::Handle<v8::Value> createFileSystem(WebFileSystem::Type,
                                                    const WebString& name,
@@ -327,6 +330,7 @@ public:
                                                   const WebString& fileSystemRootURL,
                                                   const WebString& filePath,
                                                   bool isDirectory) = 0;
+#endif
 #endif
 
 
@@ -691,6 +695,10 @@ public:
     // Dumps the layer tree, used by the accelerated compositor, in
     // text form. This is used only by layout tests.
     virtual WebString layerTreeAsText(bool showDebugInfo = false) const = 0;
+
+#if defined(__LB_SHELL__)
+    virtual WebString layerBackingsInfo() const = 0;
+#endif
 
 protected:
     ~WebFrame() { }

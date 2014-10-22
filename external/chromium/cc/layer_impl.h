@@ -5,6 +5,9 @@
 #ifndef CC_LAYER_IMPL_H_
 #define CC_LAYER_IMPL_H_
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+#include <public/H5VCCTargetScreen.h>
+#endif
 #include <public/WebFilterOperations.h>
 #include <string>
 
@@ -137,6 +140,11 @@ public:
 
     void setOpacity(float);
     bool opacityIsAnimating() const;
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    WebKit::H5VCCTargetScreen h5vccTargetScreen() const;
+    void setH5vccTargetScreen(WebKit::H5VCCTargetScreen);
+#endif
 
     void setPosition(const gfx::PointF&);
     const gfx::PointF& position() const { return m_position; }
@@ -352,6 +360,9 @@ private:
     bool m_masksToBounds;
     bool m_contentsOpaque;
     float m_opacity;
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    WebKit::H5VCCTargetScreen m_h5vccTargetScreen;
+#endif
     gfx::PointF m_position;
     bool m_preserves3D;
     bool m_useParentBackfaceVisibility;

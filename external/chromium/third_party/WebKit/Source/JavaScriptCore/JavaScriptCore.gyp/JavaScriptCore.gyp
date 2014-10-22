@@ -96,14 +96,14 @@
       ],
       'conditions': [
         [ 'OS=="lb_shell"', {
-          'sources': [
-            '../debugger/DebuggerShell.cpp',
-          ],
           'sources!': [
             '../runtime/GCActivityCallbackBlackBerry.cpp',
+            '../llint/LLIntOffsetsExtractor.cpp',
           ],
           'sources/': [
             ['exclude', '_nss.cc$'],
+            ['exclude', 'dfg/'],
+            ['exclude', 'disassembler/'],
           ],
 
         }],
@@ -233,10 +233,12 @@
           'variables': {
             'input_rb': '../offlineasm/generate_offset_extractor.rb',
             'input_source' : '../llint/LowLevelInterpreter.asm',
+            'extra_inputs' : ['../llint/LowLevelInterpreter32_64.asm',
+                              '../llint/LowLevelInterpreter64.asm'],
             'output_h': '<(SHARED_INTERMEDIATE_DIR)/JavaScriptCore/LLIntDesiredOffsets.h'
           },
           'inputs': [
-            '<(input_rb)', '<(input_source)',
+            '<(input_rb)', '<(input_source)', '<@(extra_inputs)',
           ],
           'outputs': [
             '<(output_h)',
@@ -285,6 +287,19 @@
       'sources': [
         '../llint/LLIntOffsetsExtractor.cpp',
       ],
+      'conditions': [
+        [ 'OS=="lb_shell"', {
+          'include_dirs': [
+            '../../../../../third_party/icu/public/common',
+          ],
+          'include_dirs!': [
+            '../../WTF/icu',
+          ],
+        }],
+      ],
+      # Don't complain about calling specific versions of templatized
+      # functions (e.g. in RefPtrHashMap.h).
+      'msvs_disabled_warnings': [4344],
     },
     {
       'target_name': 'llint_assembly',
@@ -299,6 +314,8 @@
           'variables': {
             'input_rb': '../offlineasm/asm.rb',
             'input_asm': '../llint/LowLevelInterpreter.asm',
+             'extra_inputs' : ['../llint/LowLevelInterpreter32_64.asm',
+                              '../llint/LowLevelInterpreter64.asm'],
             # TODO: Can this path be specified more nicely?
             'input_binary': '<(PRODUCT_DIR)/obj/external/chromium/third_party/WebKit/Source/JavaScriptCore/llint/offsets_extractor.LLIntOffsetsExtractor.o',
             'output_h': '<(SHARED_INTERMEDIATE_DIR)/JavaScriptCore/LLIntAssembly.h',
@@ -307,6 +324,7 @@
             '<(input_rb)',
             '<(input_asm)',
             '<(input_binary)',
+            '<@(extra_inputs)',
           ],
           'outputs' : [
             '<(output_h)',

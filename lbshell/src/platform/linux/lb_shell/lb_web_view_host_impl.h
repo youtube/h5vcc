@@ -13,10 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef SRC_LB_WEB_VIEW_HOST_LINUX_IMPL_H_
-#define SRC_LB_WEB_VIEW_HOST_LINUX_IMPL_H_
+#ifndef SRC_PLATFORM_LINUX_LB_SHELL_LB_WEB_VIEW_HOST_IMPL_H_
+#define SRC_PLATFORM_LINUX_LB_SHELL_LB_WEB_VIEW_HOST_IMPL_H_
 
-class LBWebViewHostImpl {
+#include "lb_web_view_host.h"
+
+class LBShell;
+
+class LBWebViewHostImpl : public LBWebViewHost {
+ public:
+  explicit LBWebViewHostImpl(LBShell* shell);
+  virtual void RunLoop() OVERRIDE;
+  virtual ~LBWebViewHostImpl() {}
+
+ private:
+  void UpdateIO();
 };
 
-#endif
+#endif  // SRC_PLATFORM_LINUX_LB_SHELL_LB_WEB_VIEW_HOST_IMPL_H_

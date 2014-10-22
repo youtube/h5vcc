@@ -2938,6 +2938,31 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
         validPrimitive = false;
         break;
 #endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    case CSSPropertyH5vccTargetScreen:
+        validPrimitive = false;
+        switch (id) {
+            case CSSValueScreenSmall:
+            case CSSValueScreenLarge:
+            case CSSValueScreenAll:
+                validPrimitive = true;
+                break;
+        };
+        break;
+    case CSSPropertyH5vccGesturable:
+        validPrimitive = false;
+        switch (id) {
+            case CSSValueGestureIgnored:
+            case CSSValueGestureClickable:
+            case CSSValueGestureScrollHorizontal:
+            case CSSValueGestureScrollVertical:
+            case CSSValueGestureScrollBoth:
+                validPrimitive = true;
+                break;
+        };
+        break;
+#endif
+
 #if ENABLE(SVG)
     default:
         return parseSVGValue(propId, important);

@@ -76,8 +76,6 @@
             [ 'OS=="lb_shell"', {
               # we use the ICU data files instead of any precompiled data
               'sources/': [['exclude', 'icudt46l_dat']],
-              # Compile in the stub data symbol or it won't link, however
-              'sources': ['source/stubdata/stubdata.c'],
             }],
             [ 'OS != "win" and icu_use_data_file_flag', {
               # Remove any assembly data file.
@@ -302,6 +300,11 @@
                 },
               }
             }],
+            ['OS == "lb_shell" and target_arch == "ps3"', {
+              'cflags_cc': [
+                '-Xc+=rtti',
+              ],
+            }],
             ['clang==1', {
               'xcode_settings': {
                 'WARNING_CFLAGS': [
@@ -338,6 +341,26 @@
                   '-lgabi++',
                 ],
               },
+            }],
+            ['OS=="lb_shell"', {
+              'dependencies': [
+                '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+              ],
+            }],
+            ['OS=="lb_shell" and target_arch=="android"', {
+              'cflags_cc': [
+                '-frtti',
+              ],
+              'link_settings': {
+                'libraries': [
+                  '-lgabi++_static',
+                ],
+              },
+            }],
+            ['OS=="lb_shell" and target_arch=="ps4"', {
+              'cflags_cc': [
+                '-frtti',
+              ],
             }],
           ],
         },
@@ -533,7 +556,13 @@
               'defines': [
                 'U_HAVE_NL_LANGINFO_CODESET=0',
                 'U_HAVE_NL_LANGINFO=0'
-              ]
+              ],
+              'sources': [
+                'source/stubdata/stubdata.c',
+              ],
+              'dependencies': [
+                '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+              ],
             }],
             [ 'os_posix == 1 and OS != "mac" and OS != "ios" and OS != "lb_shell"', {
               'cflags': [
@@ -557,6 +586,26 @@
                   'RuntimeTypeInfo': 'true',
                 },
               },
+            }],
+            ['OS == "lb_shell" and target_arch == "ps3"', {
+              'cflags_cc': [
+                '-Xc+=rtti',
+              ],
+            }],
+            ['OS=="lb_shell" and target_arch=="android"', {
+              'cflags_cc': [
+                '-frtti',
+              ],
+              'link_settings': {
+                'libraries': [
+                  '-lgabi++_static',
+                ],
+              },
+            }],
+            ['OS=="lb_shell" and target_arch=="ps4"', {
+              'cflags_cc': [
+                '-frtti',
+              ],
             }],
             ['OS == "android" and use_system_stlport == 1', {
               # ICU requires RTTI, which is not present in the system's stlport,

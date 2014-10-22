@@ -32,7 +32,8 @@
 #include <wtf/OSRandomSource.h>
 
 #include <public/Platform.h>
-
+#if !defined(__LB_SHELL__)
+// Already defined in OSRandomSource.cpp
 namespace WTF {
 
 void cryptographicallyRandomValuesFromOS(unsigned char* buffer, size_t length)
@@ -41,3 +42,4 @@ void cryptographicallyRandomValuesFromOS(unsigned char* buffer, size_t length)
 }
 
 }
+#endif

@@ -31,21 +31,6 @@
 #include "config.h"
 #include "ElementRareData.h"
 
-#include "RenderStyle.h"
-#include "WebCoreMemoryInstrumentation.h"
-
 namespace WebCore {
-
-void ElementRareData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    NodeRareData::reportMemoryUsage(memoryObjectInfo);
-
-    info.addMember(m_computedStyle);
-    info.addMember(m_dataset);
-    info.addMember(m_classList);
-    info.addMember(m_shadow);
-    info.addMember(m_attributeMap);
-}
 
 } // namespace WebCore

@@ -22,6 +22,13 @@ namespace net {
 
 namespace {
 
+#if defined(__LB_SHELL__)
+// this test is hanging in lb_shell
+#define MAYBE_CancelRequest DISABLED_CancelRequest
+#else
+#define MAYBE_CancelRequest CancelRequest
+#endif  // __LB_SHELL__
+
 void FailTest(int /* result */) {
   FAIL();
 }
@@ -188,7 +195,7 @@ TEST_F(MultiThreadedCertVerifierTest, InflightJoin) {
 }
 
 // Tests that the callback of a canceled request is never made.
-TEST_F(MultiThreadedCertVerifierTest, CancelRequest) {
+TEST_F(MultiThreadedCertVerifierTest, MAYBE_CancelRequest) {
   FilePath certs_dir = GetTestCertsDirectory();
   scoped_refptr<X509Certificate> test_cert(
       ImportCertFromFile(certs_dir, "ok_cert.pem"));

@@ -120,6 +120,22 @@ void SpeechRecognition::didReceiveResults(const Vector<RefPtr<SpeechRecognitionR
     dispatchEvent(SpeechRecognitionEvent::createResult(resultIndex, results));
 }
 
+#if defined(__LB_SHELL__)
+void SpeechRecognition::didReceiveResults(const Vector<RefPtr<SpeechRecognitionResult> >& newFinalResults, const Vector<RefPtr<SpeechRecognitionResult> >& currentInterimResults, const String& interpretation)
+{
+    unsigned long resultIndex = m_finalResults.size();
+
+    for (size_t i = 0; i < newFinalResults.size(); ++i)
+        m_finalResults.append(newFinalResults[i]);
+
+    Vector<RefPtr<SpeechRecognitionResult> > results = m_finalResults;
+    for (size_t i = 0; i < currentInterimResults.size(); ++i)
+        results.append(currentInterimResults[i]);
+
+    dispatchEvent(SpeechRecognitionEvent::createResult(resultIndex, results, interpretation));
+}
+#endif
+
 void SpeechRecognition::didReceiveNoMatch(PassRefPtr<SpeechRecognitionResult> result)
 {
     dispatchEvent(SpeechRecognitionEvent::createNoMatch(result));
@@ -180,11 +196,14 @@ SpeechRecognition::SpeechRecognition(ScriptExecutionContext* context)
     m_controller = SpeechRecognitionController::from(page);
     ASSERT(m_controller);
 
+    m_controller->setRecognitionInstance(this);
+
     // FIXME: Need to hook up with Page to get notified when the visibility changes.
 }
 
 SpeechRecognition::~SpeechRecognition()
 {
+    m_controller->removeRecognitionInstance(this);
 }
 
 } // namespace WebCore

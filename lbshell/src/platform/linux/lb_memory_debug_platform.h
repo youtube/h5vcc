@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef SRC_LB_MEMORY_DEBUG_PLATFORM_H
-#define SRC_LB_MEMORY_DEBUG_PLATFORM_H
+#ifndef SRC_PLATFORM_LINUX_LB_MEMORY_DEBUG_PLATFORM_H_
+#define SRC_PLATFORM_LINUX_LB_MEMORY_DEBUG_PLATFORM_H_
 
-// NOTE: MEMORY_LOG_PATH must be known at compile-time,
-// since it is used before any memory allocations can occur.
+// This should be known at compile-time as it may potentially be referenced
+// very early on in the event of a crash.
 #define MEMORY_LOG_PATH "/tmp/steel"
 
-#endif
+#endif  // SRC_PLATFORM_LINUX_LB_MEMORY_DEBUG_PLATFORM_H_

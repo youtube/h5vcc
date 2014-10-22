@@ -34,7 +34,7 @@
 
 #include "DrawingBuffer.h"
 #include "Extensions3DChromium.h"
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
 #include "GrContext.h"
 #include "GrGLInterface.h"
 #endif
@@ -49,7 +49,7 @@ namespace {
 // The limit of the number of textures we hold in the GrContext's bitmap->texture cache.
 const int maxGaneshTextureCacheCount = 2048;
 // The limit of the bytes allocated toward textures in the GrContext's bitmap->texture cache.
-const size_t maxGaneshTextureCacheBytes = 96 * 1024 * 1024;
+const size_t maxGaneshTextureCacheBytes = 12 * 1024 * 1024;
 
 }
 
@@ -70,7 +70,7 @@ GraphicsContext3DPrivate::GraphicsContext3DPrivate(PassOwnPtr<WebKit::WebGraphic
 
 GraphicsContext3DPrivate::~GraphicsContext3DPrivate()
 {
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
     if (m_grContext) {
         m_impl->setMemoryAllocationChangedCallbackCHROMIUM(0);
         m_grContext->contextDestroyed();
@@ -104,7 +104,7 @@ public:
 
     virtual void onMemoryAllocationChanged(WebKit::WebGraphicsMemoryAllocation allocation) OVERRIDE
     {
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
         if (!m_context)
             return;
 
@@ -122,7 +122,7 @@ private:
 
 GrContext* GraphicsContext3DPrivate::grContext()
 {
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
     if (!m_grContext) {
         SkAutoTUnref<GrGLInterface> interface(m_impl->createGrGLInterface());
         m_grContext = GrContext::Create(kOpenGL_Shaders_GrEngine, reinterpret_cast<GrPlatform3DContext>(interface.get()));

@@ -26,7 +26,6 @@
 #include "config.h"
 #include "CSSTimingFunctionValue.h"
 
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -34,11 +33,6 @@ namespace WebCore {
 String CSSLinearTimingFunctionValue::customCssText() const
 {
     return "linear";
-}
-
-void CSSLinearTimingFunctionValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
 }
 
 String CSSCubicBezierTimingFunctionValue::customCssText() const
@@ -50,19 +44,9 @@ String CSSCubicBezierTimingFunctionValue::customCssText() const
         + String::number(m_y2) + ")";
 }
 
-void CSSCubicBezierTimingFunctionValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-}
-
 String CSSStepsTimingFunctionValue::customCssText() const
 {
     return "steps(" + String::number(m_steps) + ", " + (m_stepAtStart ? "start" : "end") + ')';
-}
-
-void CSSStepsTimingFunctionValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
 }
 
 } // namespace WebCore

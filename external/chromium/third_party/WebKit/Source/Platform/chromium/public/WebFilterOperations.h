@@ -35,7 +35,7 @@ namespace WebKit {
 class WebFilterOperationsPrivate;
 
 // An ordered list of filter operations.
-class WebFilterOperations {
+class WEBKIT_EXPORT WebFilterOperations {
 public:
     WebFilterOperations() { initialize(); }
     WebFilterOperations(const WebFilterOperations& other)
@@ -50,25 +50,25 @@ public:
     }
     ~WebFilterOperations() { destroy(); }
 
-    WEBKIT_EXPORT void assign(const WebFilterOperations&);
-    WEBKIT_EXPORT bool equals(const WebFilterOperations&) const;
+    void assign(const WebFilterOperations&);
+    bool equals(const WebFilterOperations&) const;
 
-    WEBKIT_EXPORT void append(const WebFilterOperation&);
+    void append(const WebFilterOperation&);
 
     // Removes all filter operations.
-    WEBKIT_EXPORT void clear();
-    WEBKIT_EXPORT bool isEmpty() const;
+    void clear();
+    bool isEmpty() const;
 
-    WEBKIT_EXPORT void getOutsets(int& top, int& right, int& bottom, int& left) const;
-    WEBKIT_EXPORT bool hasFilterThatMovesPixels() const;
-    WEBKIT_EXPORT bool hasFilterThatAffectsOpacity() const;
+    void getOutsets(int& top, int& right, int& bottom, int& left) const;
+    bool hasFilterThatMovesPixels() const;
+    bool hasFilterThatAffectsOpacity() const;
 
-    WEBKIT_EXPORT size_t size() const;
-    WEBKIT_EXPORT WebFilterOperation at(size_t) const;
+    size_t size() const;
+    WebFilterOperation at(size_t) const;
 
 private:
-    WEBKIT_EXPORT void initialize();
-    WEBKIT_EXPORT void destroy();
+    void initialize();
+    void destroy();
 
     WebPrivateOwnPtr<WebFilterOperationsPrivate> m_private;
 };

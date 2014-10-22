@@ -81,6 +81,9 @@ public:
     virtual bool shouldInsertNode(Node*, Range*, EditorInsertAction) = 0;
     virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) = 0;
     virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) = 0;
+#if defined(__LB_SHELL__)
+    virtual void didMoveCursor() = 0;
+#endif
     
     virtual bool shouldApplyStyle(StylePropertySet*, Range*) = 0;
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) = 0;

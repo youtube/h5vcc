@@ -15,6 +15,8 @@
  */
 #include "base/process_util.h"
 
+#include <unistd.h>
+
 #include "base/logging.h"
 #include "base/process.h"
 
@@ -49,5 +51,5 @@ void EnableTerminationOnHeapCorruption() {
   // Nothing to do here
 }
 
-} // namespace base
+}  // namespace base
 

@@ -25,6 +25,35 @@ namespace net {
 
 namespace {
 
+#if defined(__LB_SHELL__)
+// lbshell changes file scheme to local
+// url_canon_fileurl.cc:DoCanonicalizeFileURL()
+#define MAYBE_FileURLConversion DISABLED_FileURLConversion
+// lbshell doesn't have mappings from mime to file extension.
+#define MAYBE_GenerateSafeFileName DISABLED_GenerateSafeFileName
+// lbshell has the whitelist, so the international domain name tests are not required.
+#define MAYBE_IDNToUnicodeFast DISABLED_IDNToUnicodeFast
+#define MAYBE_IDNToUnicodeSlow DISABLED_IDNToUnicodeSlow
+#define MAYBE_FormatUrl DISABLED_FormatUrl
+#define MAYBE_FormatUrlParsed DISABLED_FormatUrlParsed
+#define MAYBE_FormatUrlWithOffsets DISABLED_FormatUrlWithOffsets
+#else
+#define MAYBE_FileURLConversion FileURLConversion
+#define MAYBE_GenerateSafeFileName GenerateSafeFileName
+#define MAYBE_IDNToUnicodeFast IDNToUnicodeFast
+#define MAYBE_IDNToUnicodeSlow IDNToUnicodeSlow
+#define MAYBE_FormatUrl FormatUrl
+#define MAYBE_FormatUrlParsed FormatUrlParsed
+#define MAYBE_FormatUrlWithOffsets FormatUrlWithOffsets
+#endif
+
+#if defined(__LB_PS4__)
+// host name is not required.
+#define MAYBE_GetHostName DISABLED_GetHostName
+#else
+#define MAYBE_GetHostName GetHostName
+#endif
+
 static const size_t kNpos = string16::npos;
 
 struct FileCase {
@@ -503,7 +532,7 @@ void RunGenerateFileNameTestCase(const GenerateFilenameCase* test_case,
 
 }  // anonymous namespace
 
-TEST(NetUtilTest, FileURLConversion) {
+TEST(NetUtilTest, MAYBE_FileURLConversion) {
   // a list of test file names and the corresponding URLs
   const FileCase round_trip_cases[] = {
 #if defined(OS_WIN)
@@ -731,7 +760,7 @@ TEST(NetUtilTest, GetSpecificHeader) {
   }
 }
 
-TEST(NetUtilTest, IDNToUnicodeFast) {
+TEST(NetUtilTest, MAYBE_IDNToUnicodeFast) {
   for (size_t i = 0; i < ARRAYSIZE_UNSAFE(idn_cases); i++) {
     for (size_t j = 0; j < arraysize(kLanguages); j++) {
       // ja || zh-TW,en || ko,ja -> IDNToUnicodeSlow
@@ -747,7 +776,7 @@ TEST(NetUtilTest, IDNToUnicodeFast) {
   }
 }
 
-TEST(NetUtilTest, IDNToUnicodeSlow) {
+TEST(NetUtilTest, MAYBE_IDNToUnicodeSlow) {
   for (size_t i = 0; i < ARRAYSIZE_UNSAFE(idn_cases); i++) {
     for (size_t j = 0; j < arraysize(kLanguages); j++) {
       // !(ja || zh-TW,en || ko,ja) -> IDNToUnicodeFast
@@ -824,7 +853,7 @@ TEST(NetUtilTest, StripWWW) {
 #define TAR_EXT L".tar"
 #endif
 
-TEST(NetUtilTest, GenerateSafeFileName) {
+TEST(NetUtilTest, MAYBE_GenerateSafeFileName) {
   const struct {
     const char* mime_type;
     const FilePath::CharType* filename;
@@ -2353,7 +2382,7 @@ TEST(NetUtilTest, NetAddressToStringWithPort_IPv6) {
 }
 #endif
 
-TEST(NetUtilTest, GetHostName) {
+TEST(NetUtilTest, MAYBE_GetHostName) {
   // We can't check the result of GetHostName() directly, since the result
   // will differ across machines. Our goal here is to simply exercise the
   // code path, and check that things "look about right".
@@ -2361,7 +2390,7 @@ TEST(NetUtilTest, GetHostName) {
   EXPECT_FALSE(hostname.empty());
 }
 
-TEST(NetUtilTest, FormatUrl) {
+TEST(NetUtilTest, MAYBE_FormatUrl) {
   FormatUrlTypes default_format_type = kFormatUrlOmitUsernamePassword;
   const UrlTestData tests[] = {
     {"Empty URL", "", "", default_format_type, UnescapeRule::NORMAL, L"", 0},
@@ -2396,10 +2425,12 @@ TEST(NetUtilTest, FormatUrl) {
      // GURL doesn't assume an email address's domain part as a host name.
      L"mailto:foo@xn--l8jvb1ey91xtjb.jp", 7},
 
+#if !defined (__LB_SHELL__)
     {"file: with Japanese IDN",
      "file://xn--l8jvb1ey91xtjb.jp/config.sys", "ja", default_format_type,
      UnescapeRule::NORMAL,
      L"file://\x671d\x65e5\x3042\x3055\x3072.jp/config.sys", 7},
+#endif // file is not a StandardURLScheme in LB_SHELL
 
     {"ftp: with Japanese IDN",
      "ftp://xn--l8jvb1ey91xtjb.jp/config.sys", "ja", default_format_type,
@@ -2499,9 +2530,12 @@ TEST(NetUtilTest, FormatUrl) {
     {"omit slash for nonstandard URLs",
      "data:/", "en", kFormatUrlOmitTrailingSlashOnBareHostname,
      UnescapeRule::NORMAL, L"data:/", 5},
+
+#if !defined(__LB_SHELL__)
     {"omit slash for file URLs",
      "file:///", "en", kFormatUrlOmitTrailingSlashOnBareHostname,
      UnescapeRule::NORMAL, L"file:///", 7},
+#endif // file is not a StandardURLScheme in LB_SHELL
 
     // -------- view-source: --------
     {"view-source",
@@ -2531,7 +2565,7 @@ TEST(NetUtilTest, FormatUrl) {
   };
 
   for (size_t i = 0; i < arraysize(tests); ++i) {
-    size_t prefix_len;
+    size_t prefix_len = 0;
     string16 formatted = FormatUrl(
         GURL(tests[i].input), tests[i].languages, tests[i].format_types,
         tests[i].escape_rules, NULL, &prefix_len, NULL);
@@ -2540,7 +2574,7 @@ TEST(NetUtilTest, FormatUrl) {
   }
 }
 
-TEST(NetUtilTest, FormatUrlParsed) {
+TEST(NetUtilTest, MAYBE_FormatUrlParsed) {
   // No unescape case.
   url_parse::Parsed parsed;
   string16 formatted = FormatUrl(
@@ -2762,7 +2796,7 @@ TEST(NetUtilTest, FormatUrlRoundTripQueryEscaped) {
   }
 }
 
-TEST(NetUtilTest, FormatUrlWithOffsets) {
+TEST(NetUtilTest, MAYBE_FormatUrlWithOffsets) {
   const AdjustOffsetCase null_cases[] = {
     {0, string16::npos},
   };
@@ -3264,6 +3298,7 @@ TEST(NetUtilTest, IsLocalhost) {
 #endif
 }
 
+#if !defined(__LB_SHELL__) // lbshell doesn't support ifaddrs
 // Verify GetNetworkList().
 TEST(NetUtilTest, GetNetworkList) {
   NetworkInterfaceList list;
@@ -3288,5 +3323,6 @@ TEST(NetUtilTest, GetNetworkList) {
     EXPECT_FALSE(all_zeroes);
   }
 }
+#endif
 
 }  // namespace net

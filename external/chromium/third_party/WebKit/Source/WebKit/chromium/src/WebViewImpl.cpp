@@ -116,8 +116,10 @@
 #if ENABLE(INPUT_SPEECH)
 #include "SpeechInputClientImpl.h"
 #endif
-#if ENABLE(SCRIPTED_SPEECH)
+#if ENABLE(SCRIPTED_SPEECH) && !defined(__LB_SHELL__)
 #include "SpeechRecognitionClientProxy.h"
+#elif ENABLE(SCRIPTED_SPEECH)
+#include "SpeechRecognitionClient.h"
 #endif
 #include "StyleResolver.h"
 #include "Text.h"
@@ -453,7 +455,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 #if ENABLE(INPUT_SPEECH)
     , m_speechInputClient(SpeechInputClientImpl::create(client))
 #endif
-#if ENABLE(SCRIPTED_SPEECH)
+#if ENABLE(SCRIPTED_SPEECH) && !defined(__LB_SHELL__)
     , m_speechRecognitionClient(SpeechRecognitionClientProxy::create(client ? client->speechRecognizer() : 0))
 #endif
     , m_deviceOrientationClientProxy(adoptPtr(new DeviceOrientationClientProxy(client ? client->deviceOrientationClient() : 0)))
@@ -504,8 +506,11 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 #if ENABLE(INPUT_SPEECH)
     provideSpeechInputTo(m_page.get(), m_speechInputClient.get());
 #endif
-#if ENABLE(SCRIPTED_SPEECH)
+#if ENABLE(SCRIPTED_SPEECH) && !defined(__LB_SHELL__)
     provideSpeechRecognitionTo(m_page.get(), m_speechRecognitionClient.get());
+#elif ENABLE(SCRIPTED_SPEECH)
+    provideSpeechRecognitionTo(m_page.get(),
+        WebKit::Platform::current()->createSpeechRecognitionClient());
 #endif
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     provideNotification(m_page.get(), notificationPresenterImpl());
@@ -3519,12 +3524,16 @@ WebDevToolsAgent* WebViewImpl::devToolsAgent()
 
 WebAccessibilityObject WebViewImpl::accessibilityObject()
 {
+#if HAVE(ACCESSIBILITY)
     if (!mainFrameImpl())
         return WebAccessibilityObject();
 
     Document* document = mainFrameImpl()->frame()->document();
     return WebAccessibilityObject(
         document->axObjectCache()->getOrCreate(document->renderer()));
+#else
+    return WebAccessibilityObject();
+#endif
 }
 
 void WebViewImpl::applyAutofillSuggestions(

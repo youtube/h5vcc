@@ -56,6 +56,11 @@
 #include "cmemory.h"
 #include "cstring.h"
 
+#if defined(__LB_ANDROID__)
+// Used as a macro by the NDK, but also as a var name in this file.
+#undef si_value
+#endif
+
 /* control optimizations according to the platform */
 #define MBCS_UNROLL_SINGLE_TO_BMP 1
 #define MBCS_UNROLL_SINGLE_FROM_BMP 0

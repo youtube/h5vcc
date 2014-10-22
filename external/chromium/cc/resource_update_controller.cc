@@ -46,7 +46,7 @@ skia::RefPtr<SkCanvas> createAcceleratedCanvas(
     textureDesc.fHeight = canvasSize.height();
     textureDesc.fConfig = kSkia8888_GrPixelConfig;
     textureDesc.fTextureHandle = textureId;
-#if !defined (__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
     skia::RefPtr<GrTexture> target =
         skia::AdoptRef(grContext->createPlatformTexture(textureDesc));
     skia::RefPtr<SkDevice> device =

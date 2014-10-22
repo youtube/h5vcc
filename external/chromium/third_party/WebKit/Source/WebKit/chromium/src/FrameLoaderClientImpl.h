@@ -222,7 +222,9 @@ public:
     virtual void dispatchIntent(PassRefPtr<WebCore::IntentRequest>) OVERRIDE;
 #endif
 
+#if ENABLE(WEB_SOCKETS)
     virtual void dispatchWillOpenSocketStream(WebCore::SocketStreamHandle*) OVERRIDE;
+#endif
 
 #if ENABLE(MEDIA_STREAM)
     virtual void dispatchWillStartUsingPeerConnectionHandler(WebCore::RTCPeerConnectionHandler*) OVERRIDE;

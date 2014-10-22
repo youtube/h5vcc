@@ -18,7 +18,7 @@
     '../ui/gl/gl.gyp:gl',
     '../ui/surface/surface.gyp:surface',
     '../ui/ui.gyp:ui',
-    '../third_party/angle/src/build_angle.gyp:translator_glsl',
+    '<(angle_dir)/src/build_angle.gyp:translator_glsl',
     '../third_party/khronos/khronos.gyp:khronos_headers',
     '../third_party/smhasher/smhasher.gyp:cityhash',
   ],
@@ -110,6 +110,11 @@
     ['ui_compositor_image_transport==1', {
       'include_dirs': [
         '../third_party/angle/include',
+      ],
+    }],
+    ['OS=="lb_shell"', {
+      'dependencies!': [
+        '../ui/surface/surface.gyp:surface',
       ],
     }],
   ],

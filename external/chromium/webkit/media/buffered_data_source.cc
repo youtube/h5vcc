@@ -14,6 +14,11 @@ using WebKit::WebFrame;
 
 namespace {
 
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+// Cache some data before the current read position to reduce requests.
+const int kBackwardCacheSize = 256 * 1024;
+#endif  // defined(__LB_XB1__) || defined(__LB_XB360__)
+
 // BufferedDataSource has an intermediate buffer, this value governs the initial
 // size of that buffer. It is set to 32KB because this is a typical read size
 // of FFmpeg.
@@ -147,7 +152,11 @@ void BufferedDataSource::Initialize(
   if (url_.SchemeIs(kHttpScheme) || url_.SchemeIs(kHttpsScheme)) {
     // Do an unbounded range request starting at the beginning.  If the server
     // responds with 200 instead of 206 we'll fall back into a streaming mode.
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+    loader_.reset(CreateResourceLoader(0, kMaximumRequestSize));
+#else  // defined(__LB_XB1__) || defined(__LB_XB360__)
     loader_.reset(CreateResourceLoader(0, kPositionNotSpecified));
+#endif  // defined(__LB_XB1__) || defined(__LB_XB360__)
   } else {
     // For all other protocols, assume they support range request. We fetch
     // the full range of the resource to obtain the instance size because
@@ -432,8 +441,15 @@ void BufferedDataSource::ReadCallback(
 
       // Recreate a loader starting from where we last left off until the
       // end of the resource.
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+      int64 start_position = std::max<int64>(
+          0, read_op_->position() - kBackwardCacheSize);
+      loader_.reset(CreateResourceLoader(
+          start_position, start_position + kMaximumRequestSize));
+#else  // defined(__LB_XB1__) || defined(__LB_XB360__)
       loader_.reset(CreateResourceLoader(
           read_op_->position(), kPositionNotSpecified));
+#endif  // defined(__LB_XB1__) || defined(__LB_XB360__)
       loader_->Start(
           base::Bind(&BufferedDataSource::PartialReadStartCallback, this),
           base::Bind(&BufferedDataSource::LoadingStateChangedCallback, this),

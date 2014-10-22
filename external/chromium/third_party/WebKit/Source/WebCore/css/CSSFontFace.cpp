@@ -101,18 +101,6 @@ PassRefPtr<SimpleFontData> CSSFontFace::getFontData(const FontDescription& fontD
     CSSFontSelector* fontSelector = (*m_segmentedFontFaces.begin())->fontSelector();
 
     size_t size = m_sources.size();
-#if defined(__LB_SHELL__)
-    // LB Shell prefers web fonts to local ones.
-    // This loops skips local sources.
-    // The next loop will accept anything that works.
-    for (size_t i = 0; i < size; ++i) {
-        if (m_sources[i]->string().startsWith("http") == false) continue;
-        if (PassRefPtr<SimpleFontData> result = m_sources[i]->getFontData(fontDescription, syntheticBold, syntheticItalic, fontSelector)) {
-            m_activeSource = m_sources[i].get();
-            return result;
-        }
-    }
-#endif
     for (size_t i = 0; i < size; ++i) {
         if (RefPtr<SimpleFontData> result = m_sources[i]->getFontData(fontDescription, syntheticBold, syntheticItalic, fontSelector)) {
             m_activeSource = m_sources[i].get();

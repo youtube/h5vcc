@@ -69,7 +69,6 @@
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "TransformState.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "htmlediting.h"
 #include <algorithm>
 #include <stdio.h>
@@ -112,6 +111,9 @@ struct SameSizeAsRenderObject {
     void* pointers[5];
 #ifndef NDEBUG
     unsigned m_debugBitfields : 2;
+#endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    unsigned m_lb_shell_css_extension_fields : 2;
 #endif
     unsigned m_bitfields;
 };
@@ -226,6 +228,10 @@ RenderObject::RenderObject(Node* node)
 #ifndef NDEBUG
     , m_hasAXObject(false)
     , m_setNeedsLayoutForbidden(false)
+#endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    , m_parentH5vccTargetScreenDiffValid(false)
+    , m_parentH5vccTargetScreenDiff(false)
 #endif
     , m_bitfields(node)
 {
@@ -777,7 +783,7 @@ RenderBlock* RenderObject::containingBlock() const
             // list in all RenderInlines and lets us return a strongly-typed RenderBlock* result
             // from this method.  The container() method can actually be used to obtain the
             // inline directly.
-            if (!o->style()->position() == StaticPosition && !(o->isInline() && !o->isReplaced()))
+            if (o->style()->position() != StaticPosition && (!o->isInline() || o->isReplaced()))
                 break;
             if (o->isRenderView())
                 break;
@@ -3077,18 +3083,6 @@ bool RenderObject::canHaveGeneratedChildren() const
 bool RenderObject::canBeReplacedWithInlineRunIn() const
 {
     return true;
-}
-
-void RenderObject::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addMember(m_style);
-    info.addWeakPointer(m_node);
-    info.addWeakPointer(m_parent);
-    info.addWeakPointer(m_previous);
-    info.addWeakPointer(m_next);
-
-    info.setCustomAllocation(true);
 }
 
 #if ENABLE(SVG)

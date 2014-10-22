@@ -84,8 +84,6 @@ public:
     unsigned childIndex() const { return m_childIndex; }
     void setChildIndex(unsigned index) { m_childIndex = index; }
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
     ElementShadow* shadow() const { return m_shadow.get(); }
     void setShadow(PassOwnPtr<ElementShadow> shadow) { m_shadow = shadow; }
 

@@ -50,7 +50,7 @@
 // Exported symbols need to be annotated with WEBKIT_EXPORT
 
 #if defined(WEBKIT_DLL)
-    #if defined(WIN32)
+    #if defined(_MSC_VER)
         #if WEBKIT_IMPLEMENTATION
             #define WEBKIT_EXPORT __declspec(dllexport)
         #else
@@ -79,7 +79,9 @@ typedef unsigned int uint32_t;
 namespace WebKit {
 
 // UTF-16 character type
-#if defined(WIN32) || defined(__LB_PS3__) || defined(__LB_WIIU__)
+#if defined(WIN32) || \
+    (defined(__LB_SHELL__) && \
+        !(defined(__LB_LINUX__) || defined(__LB_ANDROID__)))
 typedef wchar_t WebUChar;
 #else
 typedef unsigned short WebUChar;

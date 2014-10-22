@@ -2816,6 +2816,82 @@ template<> inline CSSPrimitiveValue::operator WritingMode() const
     return TopToBottomWritingMode;
 }
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(H5VCCTargetScreen screen)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (screen) {
+    case ScreenSmall:
+        m_value.ident = CSSValueScreenSmall;
+        break;
+    case ScreenLarge:
+        m_value.ident = CSSValueScreenLarge;
+        break;
+    case ScreenAll:
+        m_value.ident = CSSValueScreenAll;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator H5VCCTargetScreen() const
+{
+    switch (m_value.ident) {
+    case CSSValueScreenSmall:
+        return ScreenSmall;
+    case CSSValueScreenLarge:
+        return ScreenLarge;
+    case CSSValueScreenAll:
+        return ScreenAll;
+    }
+
+    ASSERT_NOT_REACHED();
+    return ScreenAll;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(H5VCCGesturable setting)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (setting) {
+    case GestureIgnored:
+        m_value.ident = CSSValueGestureIgnored;
+        break;
+    case GestureClickable:
+        m_value.ident = CSSValueGestureClickable;
+        break;
+    case GestureScrollHorizontal:
+        m_value.ident = CSSValueGestureScrollHorizontal;
+        break;
+    case GestureScrollVertical:
+        m_value.ident = CSSValueGestureScrollVertical;
+        break;
+    case GestureScrollBoth:
+        m_value.ident = CSSValueGestureScrollBoth;
+        break;
+  }
+}
+
+template<> inline CSSPrimitiveValue::operator H5VCCGesturable() const
+{
+    switch (m_value.ident) {
+    case CSSValueGestureIgnored:
+        return GestureIgnored;
+    case CSSValueGestureClickable:
+        return GestureClickable;
+    case CSSValueGestureScrollHorizontal:
+        return GestureScrollHorizontal;
+    case CSSValueGestureScrollVertical:
+        return GestureScrollVertical;
+    case CSSValueGestureScrollBoth:
+        return GestureScrollBoth;
+    }
+
+    ASSERT_NOT_REACHED();
+    return GestureIgnored;
+}
+#endif
+
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextCombine e)
     : CSSValue(PrimitiveClass)
 {

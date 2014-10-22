@@ -36,21 +36,12 @@
 #include "NodeRenderStyle.h"
 #include "RenderObject.h"
 #include "StyleResolver.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 using namespace std;
 
 namespace WebCore {
-
-void CSSGradientColorStop::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_position);
-    info.addMember(m_color);
-}
 
 PassRefPtr<Image> CSSGradientValue::image(RenderObject* renderer, const IntSize& size)
 {
@@ -471,17 +462,6 @@ bool CSSGradientValue::hasAlpha(const RenderObject*) const
     return false;
 }
 
-void CSSGradientValue::reportBaseClassMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSImageGeneratorValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_firstX);
-    info.addMember(m_firstY);
-    info.addMember(m_secondX);
-    info.addMember(m_secondY);
-    info.addMember(m_stops);
-}
-
 String CSSLinearGradientValue::customCssText() const
 {
     StringBuilder result;
@@ -649,13 +629,6 @@ PassRefPtr<Gradient> CSSLinearGradientValue::createGradient(RenderObject* render
     addStops(gradient.get(), renderer, rootStyle, 1);
 
     return gradient.release();
-}
-
-void CSSLinearGradientValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSGradientValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_angle);
 }
 
 String CSSRadialGradientValue::customCssText() const
@@ -974,18 +947,6 @@ PassRefPtr<Gradient> CSSRadialGradientValue::createGradient(RenderObject* render
     addStops(gradient.get(), renderer, rootStyle, maxExtent);
 
     return gradient.release();
-}
-
-void CSSRadialGradientValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSGradientValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_firstRadius);
-    info.addMember(m_secondRadius);
-    info.addMember(m_shape);
-    info.addMember(m_sizingBehavior);
-    info.addMember(m_endHorizontalSize);
-    info.addMember(m_endVerticalSize);
 }
 
 } // namespace WebCore

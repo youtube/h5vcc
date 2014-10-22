@@ -23,6 +23,17 @@ typedef struct _NSRange NSRange;
 #include <richedit.h>
 #endif
 
+
+#if !defined(TOOLKIT_VIEWS)
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+// Prevent the following classes from being exported.
+// We don't compile their implementations.
+#pragma push_macro("UI_EXPORT")
+#undef UI_EXPORT
+#define UI_EXPORT
+#endif
+#endif
+
 namespace ui {
 
 // A Range contains two integer values that represent a numeric range, like the
@@ -110,5 +121,11 @@ class UI_EXPORT Range {
 };
 
 }  // namespace ui
+
+#if !defined(TOOLKIT_VIEWS)
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+#pragma pop_macro("UI_EXPORT")
+#endif
+#endif
 
 #endif  // UI_BASE_RANGE_RANGE_H_

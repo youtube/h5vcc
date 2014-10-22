@@ -44,7 +44,9 @@
 
 #define WinPrecompile_h_
 
+#if !defined(__LB_SHELL__)
 #include <Windows.h>
+#endif
 
 #include <errno.h>
 #include <fcntl.h>
@@ -61,3 +63,40 @@
 #include <limits>
 #include <string>
 #include <utility>
+
+#if defined(__LB_SHELL__)
+
+// Precompile the top N most expensive headers,
+// as computed by parsing /showIncludes output
+// for number of times included, and the number of
+// includes each one brings in.
+
+#include "unicode/utf.h"
+
+// Note that config.h is required for most WebKit headers.
+#include "config.h"
+#include <wtf/Assertions.h>
+#include <wtf/Atomics.h>
+#include <wtf/DoublyLinkedList.h>
+#include <wtf/Forward.h>
+#include <wtf/HashSet.h>
+#include <wtf/NonCopyable.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassRefPtr.h>
+#include <wtf/Platform.h>
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
+#include <wtf/Vector.h>
+
+#include <WebCore/bindings/js/JSDomBinding.h>
+#include <WebCore/css/StyleResolver.h>
+#include <WebCore/dom/Clipboard.h>
+#include <WebCore/html/HTMLAnchorElement.h>
+#include <WebCore/loader/DocumentLoader.h>
+#include <WebCore/platform/graphics/FontBaseline.h>
+#include <WebCore/platform/graphics/FontDescription.h>
+#include <WebCore/rendering/RenderBoxModelObject.h>
+#include <WebCore/rendering/RenderObject.h>
+
+#endif

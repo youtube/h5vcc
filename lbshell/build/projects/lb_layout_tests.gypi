@@ -2,6 +2,9 @@
   'targets': [{
     'target_name': 'lb_layout_tests',
     'type': 'executable',
+    'variables': {
+      'main_thread_stack_size': '<(LB_SHELL_MAIN_THREAD_STACK_SIZE)',
+    },
     'sources': [
       '../../src/lb_shell_main.cc',
       '../../src/lb_shell_layout_test_runner.cc',
@@ -23,7 +26,7 @@
     ],
     'dependencies': [
       'lb_shell_lib',
-      'steel_build_id',
+      '<(DEPTH)/skia/skia.gyp:skia',
       '<(DEPTH)/third_party/icu/icu.gyp:icuuc',
     ],
     'libraries': [

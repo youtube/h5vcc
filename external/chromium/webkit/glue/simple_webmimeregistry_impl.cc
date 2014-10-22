@@ -4,10 +4,13 @@
 
 #include "webkit/glue/simple_webmimeregistry_impl.h"
 
+#include <algorithm>
+
 #include "base/string_util.h"
 #include "base/sys_string_conversions.h"
 #include "base/utf_string_conversions.h"
 #include "net/base/mime_util.h"
+#include "third_party/WebKit/Source/Platform/chromium/public/Platform.h"
 #include "third_party/WebKit/Source/WebKit/chromium/public/platform/WebString.h"
 #include "webkit/base/file_path_string_conversions.h"
 #include "webkit/media/crypto/key_systems.h"
@@ -16,6 +19,22 @@ using WebKit::WebString;
 using WebKit::WebMimeRegistry;
 
 namespace {
+
+#if defined(__LB_SHELL__)
+
+const std::string kAAC51Codec = "aac51";
+
+bool ContainsAAC51(const std::vector<std::string>& codecs) {
+  std::vector<std::string>::const_iterator iter =
+      std::find(codecs.begin(), codecs.end(), kAAC51Codec);
+  return iter != codecs.end();
+}
+
+bool HasAAC51HardwareSupport() {
+  return WebKit::Platform::current()->audioHardwareMaxChannels() >= 6;
+}
+
+#endif // defined(__LB_SHELL__)
 
 // Convert a WebString to ASCII, falling back on an empty string in the case
 // of a non-ASCII string.
@@ -73,6 +92,11 @@ WebMimeRegistry::SupportsType SimpleWebMimeRegistryImpl::supportsMediaMIMEType(
     bool strip_suffix = !net::IsStrictMediaMimeType(mime_type_ascii);
     net::ParseCodecString(ToASCIIOrEmpty(codecs), &strict_codecs, strip_suffix);
 
+#if defined(__LB_SHELL__)
+    if (ContainsAAC51(strict_codecs) && !HasAAC51HardwareSupport())
+      return IsNotSupported;
+#endif  // defined(__LB_SHELL__)
+
     if (!webkit_media::IsSupportedKeySystemWithMediaMimeType(
             mime_type_ascii, strict_codecs, ToASCIIOrEmpty(key_system)))
       return IsNotSupported;
@@ -89,6 +113,12 @@ WebMimeRegistry::SupportsType SimpleWebMimeRegistryImpl::supportsMediaMIMEType(
     // Check if the codecs are a perfect match.
     std::vector<std::string> strict_codecs;
     net::ParseCodecString(ToASCIIOrEmpty(codecs), &strict_codecs, false);
+
+#if defined(__LB_SHELL__)
+    if (ContainsAAC51(strict_codecs) && !HasAAC51HardwareSupport())
+      return IsNotSupported;
+#endif  // defined(__LB_SHELL__)
+
     if (!net::IsSupportedStrictMediaMimeType(mime_type_ascii, strict_codecs))
       return IsNotSupported;
 
@@ -99,6 +129,12 @@ WebMimeRegistry::SupportsType SimpleWebMimeRegistryImpl::supportsMediaMIMEType(
   // If we don't recognize the codec, it's possible we support it.
   std::vector<std::string> parsed_codecs;
   net::ParseCodecString(ToASCIIOrEmpty(codecs), &parsed_codecs, true);
+
+#if defined(__LB_SHELL__)
+    if (ContainsAAC51(parsed_codecs) && !HasAAC51HardwareSupport())
+      return IsNotSupported;
+#endif  // defined(__LB_SHELL__)
+
   if (!net::AreSupportedMediaCodecs(parsed_codecs))
     return MayBeSupported;
 

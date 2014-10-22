@@ -2643,7 +2643,13 @@ void RenderBoxModelObject::paintBoxShadow(const PaintInfo& info, const LayoutRec
                 Path path;
                 path.addRoundedRect(border);
                 context->clip(path);
+#if !defined(__LB_XB360__)
                 roundedHole.shrinkRadii(shadowSpread);
+#else
+                // The shrinkRadii() call above causes the Xbox 360 compiler to
+                // suffer an internal error.
+                notImplemented();
+#endif
             } else
                 context->clip(border.rect());
 

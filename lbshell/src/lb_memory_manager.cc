@@ -16,8 +16,13 @@
 // Replace the system allocation functions with our own versions. This
 // helps us to track and debug memory problems.
 
+#ifdef LB_MACRO_MALLOC_OVERRIDE
+#undef free
+#undef memalign
+#undef realloc
+#endif
+
 #include "lb_memory_manager.h"
-#include "lb_memory_internal.h"
 
 #include <string.h>
 
@@ -25,16 +30,9 @@ static const size_t kMaxSize = ~static_cast<size_t>(0);
 
 #if LB_ENABLE_MEMORY_DEBUGGING
 
-static const int kNoAlignment = 1;
-
 extern "C" {
-
 void* __wrap_malloc(size_t size) {
-  return lb_memory_allocate(kNoAlignment, size, LB_MEMORY_GUARD_EXTERN, 0);
-}
-
-void* lb_malloc(size_t size) {
-  return lb_memory_allocate(kNoAlignment, size, LB_MEMORY_GUARD_LB, 0);
+  return lb_memory_allocate(kNoAlignment, size, 0);
 }
 
 void* __wrap_calloc(size_t nelem, size_t size) {
@@ -44,22 +42,7 @@ void* __wrap_calloc(size_t nelem, size_t size) {
     return NULL;
   }
 
-  void *ptr = lb_memory_allocate(kNoAlignment, bytes, LB_MEMORY_GUARD_EXTERN,
-                                 0);
-  if (ptr) {
-    memset(ptr, 0, bytes);
-  }
-  return ptr;
-}
-
-void* lb_calloc(size_t nelem, size_t size) {
-  const size_t bytes = nelem * size;
-  // Check for overflow
-  if (nelem && kMaxSize / nelem < size) {
-    return NULL;
-  }
-
-  void *ptr = lb_memory_allocate(kNoAlignment, bytes, LB_MEMORY_GUARD_LB, 0);
+  void *ptr = lb_memory_allocate(kNoAlignment, bytes, 0);
   if (ptr) {
     memset(ptr, 0, bytes);
   }
@@ -67,19 +50,11 @@ void* lb_calloc(size_t nelem, size_t size) {
 }
 
 void* __wrap_realloc(void* ptr, size_t size) {
-  return lb_memory_reallocate(ptr, size, LB_MEMORY_GUARD_EXTERN, 0);
-}
-
-void* lb_realloc(void* ptr, size_t size) {
-  return lb_memory_reallocate(ptr, size, LB_MEMORY_GUARD_LB, 0);
+  return lb_memory_reallocate(ptr, size, 0);
 }
 
 void* __wrap_memalign(size_t boundary, size_t size) {
-  return lb_memory_allocate(boundary, size, LB_MEMORY_GUARD_EXTERN, 0);
-}
-
-void* lb_memalign(size_t boundary, size_t size) {
-  return lb_memory_allocate(boundary, size, LB_MEMORY_GUARD_LB, 0);
+  return lb_memory_allocate(boundary, size, 0);
 }
 
 void __wrap_free(void* ptr) {
@@ -91,42 +66,14 @@ size_t __wrap_malloc_usable_size(void* ptr) {
 }
 
 char* __wrap_strdup(const char* ptr) {
-  const int size = strlen(ptr) + 1;
-  char* s = (char*)malloc(size);
+  const size_t size = strlen(ptr) + 1;
+  char* s = reinterpret_cast<char*>(lb_memory_allocate(kNoAlignment, size, 0));
   if (s) {
     memcpy(s, ptr, size);
   }
   return s;
 }
-
 }  // extern "C"
-
-// scalar new and its matching delete
-void* operator new(size_t size) {
-  return lb_memory_allocate(kNoAlignment, size, LB_MEMORY_GUARD_EXTERN, 0);
-}
-
-void operator delete(void* ptr) {
-  return lb_memory_deallocate(ptr);
-}
-
-// array new and its matching delete[]
-void* operator new[](size_t size) {
-  return lb_memory_allocate(kNoAlignment, size, LB_MEMORY_GUARD_EXTERN, 0);
-}
-
-void operator delete[](void* ptr) {
-  return lb_memory_deallocate(ptr);
-}
-
-void* operator new(size_t size, int dummy) {
-  return lb_memory_allocate(kNoAlignment, size, LB_MEMORY_GUARD_LB, 0);
-}
-
-// array new and its matching delete[]
-void* operator new[](size_t size, int dummy) {
-  return lb_memory_allocate(kNoAlignment, size, LB_MEMORY_GUARD_LB, 0);
-}
 
 #else  // #if LB_ENABLE_MEMORY_DEBUGGING
 
@@ -134,13 +81,22 @@ void* operator new[](size_t size, int dummy) {
 // connect these symbols directly to the allocator.
 
 extern "C" {
-
-#if defined(__LB_LINUX__)
+#if defined(__LB_ANDROID__)
+static const int kMinimumAlignment = 4;
+#elif defined(__LB_LINUX__)
 static const int kMinimumAlignment = 4;
 #elif defined(__LB_PS3__)
 static const int kMinimumAlignment = 16;
+#elif defined(__LB_PS4__)
+static const int kMinimumAlignment = 16;
 #elif defined(__LB_WIIU__)
 static const int kMinimumAlignment = 8;
+#elif defined(__LB_XB1__)
+static const int kMinimumAlignment = 4;
+#elif defined(__LB_XB360__)
+static const int kMinimumAlignment = 16;
+#else
+#error kMinimumAlignment undefined for this platform
 #endif
 
 void* __wrap_malloc(size_t size) {
@@ -159,21 +115,7 @@ void* __wrap_calloc(size_t nelem, size_t size) {
 }
 
 void* __wrap_realloc(void* ptr, size_t size) {
-#if ALLOCATOR_HAS_REALLOC
   return ALLOCATOR(realloc)(ptr, size);
-#else
-  // NOTE: This fallback is prone to fragmentation.
-  void *ptr2 = ALLOCATOR(memalign)(kMinimumAlignment, size);
-  size_t copy_size = ALLOCATOR(malloc_usable_size)(ptr);
-  if (copy_size > size) {
-    copy_size = size;
-  }
-  if (copy_size) {
-    memcpy(ptr2, ptr, copy_size);
-  }
-  ALLOCATOR(free)(ptr);
-  return ptr2;
-#endif
 }
 
 void* __wrap_memalign(size_t boundary, size_t size) {
@@ -191,13 +133,13 @@ size_t __wrap_malloc_usable_size(void* ptr) {
 
 char* __wrap_strdup(const char* ptr) {
   const int size = strlen(ptr) + 1;
-  char* s = (char*)ALLOCATOR(memalign)(kMinimumAlignment, size);
+  char* s = reinterpret_cast<char*>(
+      ALLOCATOR(memalign)(kMinimumAlignment, size));
   if (s) {
     memcpy(s, ptr, size);
   }
   return s;
 }
-
 }  // extern "C"
 
 #endif  // #if LB_ENABLE_MEMORY_DEBUGGING

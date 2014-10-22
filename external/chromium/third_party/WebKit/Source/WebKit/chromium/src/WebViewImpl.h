@@ -899,7 +899,7 @@ private:
 #if ENABLE(INPUT_SPEECH)
     OwnPtr<SpeechInputClientImpl> m_speechInputClient;
 #endif
-#if ENABLE(SCRIPTED_SPEECH)
+#if ENABLE(SCRIPTED_SPEECH) && !defined(__LB_SHELL__)
     OwnPtr<SpeechRecognitionClientProxy> m_speechRecognitionClient;
 #endif
 

@@ -130,6 +130,14 @@
             ['include', 'crypto/proxy_decryptor'],
             # naturally include everything starting with the name shell
             ['include', 'shell_'],
+            # android is not deleted by default on target_arch == android
+            # so we need to remove these files by hand
+            # these were excluded by all, but brought back in by webmediaplayer
+            # rule
+            ['exclude', 'android/'],
+            # Re-include a potential precompiled header as the .* would have
+            # excluded it here.
+            ['include', 'precompile\\.(cc|h)$'],
           ],
         }, { # OS != lb_shell
           'dependencies': [

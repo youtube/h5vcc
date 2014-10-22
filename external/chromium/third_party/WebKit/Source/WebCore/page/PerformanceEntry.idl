@@ -32,6 +32,9 @@
 [
     Conditional=WEB_TIMING,
     Conditional=PERFORMANCE_TIMELINE,
+#if defined(V8_BINDING) && V8_BINDING
+    CustomToJSObject,
+#endif
     OmitConstructor
 ] interface PerformanceEntry {
     readonly attribute DOMString name;

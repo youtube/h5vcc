@@ -18,8 +18,8 @@
 // available, a new block will be created. User needs to call ReturnBuffer
 // after process is done, otherwise the memory block might be leaked.
 
-#ifndef SRC_DATA_BUFFER_POOL_H_
-#define SRC_DATA_BUFFER_POOL_H_
+#ifndef SRC_LB_DATA_BUFFER_POOL_H_
+#define SRC_LB_DATA_BUFFER_POOL_H_
 
 #include "external/chromium/base/synchronization/lock.h"
 #include "external/chromium/base/logging.h"
@@ -60,9 +60,9 @@ class DataBufferPoolBase {
 template<typename T>
 class DataPointerBufferPool : public DataBufferPoolBase<T*> {
  public:
-   typedef DataBufferPoolBase<T*> BaseClass;
+  typedef DataBufferPoolBase<T*> BaseClass;
   // Release all cached objects
-   virtual ~DataPointerBufferPool() { Clear(); }
+  virtual ~DataPointerBufferPool() { Clear(); }
 
   void Clear() {
     base::AutoLock lock(BaseClass::lock_);
@@ -73,14 +73,14 @@ class DataPointerBufferPool : public DataBufferPoolBase<T*> {
   }
 
  private:
-  virtual T* CreateObject() { return LB_NEW T; }
+  virtual T* CreateObject() { return new T; }
 };
 
 // Buffer pool for reference counted objects
 template<typename T>
 class DataRefPtrBufferPool : public DataBufferPoolBase<scoped_refptr<T> > {
  private:
-  virtual scoped_refptr<T> CreateObject() { return LB_NEW T; }
+  virtual scoped_refptr<T> CreateObject() { return new T; }
 };
 
 // A simple array object with size information
@@ -140,7 +140,7 @@ class DataArrayBufferPool {
   virtual DataObject CreateObject(const uint32_t size) {
     DataObject buffer;
     const uint32_t actual_size = std::max(capacity, size);
-    buffer.raw_pointer = LB_NEW T[actual_size];
+    buffer.raw_pointer = new T[actual_size];
     buffer.size = actual_size;
     return buffer;
   }
@@ -149,5 +149,5 @@ class DataArrayBufferPool {
   base::Lock lock_;                    // Protect data buffers
 };
 
-#endif  // SRC_DATA_BUFFER_POOL_H_
+#endif  // SRC_LB_DATA_BUFFER_POOL_H_
 

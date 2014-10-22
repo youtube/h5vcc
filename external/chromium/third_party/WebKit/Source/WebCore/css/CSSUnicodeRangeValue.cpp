@@ -26,7 +26,6 @@
 #include "config.h"
 #include "CSSUnicodeRangeValue.h"
 
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -36,11 +35,6 @@ String CSSUnicodeRangeValue::customCssText() const
     String result;
     // FIXME: Implement.
     return result;
-}
-
-void CSSUnicodeRangeValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
 }
 
 }

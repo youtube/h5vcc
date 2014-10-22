@@ -47,8 +47,6 @@ public:
 
     String customCssText() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     explicit CSSFunctionValue(CSSParserFunction*);
     CSSFunctionValue(String, PassRefPtr<CSSValueList>);

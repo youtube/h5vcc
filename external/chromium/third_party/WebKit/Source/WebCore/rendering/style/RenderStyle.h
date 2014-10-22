@@ -911,6 +911,11 @@ public:
     bool textSizeAdjust() const { return rareInheritedData->textSizeAdjust; }
     ETextSecurity textSecurity() const { return static_cast<ETextSecurity>(rareInheritedData->textSecurity); }
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    H5VCCTargetScreen h5vccTargetScreen() const { return static_cast<H5VCCTargetScreen>(rareInheritedData->m_h5vccTargetScreen); }
+    H5VCCGesturable h5vccGesturable() const { return static_cast<H5VCCGesturable>(rareNonInheritedData->m_h5vccGesturable); }
+#endif
+
     WritingMode writingMode() const { return static_cast<WritingMode>(inherited_flags.m_writingMode); }
     bool isHorizontalWritingMode() const { return WebCore::isHorizontalWritingMode(writingMode()); }
     bool isFlippedLinesWritingMode() const { return WebCore::isFlippedLinesWritingMode(writingMode()); }
@@ -1480,6 +1485,11 @@ public:
             || display() == LIST_ITEM;
     }
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    void setH5vccTargetScreen(H5VCCTargetScreen screen) { SET_VAR(rareInheritedData, m_h5vccTargetScreen, screen); }
+    void setH5vccGesturable(H5VCCGesturable value) { SET_VAR(rareNonInheritedData, m_h5vccGesturable, value); }
+#endif
+
     bool setWritingMode(WritingMode v)
     {
         if (v == writingMode())
@@ -1504,8 +1514,6 @@ public:
 
     void setHasExplicitlyInheritedProperties() { noninherited_flags.explicitInheritance = true; }
     bool hasExplicitlyInheritedProperties() const { return noninherited_flags.explicitInheritance; }
-
-    void reportMemoryUsage(MemoryObjectInfo*) const;
     
     // Initial values for all the properties
     static EBorderCollapse initialBorderCollapse() { return BSEPARATE; }
@@ -1519,6 +1527,10 @@ public:
     static ColumnAxis initialColumnAxis() { return AutoColumnAxis; }
     static ColumnProgression initialColumnProgression() { return NormalColumnProgression; }
     static TextDirection initialDirection() { return LTR; }
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    static H5VCCTargetScreen initialH5vccTargetScreen() { return ScreenSmall; }
+    static H5VCCGesturable initialH5vccGesturable() { return GestureIgnored; }
+#endif
     static WritingMode initialWritingMode() { return TopToBottomWritingMode; }
     static TextCombine initialTextCombine() { return TextCombineNone; }
     static TextOrientation initialTextOrientation() { return TextOrientationVerticalRight; }

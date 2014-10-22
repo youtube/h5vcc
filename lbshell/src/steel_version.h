@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _STEEL_VERSION_H_
-#define _STEEL_VERSION_H_
+#ifndef SRC_STEEL_VERSION_H_
+#define SRC_STEEL_VERSION_H_
 
-#define STEEL_VERSION "2.00"
+#define STEEL_VERSION "2.20"
 
-#endif
+#endif  // SRC_STEEL_VERSION_H_

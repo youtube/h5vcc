@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef MEDIA_CRYPTO_SHELL_DECRYPTOR_FACTORY_H
+#ifndef MEDIA_CRYPTO_SHELL_DECRYPTOR_FACTORY_H_
 #define MEDIA_CRYPTO_SHELL_DECRYPTOR_FACTORY_H_
 
 #include <map>
@@ -28,10 +28,10 @@ namespace media {
 // Serves as a registry and factory for decryptors.
 // This allows a complete decoupling so that the media stack does not need
 // explicit knowledge of any particular decryptor or how it should be created.
-class ShellDecryptorFactory {
+class MEDIA_EXPORT ShellDecryptorFactory {
  public:
   // Creates a decryptor.  Returns NULL on failure.
-  typedef base::Callback<Decryptor *(DecryptorClient *)> CreateCB;
+  typedef base::Callback<media::Decryptor *(media::DecryptorClient *)> CreateCB;
 
   static bool Supports(const std::string& key_system);
 

@@ -42,6 +42,9 @@ Layer::Layer()
     , m_anchorPoint(0.5, 0.5)
     , m_backgroundColor(0)
     , m_opacity(1.0)
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    , m_h5vccTargetScreen(WebKit::ScreenSmall)
+#endif
     , m_anchorPointZ(0)
     , m_isContainerForFixedPositionLayers(false)
     , m_fixedToContainerLayer(false)
@@ -376,6 +379,19 @@ void Layer::setOpacity(float opacity)
     setNeedsCommit();
 }
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+WebKit::H5VCCTargetScreen Layer::h5vccTargetScreen() const {
+    return m_h5vccTargetScreen;
+}
+
+void Layer::setH5vccTargetScreen(WebKit::H5VCCTargetScreen h5vccTargetScreen) {
+    if (m_h5vccTargetScreen == h5vccTargetScreen)
+        return;
+    m_h5vccTargetScreen = h5vccTargetScreen;
+    setNeedsCommit();
+}
+#endif
+
 bool Layer::opacityIsAnimating() const
 {
     return m_layerAnimationController->isAnimatingProperty(ActiveAnimation::Opacity);
@@ -596,6 +612,9 @@ void Layer::pushPropertiesTo(LayerImpl* layer)
     layer->setContentsOpaque(m_contentsOpaque);
     if (!opacityIsAnimating())
         layer->setOpacity(m_opacity);
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    layer->setH5vccTargetScreen(m_h5vccTargetScreen);
+#endif
     layer->setPosition(m_position);
     layer->setIsContainerForFixedPositionLayers(m_isContainerForFixedPositionLayers);
     layer->setFixedToContainerLayer(m_fixedToContainerLayer);

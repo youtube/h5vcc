@@ -109,7 +109,6 @@ public:
         , m_result(result)
     {
     }
-    void reportMemoryUsage(MemoryObjectInfo*) const;
 
     MediaQueryExp m_expression;
     bool m_result;
@@ -323,7 +322,6 @@ private:
 
     struct MatchedProperties {
         MatchedProperties() : possiblyPaddedMember(0) { }
-        void reportMemoryUsage(MemoryObjectInfo*) const;
         
         RefPtr<StylePropertySet> properties;
         union {
@@ -428,8 +426,6 @@ public:
     static Length convertToFloatLength(CSSPrimitiveValue*, RenderStyle*, RenderStyle* rootStyle, double multiplier = 1);
 
     CSSToStyleMap* styleMap() { return &m_styleMap; }
-
-    void reportMemoryUsage(MemoryObjectInfo*) const;
     
 private:
     static RenderStyle* s_styleNotYetAvailable;
@@ -452,7 +448,6 @@ private:
 
     static unsigned computeMatchedPropertiesHash(const MatchedProperties*, unsigned size);
     struct MatchedPropertiesCacheItem {
-        void reportMemoryUsage(MemoryObjectInfo*) const;
         Vector<MatchedProperties> matchedProperties;
         MatchRanges ranges;
         RefPtr<RenderStyle> renderStyle;

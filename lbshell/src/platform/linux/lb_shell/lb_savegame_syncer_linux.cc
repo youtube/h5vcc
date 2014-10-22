@@ -21,29 +21,39 @@
 
 // static
 void LBSavegameSyncer::PlatformInit() {
-  // TODO: unimplemented!
+  // no-op.
 }
 
 // static
 void LBSavegameSyncer::PlatformShutdown() {
-  // TODO: unimplemented!
+  // no-op.
 }
 
 // static
-void LBSavegameSyncer::SavegameToFile(InternalCallback cb) {
-  // TODO: unimplemented!
-  cb();
+bool LBSavegameSyncer::PlatformMountStart(bool readonly) {
+  return true;
 }
 
 // static
-void LBSavegameSyncer::FileToSavegame(InternalCallback cb) {
-  // TODO: unimplemented!
-  cb();
+bool LBSavegameSyncer::PlatformMountEnd() {
+  return true;
+}
+
+// static
+void LBSavegameSyncer::SavegameToFile(const base::Closure& cb) {
+  // no-op.
+  cb.Run();
+}
+
+// static
+void LBSavegameSyncer::FileToSavegame(const base::Closure& cb) {
+  // no-op.
+  cb.Run();
 }
 
 // static
 FilePath LBSavegameSyncer::GetFilePath() {
-  // TODO: unimplemented!
-  return FilePath();
+  const char *home = getenv("HOME");
+  if (!home) home = "/";
+  return FilePath(home).Append(".steel.db");
 }
-

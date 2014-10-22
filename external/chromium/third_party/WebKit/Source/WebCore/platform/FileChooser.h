@@ -82,16 +82,21 @@ private:
 class FileChooser : public RefCounted<FileChooser> {
 public:
     static PassRefPtr<FileChooser> create(FileChooserClient*, const FileChooserSettings&);
+#if !defined(__LB_SHELL__)
     ~FileChooser();
-
+#else
+    ~FileChooser() {}
+#endif
     void disconnectClient() { m_client = 0; }
 
     void chooseFile(const String& path);
     void chooseFiles(const Vector<String>& paths);
-
+#if !defined(__LB_SHELL__)
     // FIXME: We should probably just pass file paths that could be virtual paths with proper display names rather than passing structs.
     void chooseFiles(const Vector<FileChooserFileInfo>& files);
-
+#else
+    void chooseFiles(const Vector<FileChooserFileInfo>& files) {}
+#endif
     const FileChooserSettings& settings() const { return m_settings; }
 
 private:

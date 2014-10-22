@@ -14,7 +14,7 @@
 
 #include "unicode/utypes.h"
 
-#ifdef U_WINDOWS
+#if defined(U_WINDOWS) || defined(__LB_XB1__)
 
 /**
  * \file 

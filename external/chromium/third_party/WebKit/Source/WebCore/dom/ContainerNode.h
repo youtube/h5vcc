@@ -134,14 +134,6 @@ public:
 
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const { return true; }
 
-    virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-    {
-        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-        Node::reportMemoryUsage(memoryObjectInfo);
-        info.addMember(m_firstChild);
-        info.addMember(m_lastChild);
-    }
-
 protected:
     ContainerNode(Document*, ConstructionType = CreateContainer);
 

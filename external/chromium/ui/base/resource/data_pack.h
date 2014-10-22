@@ -67,15 +67,29 @@ class UI_EXPORT DataPack : public ResourceHandle {
   bool LoadImpl();
 
 #if defined(__LB_SHELL__)
-  struct DataPackEntry {
+
+#if defined(COMPILER_MSVC)
+# define PACK(decl) __pragma(pack(push, 1)) decl __pragma(pack(pop))
+#else
+# define PACK(decl) decl __attribute__((__packed__))
+#endif
+
+  // These have to be packed to match the structure from the data file.
+  // The performance hit is probably okay since this is not accessed much.
+  PACK(struct DataPackHeader {
+    uint32 version;
+    uint32 resource_count;
+    uint8 encoding;
+  });
+  PACK(struct DataPackEntry {
     uint16 resource_id;
     uint32 file_offset;
-  } __attribute__((packed));  // This has to be packed so the data file we read
-                              // in from disk fits properly. The performance hit
-                              // is probably okay since this is not accessed
-                              // much
+  });
+  COMPILE_ASSERT(sizeof(DataPackHeader) == 9,
+                 size_of_header_must_be_nine);
   COMPILE_ASSERT(sizeof(DataPackEntry) == 6,
-                 size_of_header_must_be_six);
+                 size_of_entry_must_be_six);
+
   FilePath pack_file_;
   scoped_array<DataPackEntry> metadata_;
   std::map<uint16, int> resource_id_to_metadata_index_;

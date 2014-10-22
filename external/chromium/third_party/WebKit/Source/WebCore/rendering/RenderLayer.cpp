@@ -99,8 +99,6 @@
 #include "TextStream.h"
 #include "TransformationMatrix.h"
 #include "TranslateTransformOperation.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
@@ -173,6 +171,9 @@ RenderLayer::RenderLayer(RenderLayerModelObject* renderer)
     , m_layerListMutationAllowed(true)
 #endif
     , m_canSkipRepaintRectsUpdateOnScroll(renderer->isTableCell())
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    , m_h5vccTargetScreen(ScreenSmall)
+#endif
 #if ENABLE(CSS_FILTERS)
     , m_hasFilterInfo(false)
 #endif
@@ -5469,6 +5470,10 @@ void RenderLayer::styleChanged(StyleDifference, const RenderStyle* oldStyle)
     updateOrRemoveFilterClients();
 #endif
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    m_h5vccTargetScreen = renderer()->style()->h5vccTargetScreen();
+#endif
+
 #if USE(ACCELERATED_COMPOSITING)
     updateNeedsCompositedScrolling();
     if (compositor()->updateLayerCompositingState(this))
@@ -5724,33 +5729,6 @@ void RenderLayer::filterNeedsRepaint()
         renderer()->repaint();
 }
 #endif
-
-void RenderLayer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Rendering);
-    ScrollableArea::reportMemoryUsage(memoryObjectInfo);
-    info.addWeakPointer(m_renderer);
-    info.addWeakPointer(m_parent);
-    info.addWeakPointer(m_previous);
-    info.addWeakPointer(m_next);
-    info.addWeakPointer(m_first);
-    info.addWeakPointer(m_last);
-    info.addMember(m_hBar);
-    info.addMember(m_vBar);
-    info.addMember(m_posZOrderList);
-    info.addMember(m_negZOrderList);
-    info.addMember(m_normalFlowList);
-    info.addMember(m_clipRectsCache);
-    info.addMember(m_marquee);
-    info.addMember(m_transform);
-    info.addWeakPointer(m_reflection);
-    info.addWeakPointer(m_scrollCorner);
-    info.addWeakPointer(m_resizer);
-#if USE(ACCELERATED_COMPOSITING)
-    info.addMember(m_backing);
-#endif
-    info.setCustomAllocation(true);
-}
 
 } // namespace WebCore
 

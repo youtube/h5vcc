@@ -1,0 +1,32 @@
+Initially, these files were generated with the following command:
+  configure --target=x86-linux-gcc --disable-vp8 --disable-vp9-encoder
+    --disable-examples --disable-webm-io;
+
+Then, run "make" in order to generate vp9_rtcd.h, vpx_scale_rtcd.h,
+vpx_config.asm, and vpx_version.h. You can abort the make once these files are
+generated.
+
+At this point, you should have the following files:
+  vp9_rtcd.h
+  vpx_config.asm
+  vpx_config.c
+  vpx_config.h
+  vpx_scale_rtcd.h
+  vpx_version.h
+Any other generated files can be discarded.
+
+Since the PS4 does not support AVX2, remove references to AVX2 from:
+  vp9_rtcd.h
+  vpx_config.h
+  vpx_config.asm
+
+Also, we generated x86-linux-gcc instead of x86_64-linux-gcc due to some errors
+that show up during generation of the 64 bit version. We must then go and set
+the configuration to be 64 bits within vpx_config.asm and vpx_config.h (see the
+ARCH_X86 and ARCH_X86_64 constants).
+
+Set CONFIG_OS_SUPPORT to 0 in vpx_config.h and vpx_config.asm.
+
+To generate the test data, set LIBVPX_TEST_DATA_PATH to a local directory, and
+run 'make testdata'.
+

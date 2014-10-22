@@ -13,14 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "net/proxy/proxy_config_service_shell.h"
+
 #include "base/logging.h"
 #include "net/proxy/proxy_config.h"
-#include "net/proxy/proxy_config_service_shell.h"
 
 namespace net {
 
+static const int kPollingIntervalInSec = 300;
+
 ProxyConfigServiceShell::ProxyConfigServiceShell()
-  : PollingProxyConfigService(base::TimeDelta(),
+  : PollingProxyConfigService(
+        base::TimeDelta::FromSeconds(kPollingIntervalInSec),
         &ProxyConfigServiceShell::GetCurrentProxyConfig) {
 }
 
@@ -29,14 +33,7 @@ ProxyConfigServiceShell::~ProxyConfigServiceShell() {
 
 // static
 void ProxyConfigServiceShell::GetCurrentProxyConfig(ProxyConfig* config) {
-  const char *http_proxy = getenv("http_proxy");
-  if (!http_proxy) {
-    config->proxy_rules().type = ProxyConfig::ProxyRules::TYPE_NO_RULES;
-  } else {
-    config->proxy_rules().type = ProxyConfig::ProxyRules::TYPE_SINGLE_PROXY;
-    config->proxy_rules().single_proxy = ProxyServer::FromURI(
-        http_proxy, ProxyServer::SCHEME_HTTP);
-  }
+  // No standard mechanism for this at the moment.
 }
 
 }  // namespace net

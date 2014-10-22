@@ -28,7 +28,7 @@ TEST(StringPrintfTest, StringPrintfEmpty) {
 
 TEST(StringPrintfTest, StringPrintfMisc) {
   EXPECT_EQ("123hello w", StringPrintf("%3d%2s %1c", 123, "hello", 'w'));
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
   EXPECT_EQ(L"123hello w", StringPrintf(L"%3d%2ls %1lc", 123, L"hello", 'w'));
 #endif
 }
@@ -38,7 +38,7 @@ TEST(StringPrintfTest, StringAppendfEmptyString) {
   StringAppendF(&value, "%s", "");
   EXPECT_EQ("Hello", value);
 
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
   std::wstring valuew(L"Hello");
   StringAppendF(&valuew, L"%ls", L"");
   EXPECT_EQ(L"Hello", valuew);
@@ -50,7 +50,7 @@ TEST(StringPrintfTest, StringAppendfString) {
   StringAppendF(&value, " %s", "World");
   EXPECT_EQ("Hello World", value);
 
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
   std::wstring valuew(L"Hello");
   StringAppendF(&valuew, L" %ls", L"World");
   EXPECT_EQ(L"Hello World", valuew);
@@ -62,7 +62,7 @@ TEST(StringPrintfTest, StringAppendfInt) {
   StringAppendF(&value, " %d", 123);
   EXPECT_EQ("Hello 123", value);
 
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
   std::wstring valuew(L"Hello");
   StringAppendF(&valuew, L" %d", 123);
   EXPECT_EQ(L"Hello 123", valuew);
@@ -87,7 +87,7 @@ TEST(StringPrintfTest, StringPrintfBounds) {
     SStringPrintf(&out, "%s", src);
     EXPECT_STREQ(src, out.c_str());
 
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
     srcw[kSrcLen - i] = 0;
     std::wstring outw;
     SStringPrintf(&outw, L"%ls", srcw);
@@ -145,7 +145,7 @@ TEST(StringPrintfTest, GrowBoundary) {
 }
 
 // TODO(evanm): what's the proper cross-platform test here?
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(__LB_XB1__) || defined(__LB_XB360__)
 // sprintf in Visual Studio fails when given U+FFFF. This tests that the
 // failure case is gracefuly handled.
 TEST(StringPrintfTest, Invalid) {

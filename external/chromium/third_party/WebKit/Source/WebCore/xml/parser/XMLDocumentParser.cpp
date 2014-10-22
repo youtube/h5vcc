@@ -142,7 +142,9 @@ void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, Te
 
 void XMLDocumentParser::enterText()
 {
-#if !USE(QXMLSTREAM)
+#if USE(LB_SHELL_XML_PARSER)
+    ASSERT(m_bufferedText.length() == 0);
+#elif !USE(QXMLSTREAM)
     ASSERT(m_bufferedText.size() == 0);
 #endif
     ASSERT(!m_leafTextNode);
@@ -150,10 +152,10 @@ void XMLDocumentParser::enterText()
     m_currentNode->parserAppendChild(m_leafTextNode.get());
 }
 
-#if !USE(QXMLSTREAM)
-static inline String toString(const xmlChar* string, size_t size) 
-{ 
-    return String::fromUTF8(reinterpret_cast<const char*>(string), size); 
+#if !USE(QXMLSTREAM) && !USE(LB_SHELL_XML_PARSER)
+static inline String toString(const xmlChar* string, size_t size)
+{
+    return String::fromUTF8(reinterpret_cast<const char*>(string), size);
 }
 #endif
 
@@ -165,8 +167,11 @@ void XMLDocumentParser::exitText()
 
     if (!m_leafTextNode)
         return;
-
-#if !USE(QXMLSTREAM)
+#if USE(LB_SHELL_XML_PARSER)
+    ExceptionCode ec = 0;
+    m_leafTextNode->appendData(m_bufferedText, ec);
+    m_bufferedText = emptyString();
+#elif !USE(QXMLSTREAM)
     ExceptionCode ec = 0;
     m_leafTextNode->appendData(toString(m_bufferedText.data(), m_bufferedText.size()), ec);
     Vector<xmlChar> empty;
@@ -286,6 +291,7 @@ void XMLDocumentParser::pauseParsing()
     m_parserPaused = true;
 }
 
+#if !USE(LB_SHELL_XML_PARSER)
 bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission scriptingPermission)
 {
     if (!chunk.length())
@@ -306,5 +312,6 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
     parser->detach(); // Allows ~DocumentParser to assert it was detached before destruction.
     return wellFormed; // appendFragmentSource()'s wellFormed is more permissive than wellFormed().
 }
+#endif
 
 } // namespace WebCore

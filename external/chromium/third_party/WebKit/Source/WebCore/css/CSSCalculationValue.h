@@ -71,8 +71,6 @@ public:
     virtual String serializeResolvingVariables(const HashMap<AtomicString, String>&) const = 0;
     virtual bool hasVariableReference() const = 0;
 #endif
-
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const = 0;
     
     CalculationCategory category() const { return m_category; }    
     bool isInteger() const { return m_isInteger; }
@@ -108,8 +106,6 @@ public:
     String customSerializeResolvingVariables(const HashMap<AtomicString, String>&) const;
     bool hasVariableReference() const;
 #endif
-
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
     
 private:    
     CSSCalcValue(PassRefPtr<CSSCalcExpressionNode> expression, CalculationPermittedValueRange range)

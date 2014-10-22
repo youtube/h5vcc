@@ -101,7 +101,13 @@ TEST(DirectoryListerTest, BigDirTest) {
 
 TEST(DirectoryListerTest, BigDirRecursiveTest) {
   FilePath path;
+#if defined(__LB_XB360__)
+  // This test is particularly slow on Xbox 360. Having a smaller set of files
+  // is still a fine test, but doesn't take nearly as long.
+  ASSERT_TRUE(PathService::Get(base::DIR_SOURCE_ROOT, &path));
+#else
   ASSERT_TRUE(PathService::Get(base::DIR_EXE, &path));
+#endif
 
   ListerDelegate delegate(true, false);
   DirectoryLister lister(path, true, DirectoryLister::FULL_PATH, &delegate);

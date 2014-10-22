@@ -120,6 +120,21 @@ public:
 
     template<typename T, UChar Converter(T)> static inline unsigned computeHashAndMaskTop8Bits(const T* data, unsigned length)
     {
+        // On Android there is a compiler bug that makes the original code generate different hashes for the same piece of
+        // data in non Debug build. Rewriting in the following way can make the compiler generate code correctly.
+#if defined(__LB_ANDROID__)
+        StringHasher hasher;
+        int i = 0;
+        while (i + 1 < length) {
+            hasher.addCharacters(Converter(data[i]), Converter(data[i + 1]));
+            i += 2;
+        }
+
+        if (i < length)
+            hasher.addCharacter(Converter(data[i]));
+
+        return hasher.hashWithTop8BitsMasked();
+#else  // defined(__LB_ANDROID__)
         StringHasher hasher;
         bool rem = length & 1;
         length >>= 1;
@@ -133,6 +148,7 @@ public:
             hasher.addCharacter(Converter(*data));
 
         return hasher.hashWithTop8BitsMasked();
+#endif  // defined(__LB_ANDROID__)
     }
 
     template<typename T, UChar Converter(T)> static inline unsigned computeHashAndMaskTop8Bits(const T* data)

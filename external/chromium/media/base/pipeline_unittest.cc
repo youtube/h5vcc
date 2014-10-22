@@ -206,7 +206,8 @@ class PipelineTest : public ::testing::Test {
         base::Bind(&CallbackHelper::OnError, base::Unretained(&callbacks_)),
         base::Bind(&CallbackHelper::OnStart, base::Unretained(&callbacks_)),
         base::Bind(&CallbackHelper::OnBufferingState,
-                   base::Unretained(&callbacks_)));
+                   base::Unretained(&callbacks_)),
+        base::Closure());
     message_loop_.RunUntilIdle();
   }
 
@@ -339,7 +340,8 @@ TEST_F(PipelineTest, NeverInitializes) {
         base::Bind(&CallbackHelper::OnError, base::Unretained(&callbacks_)),
         base::Bind(&CallbackHelper::OnStart, base::Unretained(&callbacks_)),
         base::Bind(&CallbackHelper::OnBufferingState,
-                   base::Unretained(&callbacks_)));
+                   base::Unretained(&callbacks_)),
+        base::Closure());
   message_loop_.RunUntilIdle();
 
 
@@ -943,7 +945,8 @@ class PipelineTeardownTest : public PipelineTest {
         base::Bind(&CallbackHelper::OnError, base::Unretained(&callbacks_)),
         base::Bind(&CallbackHelper::OnStart, base::Unretained(&callbacks_)),
         base::Bind(&CallbackHelper::OnBufferingState,
-                   base::Unretained(&callbacks_)));
+                   base::Unretained(&callbacks_)),
+        base::Closure());
     message_loop_.RunUntilIdle();
   }
 

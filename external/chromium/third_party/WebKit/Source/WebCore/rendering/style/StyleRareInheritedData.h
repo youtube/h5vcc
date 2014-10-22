@@ -59,8 +59,6 @@ public:
     }
     bool shadowDataEquivalent(const StyleRareInheritedData&) const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
     RefPtr<StyleImage> listStyleImage;
 
     Color textStrokeColor;
@@ -120,6 +118,9 @@ public:
     unsigned m_textAlignLast : 3; // ETextAlignLast
 #endif // CSS3_TEXT
     unsigned m_rubyPosition : 1; // RubyPosition
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    unsigned m_h5vccTargetScreen : 2;  // What screen to target
+#endif
 
     AtomicString hyphenationString;
     short hyphenationLimitBefore;

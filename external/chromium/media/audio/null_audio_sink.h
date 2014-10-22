@@ -34,6 +34,7 @@ class MEDIA_EXPORT NullAudioSink
   virtual void Pause(bool flush) OVERRIDE;
   virtual void Play() OVERRIDE;
   virtual bool SetVolume(double volume) OVERRIDE;
+  virtual void ResumeAfterUnderflow(bool buffer_more_audio) OVERRIDE {}
 
   // Enables audio frame hashing and reinitializes the MD5 context.  Must be
   // called prior to Initialize().

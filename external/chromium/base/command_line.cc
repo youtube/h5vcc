@@ -20,6 +20,10 @@
 #include <shellapi.h>
 #endif
 
+#if defined(__LB_XB360__)
+#include <windows.h>
+#endif
+
 CommandLine* CommandLine::current_process_commandline_ = NULL;
 
 namespace {
@@ -179,6 +183,8 @@ bool CommandLine::Init(int argc, const char* const* argv) {
   current_process_commandline_ = new CommandLine(NO_PROGRAM);
 #if defined(OS_WIN)
   current_process_commandline_->ParseFromString(::GetCommandLineW());
+#elif defined(__LB_XB360__)
+  current_process_commandline_->ParseFromString(::GetCommandLine());
 #elif defined(OS_POSIX)
   current_process_commandline_->InitFromArgv(argc, argv);
 #endif
@@ -412,5 +418,27 @@ void CommandLine::ParseFromString(const std::wstring& command_line) {
                          << command_line;
   InitFromArgv(num_args, args);
   LocalFree(args);
+}
+#endif
+
+#if defined(__LB_XB360__)
+// Convert the 360 command line string to argc/argv.
+// Note: this doesn't handle quoted strings.
+void CommandLine::ParseFromString(char *cmd_line) {
+  if (!cmd_line) {
+    return;
+  }
+
+  char** argv;
+
+  std::vector<std::string> argv_vec;
+  char* next_token = NULL;
+  char* token = strtok_s(cmd_line, " \t", &next_token);
+  while (token) {
+    argv_vec.push_back(token);
+    token = strtok_s(NULL, " \t", &next_token);
+  }
+
+  InitFromArgv(argv_vec);
 }
 #endif

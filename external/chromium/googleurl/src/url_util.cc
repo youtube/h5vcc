@@ -39,7 +39,11 @@
 
 namespace url_util {
 
+#if defined(__LB_SHELL__)
+const char kFileScheme[] = "local";
+#else
 const char kFileScheme[] = "file";
+#endif
 const char kFileSystemScheme[] = "filesystem";
 const char kMailtoScheme[] = "mailto";
 

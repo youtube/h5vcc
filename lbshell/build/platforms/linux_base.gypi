@@ -4,7 +4,18 @@
   ],
   'variables' : {
     'target_arch' : 'linux',
+    'js_engine' : 'v8',
+    'enable_touch_events': 0,
+    'final_executable_type' : 'executable',
+    'has_tex_sub_image_sub': 0,
+    'lb_shell_css_extensions': 1,
+    'skia_gpu': 0,
+    'use_gpu_command_buffer': 1,
     'use_native_http_stack' : 0,
+    'use_shell_reusable_allocator': 1,
+    'use_shell_xml_parser' : 0,
+    'use_web_speech_api' : 0,
+
     'compiler_flags_host' : [
       '-O2',
     ],
@@ -20,6 +31,7 @@
       # we will implement all our own wrappers.
       '-U__linux__',
       '-include', 'posix_emulation.h',
+      '-D_REENTRANT',
     ],
     'linker_flags' : [
       # In order to wrap and override the system allocator.
@@ -40,13 +52,13 @@
     ],
 
     'compiler_flags_debug' : [
-      '-O0', '-g',
+      '-O0',
     ],
     'linker_flags_debug' : [
     ],
 
     'compiler_flags_devel' : [
-      '-O2', '-g',
+      '-O2',
     ],
     'linker_flags_devel' : [
     ],
@@ -64,9 +76,13 @@
     ],
 
     'platform_libraries': [
+      '-lavcodec',
+      '-lavformat',
+      '-lavutil',
       '-ldl',
       '-lGL',
       '-lpthread',
+      '-lpulse',
       '-lrt',
       '-lX11',
       '-lXpm',
@@ -76,11 +92,13 @@
     'platform_contents_lbshell': [
       '../platforms/linux_contents.gyp:copy_contents_common',
       '../platforms/linux_contents.gyp:copy_contents_lbshell',
+    ],
+    'platform_contents_unit_tests': [
       '../platforms/linux_contents.gyp:copy_unit_test_data',
     ],
-    'platform_contents_jsc_tests': [
+    'platform_contents_js_tests': [
       '../platforms/linux_contents.gyp:copy_contents_common',
-      '../platforms/linux_contents.gyp:copy_jsc_test_scripts',
+      '../platforms/linux_contents.gyp:copy_js_tests_scripts',
     ],
   },
   'conditions' : [
@@ -118,6 +136,16 @@
         ],
       },
     }],
+    ['lb_fastbuild==0', {
+      'variables' : {
+        'compiler_flags_debug' : [
+          '-g',
+        ],
+        'compiler_flags_devel' : [
+          '-g',
+        ],
+      },
+    }],
   ],
   'target_defaults' : {
     'defines' : [
@@ -131,15 +159,14 @@
       # Enable useful macros from stdint.h
       '__STDC_LIMIT_MACROS',
       '__STDC_CONSTANT_MACROS',
-      '__LB_ENABLE_NATIVE_HTTP_STACK__=<(use_native_http_stack)',
     ],
-
     'include_dirs' : [
     ],
     'include_dirs_target' : [
       '../../../external/chromium/third_party/mesa/MesaLib/include',
       '../../src',
       '../../src/platform/linux',
+      '../../src/platform/linux/posix_emulation/lb_shell',
       # headers that we don't need, but should exist somewhere in the path:
       '../../src/platform/linux/posix_emulation/place_holders',
     ],

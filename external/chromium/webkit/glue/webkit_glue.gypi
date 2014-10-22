@@ -88,6 +88,7 @@
         '<(DEPTH)/base/base.gyp:base_static',
         '<(DEPTH)/base/third_party/dynamic_annotations/dynamic_annotations.gyp:dynamic_annotations',
         '<(DEPTH)/build/temp_gyp/googleurl.gyp:googleurl',
+        '<(DEPTH)/media/media.gyp:media',
         '<(DEPTH)/net/net.gyp:net',
         '<(DEPTH)/skia/skia.gyp:skia',
         '<(DEPTH)/third_party/icu/icu.gyp:icui18n',
@@ -97,6 +98,7 @@
         '<(webkit_src_dir)/Source/WebKit/chromium/WebKit.gyp:webkit',
         'user_agent',
         'webkit_base',
+        'webkit_media',
         'webkit_resources',
         'webkit_storage',
         'webkit_strings',
@@ -421,6 +423,9 @@
           ],
         }],
         ['OS=="lb_shell"', {
+          'include_dirs': [
+            '<(DEPTH)/v8/include',
+          ],
           'sources/' : [
             ['exclude', 'plugin'],
             ['exclude', 'clipboard'],
@@ -435,9 +440,13 @@
             ['exclude', '../extensions/v8/'],
             ['exclude', 'webcursor'],
             ['exclude', 'webdrop'],
+            ['exclude', 'webthemeengine_impl_'],
           ],
           'sources' : [
             'webthemeengine_impl_default.cc',
+          ],
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
           ],
         }, {
           'dependencies': [
@@ -451,7 +460,6 @@
             '<(DEPTH)/ui/gl/gl.gyp:gl',
             '<(DEPTH)/v8/tools/gyp/v8.gyp:v8',
             '<(DEPTH)/ui/native_theme/native_theme.gyp:native_theme',
-            'webkit_media',
           ]
         }],
         ['use_aura==1 and use_x11==1', {

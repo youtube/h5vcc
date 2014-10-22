@@ -16,15 +16,25 @@
 
 #include "lb_web_media_player_delegate.h"
 
-#include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebMediaPlayer.h"
+#include "third_party/WebKit/Source/WebKit/chromium/public/WebMediaPlayer.h"
+
 #include "lb_graphics.h"
+#include "lb_web_view_host.h"
+
+namespace {
+
+MessageLoop* GetWebKitMessageLoop() {
+  DCHECK(LBWebViewHost::Get());
+  return LBWebViewHost::Get()->webkit_message_loop();
+}
+
+}  // namespace
 
 namespace webkit_media {
 
 LBWebMediaPlayerDelegate* LBWebMediaPlayerDelegate::instance_ = NULL;
 
-LBWebMediaPlayerDelegate::LBWebMediaPlayerDelegate()
-    : force_pausing_(false) {
+LBWebMediaPlayerDelegate::LBWebMediaPlayerDelegate() {
 }
 
 // static
@@ -50,20 +60,23 @@ void LBWebMediaPlayerDelegate::Terminate() {
 }
 
 void LBWebMediaPlayerDelegate::DidPlay(WebKit::WebMediaPlayer* player) {
+  DCHECK_EQ(MessageLoop::current(), GetWebKitMessageLoop());
+
   // add or update player map with this instance of the player
   player_map_[player] = true;
   SetDimmingState();
 }
 
 void LBWebMediaPlayerDelegate::DidPause(WebKit::WebMediaPlayer* player) {
-  // this will be called when we force pause players, skip if so
-  if (!force_pausing_) {
-    player_map_[player] = false;
-  }
+  DCHECK_EQ(MessageLoop::current(), GetWebKitMessageLoop());
+
+  player_map_[player] = false;
   SetDimmingState();
 }
 
 void LBWebMediaPlayerDelegate::PlayerGone(WebKit::WebMediaPlayer* player) {
+  DCHECK_EQ(MessageLoop::current(), GetWebKitMessageLoop());
+
   // look for our player in the player map
   PlayerMap::iterator it = player_map_.find(player);
   if (it != player_map_.end()) {
@@ -73,7 +86,8 @@ void LBWebMediaPlayerDelegate::PlayerGone(WebKit::WebMediaPlayer* player) {
 }
 
 void LBWebMediaPlayerDelegate::PauseActivePlayers() {
-  force_pausing_ = true;
+  DCHECK_EQ(MessageLoop::current(), GetWebKitMessageLoop());
+
   // pause all currently playing players in the map
   for (PlayerMap::iterator it = player_map_.begin();
        it != player_map_.end(); ++it) {
@@ -82,10 +96,11 @@ void LBWebMediaPlayerDelegate::PauseActivePlayers() {
       force_paused_list_.push_back(it->first);
     }
   }
-  force_pausing_ = false;
 }
 
 void LBWebMediaPlayerDelegate::ResumeActivePlayers() {
+  DCHECK_EQ(MessageLoop::current(), GetWebKitMessageLoop());
+
   // resume all force-paused players in the list
   for (PlayerList::iterator it = force_paused_list_.begin();
       it != force_paused_list_.end(); ++it) {

@@ -152,7 +152,7 @@
       'use_accelerated_compositing%': 1,
       'enable_skia_text%': 1,
       'enable_svg%': 1,
-      'enable_touch_events%': 1,
+#      'enable_touch_events%': 1,
       'enable_touch_icon_loading%' : 0,
       'enable_mutation_observers%': 1,
       'enable_inspector%' : 1,
@@ -250,11 +250,11 @@
           'ENABLE_GESTURE_RECOGNIZER=1',
           'ENABLE_INDEXED_DATABASE=1',
           'ENABLE_INPUT_SPEECH=1',
+          'ENABLE_JAVASCRIPT_I18N_API=1',
           'ENABLE_LEGACY_NOTIFICATIONS=1',
           'ENABLE_LEVELDB=1',
           'ENABLE_LINK_PREFETCH=1',
           'ENABLE_METER_TAG=1',
-          'ENABLE_MEDIA_STATISTICS=1',
           'ENABLE_MEDIA_STREAM=1',
           'ENABLE_MHTML=1',
           'ENABLE_NOTIFICATIONS=1',
@@ -264,24 +264,17 @@
           'ENABLE_QUOTA=1',
           'ENABLE_RUBY=1',
           'ENABLE_SANDBOX=1',
-          'ENABLE_SCRIPTED_SPEECH=1',
           'ENABLE_SHARED_WORKERS=1',
           'ENABLE_SMOOTH_SCROLLING=1',
           'ENABLE_SQL_DATABASE=1',
-          'ENABLE_SVG=1',
-          'ENABLE_SVG_ANIMATION=1',
-          'ENABLE_SVG_AS_IMAGE=1',
-          'ENABLE_SVG_FONTS=1',
-          'ENABLE_SVG_FOREIGN_OBJECT=1',
-          'ENABLE_SVG_USE=1',
           'ENABLE_TOUCH_ADJUSTMENT=1',
           'ENABLE_V8_SCRIPT_DEBUG_SERVER=1',
           'ENABLE_VIDEO_TRACK=1',
+          'ENABLE_WEB_SOCKETS=1',
           'ENABLE_XHR_RESPONSE_BLOB=1',
           'ENABLE_XPATH=1',
           'ENABLE_XSLT=1',
           'WTF_USE_LEVELDB=1',
-          'WTF_USE_WEBP=1',
           'WTF_USE_WEBAUDIO_FFMPEG=1',
           # added by lb_shell:
           'ENABLE_FILE_CHOOSER=1',
@@ -290,23 +283,105 @@
         ],
         # add these to feature defines so that they are globally defined
         'feature_defines': [
+          'ENABLE_DIAL_SERVER=1',
           'ENABLE_LEGACY_NOTIFICATIONS=0',
           'ENABLE_NOTIFICATIONS=0',
           # for webkit/wtf:
-          'WEBKIT_USING_JSC=1',
-          'WEBKIT_USING_V8=0',
           'WEBKIT_USING_SKIA=1',
           'WEBKIT_USING_CG=0',
           'WTF_USE_HARFBUZZ_NG=1',
-          'WTF_USE_JSC=1',
-          'WTF_USE_V8=0',
           'WTF_USE_LEVELDB=0',
+          # Add this so that we can do LB_SHELL conditional logic in IDL files
+          # either by checking #ifdef ENABLE_LB_SHELL or through the
+          # [Conditional=LB_SHELL] attribute
+          'ENABLE_LB_SHELL=1',
         ],
+        'enable_svg': 0,
         'conditions': [
-          ['target_arch != "wiiu"', {
-            'variables': {
-              'enable_touch_events%': 0,
-            },
+          ['target_arch == "android"', {
+            'feature_defines!' : [
+              'ENABLE_DIAL_SERVER=1',
+            ],
+            'feature_defines' : [
+              'ENABLE_LB_SHELL_SEARCH_BAR=1',
+              'ENABLE_LB_SHELL_ACCOUNT_MANAGER=0',
+            ],
+          }],
+          ['target_arch == "linux"', {
+            'feature_defines!' : [
+              'ENABLE_DIAL_SERVER=1',
+            ],
+          }],
+          ['target_arch == "ps3"', {
+            'feature_defines' : [
+              'ENABLE_ACCOUNT_INFO=1',
+              'ENABLE_AUDIO_CONFIGURATION_REPORTING=1',
+            ],
+          }],
+          ['target_arch == "ps4"', {
+            'feature_defines' : [
+              'ENABLE_ACCOUNT_INFO=1',
+              'ENABLE_AUDIO_CONFIGURATION_REPORTING=1',
+              'ENABLE_LB_SHELL_ACCOUNT_MANAGER=1',
+              'ENABLE_LB_SHELL_SINGLE_SIGN_ON=1',
+            ],
+          }],
+          ['target_arch == "wiiu"', {
+            'feature_defines' : [
+              'ENABLE_AUDIO_CONFIGURATION_REPORTING=1',
+            ],
+          }],
+          ['target_arch == "xb1"', {
+            'feature_defines' : [
+              'ENABLE_ACCOUNT_INFO=1',
+              'ENABLE_LB_SHELL_DIAL_NATIVE_SERVICE=1',
+              'ENABLE_LB_SHELL_DVR=1',
+              'ENABLE_LB_SHELL_EVENT_REPORTING=1',
+              'ENABLE_LB_SHELL_GLOBAL_CC_SETTINGS=1',
+              'ENABLE_LB_SHELL_HOME_PINNING=1',
+              'ENABLE_LB_SHELL_INPUT=1',
+              'ENABLE_LB_SHELL_REMOTE_CONTROL=1',
+              'ENABLE_LB_SHELL_SINGLE_SIGN_ON=1',
+            ],
+          }],
+          ['target_arch == "xb360"', {
+            'feature_defines' : [
+# TODO(iffy): Enable these features as their native implementations come online.
+#              'ENABLE_LB_SHELL_REMOTE_CONTROL=1',
+              'ENABLE_ACCOUNT_INFO=1',
+              'ENABLE_LB_SHELL_SINGLE_SIGN_ON=1',
+            ],
+          }],
+          ['use_web_speech_api == 0', {
+            'feature_defines!': [
+              'ENABLE_SCRIPTED_SPEECH=1',
+            ],
+          }],
+          ['use_native_http_stack == 1', {
+            'feature_defines!' : [
+              'ENABLE_DIAL_SERVER=1',
+            ],
+          }],
+          ['lb_shell_css_extensions == 1', {
+            'feature_defines' : [
+              'ENABLE_LB_SHELL_CSS_EXTENSIONS=1',
+            ],
+          }],
+          ['js_engine == "jsc"', {
+            'feature_defines': [
+              'WEBKIT_USING_JSC=1',
+              'WEBKIT_USING_V8=0',
+              'WTF_USE_JSC=1',
+              'WTF_USE_V8=0',
+            ],
+          }],
+          ['js_engine == "v8"', {
+            'feature_defines': [
+              'WEBKIT_USING_JSC=0',
+              'WEBKIT_USING_V8=1',
+              'WTF_USE_JSC=0',
+              'WTF_USE_V8=1',
+            ],
           }],
         ],
       }],

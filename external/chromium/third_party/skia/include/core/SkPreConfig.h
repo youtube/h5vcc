@@ -66,13 +66,17 @@
     #endif
 #endif
 
-#ifdef SK_BUILD_FOR_WIN32
+#if defined(SK_BUILD_FOR_WIN32) || defined(__LB_XB1__) || \
+    defined(__LB_XB360__)
     #if !defined(SK_RESTRICT)
         #define SK_RESTRICT __restrict
     #endif
     #if !defined(SK_WARN_UNUSED_RESULT)
         #define SK_WARN_UNUSED_RESULT
     #endif
+#endif
+
+#ifdef SK_BUILD_FOR_WIN32
     #include "sk_stdint.h"
 #endif
 
@@ -195,7 +199,7 @@
 #endif
 
 #if defined(SKIA_DLL)
-    #if defined(WIN32)
+    #if defined(_MSC_VER)
         #if SKIA_IMPLEMENTATION
             #define SK_API __declspec(dllexport)
         #else

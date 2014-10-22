@@ -158,8 +158,6 @@ public:
     bool containsPasswordData() const { return m_containsPasswordData; }
     void setContainsPasswordData(bool containsPasswordData) { m_containsPasswordData = containsPasswordData; }
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
     static EncodingType parseEncodingType(const String& type)
     {
         if (equalIgnoringCase(type, "text/plain"))

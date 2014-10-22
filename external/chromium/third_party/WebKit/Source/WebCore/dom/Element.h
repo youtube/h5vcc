@@ -473,8 +473,6 @@ public:
     IntSize savedLayerScrollOffset() const;
     void setSavedLayerScrollOffset(const IntSize&);
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 protected:
     Element(const QualifiedName& tagName, Document* document, ConstructionType type)
         : ContainerNode(document, type)

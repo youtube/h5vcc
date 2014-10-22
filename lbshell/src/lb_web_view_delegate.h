@@ -16,8 +16,8 @@
 // Provides a callback-driven interface to WebKit/Chromium for diverse
 // functions related to loading and displaying web pages.
 
-#ifndef _SRC_LB_WEB_VIEW_DELEGATE_H_
-#define _SRC_LB_WEB_VIEW_DELEGATE_H_
+#ifndef SRC_LB_WEB_VIEW_DELEGATE_H_
+#define SRC_LB_WEB_VIEW_DELEGATE_H_
 
 #include "external/chromium/base/basictypes.h"
 #include "external/chromium/base/bind.h"
@@ -28,36 +28,10 @@
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebPluginParams.h"
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebViewClient.h"
 
+#include "lb_output_surface.h"
 #include "lb_web_graphics_context_3d.h"
 
 class LBShell;
-class LBGraphics;
-
-class LBOutputSurface : public cc::OutputSurface {
- public:
-  LBOutputSurface(LBGraphics* graphics);
-
-  bool BindToClient(cc::OutputSurfaceClient*) OVERRIDE { return true;}
-
-  const struct Capabilities& Capabilities() const OVERRIDE {
-    return capabilities_;
-  }
-
-  WebKit::WebGraphicsContext3D* Context3D() const OVERRIDE {
-    return context_;
-  }
-
-  cc::SoftwareOutputDevice* SoftwareDevice() const OVERRIDE {
-    return 0;
-  }
-
- private:
-  LBGraphics* graphics_;
-  LBWebGraphicsContext3D* context_;
-
-  struct Capabilities capabilities_;
-};
-
 
 class LBWebViewDelegate : public WebKit::WebViewClient,
                           public WebKit::WebFrameClient,
@@ -113,6 +87,9 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
   virtual bool isSelectTrailingWhitespaceEnabled();
   virtual void didBeginEditing();
   virtual void didChangeSelection(bool is_selection_empty);
+*/
+  virtual void didMoveCursor() OVERRIDE;
+/*
   virtual void didChangeContents();
   virtual void didEndEditing();
   virtual bool handleCurrentKeyboardEvent();
@@ -158,9 +135,9 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
   virtual void didFocus();
   virtual void didBlur();
   virtual void didChangeCursor(const WebKit::WebCursorInfo& cursor);
-  virtual void closeWidgetSoon();
 */
-  virtual void show(WebKit::WebNavigationPolicy policy);
+  virtual void closeWidgetSoon() OVERRIDE;
+  virtual void show(WebKit::WebNavigationPolicy policy) OVERRIDE;
 /*
   virtual void runModal();
   virtual WebKit::WebRect windowRect();
@@ -172,7 +149,7 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
 
   // WebKit::WebFrameClient
   virtual WebKit::WebPlugin* createPlugin(
-      WebKit::WebFrame*, const WebKit::WebPluginParams&);
+      WebKit::WebFrame*, const WebKit::WebPluginParams&) OVERRIDE;
 /*
   virtual WebKit::WebWorker* createWorker(
       WebKit::WebFrame*, WebKit::WebWorkerClient*);
@@ -182,7 +159,8 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
       const WebKit::WebURL&,
       WebKit::WebMediaPlayerClient*) OVERRIDE;
 /*
-  virtual bool allowPlugins(WebKit::WebFrame* frame, bool enabled_per_settings);
+  virtual bool allowPlugins(WebKit::WebFrame* frame,
+      bool enabled_per_settings);
   virtual bool allowImages(WebKit::WebFrame* frame, bool enabled_per_settings);
   virtual void loadURLExternally(
       WebKit::WebFrame*, const WebKit::WebURLRequest&,
@@ -206,12 +184,13 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
   virtual void didCreateDataSource(
       WebKit::WebFrame*, WebKit::WebDataSource*);
   */
-  virtual void didStartProvisionalLoad(WebKit::WebFrame*);
-  virtual void didReceiveServerRedirectForProvisionalLoad(WebKit::WebFrame*);
+  virtual void didStartProvisionalLoad(WebKit::WebFrame*) OVERRIDE;
+  virtual void didReceiveServerRedirectForProvisionalLoad(WebKit::WebFrame*)
+      OVERRIDE;
   virtual void didFailProvisionalLoad(
-      WebKit::WebFrame*, const WebKit::WebURLError&);
+      WebKit::WebFrame*, const WebKit::WebURLError&) OVERRIDE;
   virtual void didCommitProvisionalLoad(
-      WebKit::WebFrame*, bool is_new_navigation);
+      WebKit::WebFrame*, bool is_new_navigation) OVERRIDE;
   /*
   virtual void didClearWindowObject(WebKit::WebFrame*);
   virtual void didReceiveTitle(
@@ -221,10 +200,10 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
   virtual void didHandleOnloadEvents(WebKit::WebFrame*);
   */
   virtual void didFailLoad(
-      WebKit::WebFrame*, const WebKit::WebURLError&);
-  virtual void didFinishLoad(WebKit::WebFrame*);
+      WebKit::WebFrame*, const WebKit::WebURLError&) OVERRIDE;
+  virtual void didFinishLoad(WebKit::WebFrame*) OVERRIDE;
   virtual void didNavigateWithinPage(
-      WebKit::WebFrame*, bool is_new_navigation);
+      WebKit::WebFrame*, bool is_new_navigation) OVERRIDE;
   /*
   virtual void didChangeLocationWithinPage(
       WebKit::WebFrame*);
@@ -252,15 +231,18 @@ class LBWebViewDelegate : public WebKit::WebViewClient,
       bool create,
       WebKit::WebFileSystemCallbacks* callbacks);
 */
+
   void SetNavCompletedClosure(base::Closure closure);
 
  private:
   // non-owning pointer.  Delegate is owned by the host.
   LBShell * shell_;
 
+  bool showing_spinner_;
+
   base::Closure nav_completed_closure_;
 
   DISALLOW_COPY_AND_ASSIGN(LBWebViewDelegate);
 };
 
-#endif  // _SRC_LB_WEB_VIEW_DELEGATE_H_
+#endif  // SRC_LB_WEB_VIEW_DELEGATE_H_

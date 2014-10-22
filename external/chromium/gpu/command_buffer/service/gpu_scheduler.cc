@@ -39,7 +39,11 @@ GpuScheduler::GpuScheduler(
 GpuScheduler::~GpuScheduler() {
 }
 
+#if defined(__LB_SHELL__)
+void GpuScheduler::PutChanged(int32 put_offset_override) {
+#else
 void GpuScheduler::PutChanged() {
+#endif
   TRACE_EVENT1("gpu", "GpuScheduler:PutChanged", "this", this);
 
   CommandBuffer::State state = command_buffer_->GetState();
@@ -50,7 +54,16 @@ void GpuScheduler::PutChanged() {
     return;
   }
 
+#if defined(__LB_SHELL__)
+  // The command buffer may have been touched since the message was sent.
+  // put_offset_override is the offset at the time, not what it is currently.
+  // In an IPC implementation that can't happen since client and server
+  // don't share the same command buffer.
+  parser_->set_put(put_offset_override);
+#else
   parser_->set_put(state.put_offset);
+#endif
+
   if (state.error != error::kNoError)
     return;
 

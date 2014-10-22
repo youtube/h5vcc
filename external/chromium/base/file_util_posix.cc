@@ -46,7 +46,7 @@
 #include "base/time.h"
 #include "base/utf_string_conversions.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include "base/os_compat_android.h"
 #endif
 
@@ -84,6 +84,7 @@ static int CallLstat(const char *path, stat_wrapper_t *sb) {
 }
 #endif
 
+#if !defined(__LB_PS4__) && !defined(__LB_ANDROID__)
 // Helper for NormalizeFilePath(), defined below.
 bool RealPath(const FilePath& path, FilePath* real_path) {
   base::ThreadRestrictions::AssertIOAllowed();  // For realpath().
@@ -94,6 +95,7 @@ bool RealPath(const FilePath& path, FilePath* real_path) {
   *real_path = FilePath(buf);
   return true;
 }
+#endif
 
 // Helper for VerifyPathControlledByUser.
 bool VerifySpecificPathControlledByUser(const FilePath& path,
@@ -148,6 +150,7 @@ static std::string TempFileName() {
 #endif
 }
 
+#if !defined(__LB_PS4__) && !defined(__LB_ANDROID__)
 bool AbsolutePath(FilePath* path) {
   base::ThreadRestrictions::AssertIOAllowed();  // For realpath().
   char full_path[PATH_MAX];
@@ -156,6 +159,7 @@ bool AbsolutePath(FilePath* path) {
   *path = FilePath(full_path);
   return true;
 }
+#endif
 
 int CountFilesCreatedAfter(const FilePath& path,
                            const base::Time& comparison_time) {
@@ -388,6 +392,7 @@ bool PathIsWritable(const FilePath& path) {
   return access(path.value().c_str(), W_OK) == 0;
 }
 
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__)
 bool DirectoryExists(const FilePath& path) {
   base::ThreadRestrictions::AssertIOAllowed();
   stat_wrapper_t file_info;
@@ -395,6 +400,7 @@ bool DirectoryExists(const FilePath& path) {
     return S_ISDIR(file_info.st_mode);
   return false;
 }
+#endif
 
 // TODO(erikkay): implement
 #if 0
@@ -584,6 +590,7 @@ bool CreateNewTempDirectory(const FilePath::StringType& prefix,
   return CreateTemporaryDirInDirImpl(tmpdir, TempFileName(), new_temp_path);
 }
 
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__)
 bool CreateDirectory(const FilePath& full_path) {
   base::ThreadRestrictions::AssertIOAllowed();  // For call to mkdir().
   std::vector<FilePath> subpaths;
@@ -613,6 +620,7 @@ bool CreateDirectory(const FilePath& full_path) {
   }
   return true;
 }
+#endif
 
 // TODO(rkc): Refactor GetFileInfo and FileEnumerator to handle symlinks
 // correctly. http://code.google.com/p/chromium-os/issues/detail?id=15948

@@ -200,6 +200,10 @@ public:
     void scrollingLayerDidChange(RenderLayer*);
 
     String layerTreeAsText(LayerTreeFlags);
+#if defined(__LB_SHELL__)
+    String RecursivelyPrintLayerBackingInfo(RenderLayer* layer, int depth);
+    String layerBackingsInfo();
+#endif
 
     virtual float deviceScaleFactor() const OVERRIDE;
     virtual float pageScaleFactor() const OVERRIDE;
@@ -226,7 +230,6 @@ public:
     void resetTrackedRepaintRects();
     void setTracksRepaints(bool);
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
     void setShouldReevaluateCompositingAfterLayout() { m_reevaluateCompositingAfterLayout = true; }
 
     enum FixedPositionLayerNotCompositedReason {
@@ -321,6 +324,7 @@ private:
     bool requiresCompositingForPosition(RenderObject*, const RenderLayer*, FixedPositionLayerNotCompositedReason* = 0) const;
     bool requiresCompositingForOverflowScrolling(const RenderLayer*) const;
     bool requiresCompositingForIndirectReason(RenderObject*, bool hasCompositedDescendants, bool has3DTransformedDescendants, RenderLayer::IndirectCompositingReason&) const;
+    bool requiresCompositingForSecondScreen(RenderObject* renderer) const;
 
     void addViewportConstrainedLayer(RenderLayer*);
     void registerOrUpdateViewportConstrainedLayer(RenderLayer*);
@@ -338,8 +342,9 @@ private:
     bool requiresContentShadowLayer() const;
 #endif
 
-#if !LOG_DISABLED
     const char* reasonForCompositing(const RenderLayer*);
+    String logLayerInfoString(const RenderLayer* layer, int depth);
+#if !LOG_DISABLED
     void logLayerInfo(const RenderLayer*, int depth);
 #endif
 

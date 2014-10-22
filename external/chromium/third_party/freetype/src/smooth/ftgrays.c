@@ -877,6 +877,7 @@ typedef ptrdiff_t  FT_PtrDist;
     int*        levels;
     FT_Vector*  arc;
 
+    levels    = ras.lev_stack;
 
     arc      = ras.bez_stack;
     arc[0].x = UPSCALE( to->x );
@@ -916,7 +917,6 @@ typedef ptrdiff_t  FT_PtrDist;
       level++;
     } while ( dx > ONE_PIXEL / 4 );
 
-    levels    = ras.lev_stack;
     levels[0] = level;
 
     do

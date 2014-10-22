@@ -49,7 +49,9 @@ const char kHTTPInternalErrorText[] = "Internal Server Error";
 bool IsFileType(BlobData::Item::Type type) {
   switch (type) {
     case BlobData::Item::TYPE_FILE:
+#if !defined(__LB_SHELL__)
     case BlobData::Item::TYPE_FILE_FILESYSTEM:
+#endif
       return true;
     default:
       return false;
@@ -560,12 +562,14 @@ void BlobURLRequestJob::CreateFileStreamReader(size_t index,
           item.offset() + additional_offset,
           item.expected_modification_time());
       break;
+#if !defined(__LB_SHELL__)
     case BlobData::Item::TYPE_FILE_FILESYSTEM:
       reader = file_system_context_->CreateFileStreamReader(
           fileapi::FileSystemURL(item.url()),
           item.offset() + additional_offset,
           item.expected_modification_time());
       break;
+#endif
     default:
       NOTREACHED();
   }

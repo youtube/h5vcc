@@ -42,7 +42,6 @@
 #include "ImageData.h"
 #include "JPEGImageEncoder.h"
 #include "MIMETypeRegistry.h"
-#include "MemoryInstrumentationSkia.h"
 #include "PNGImageEncoder.h"
 #include "PlatformContextSkia.h"
 #include "SharedGraphicsContext3D.h"
@@ -73,7 +72,7 @@ ImageBufferData::ImageBufferData(const IntSize& size)
 
 static SkCanvas* createAcceleratedCanvas(const IntSize& size, ImageBufferData* data, DeferralMode deferralMode)
 {
-#if !defined(__LB_SHELL__)
+#if !defined(__LB_DISABLE_SKIA_GPU__)
     RefPtr<GraphicsContext3D> context3D = SharedGraphicsContext3D::get();
     if (!context3D)
         return 0;
@@ -416,16 +415,6 @@ String ImageBuffer::toDataURL(const String& mimeType, const double* quality, Coo
     base64Encode(encodedImage, base64Data);
 
     return "data:" + mimeType + ";base64," + base64Data;
-}
-
-void ImageBufferData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-    info.addMember(m_canvas);
-    info.addMember(m_platformContext);
-#if USE(ACCELERATED_COMPOSITING)
-    info.addMember(m_layerBridge);
-#endif
 }
 
 String ImageDataToDataURL(const ImageData& imageData, const String& mimeType, const double* quality)

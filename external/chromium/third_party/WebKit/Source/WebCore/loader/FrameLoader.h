@@ -279,8 +279,6 @@ public:
 
     NetworkingContext* networkingContext() const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     bool allChildrenAreComplete() const; // immediate children, not all descendants
 

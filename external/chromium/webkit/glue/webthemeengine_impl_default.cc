@@ -9,11 +9,6 @@
 #include "third_party/WebKit/Source/WebKit/chromium/public/platform/WebSize.h"
 #include "ui/native_theme/native_theme.h"
 
-#if defined(__LB_SHELL__)
-// for NOTIMPLEMENTED()
-#include "base/logging.h"
-#endif
-
 using WebKit::WebCanvas;
 using WebKit::WebColor;
 using WebKit::WebRect;
@@ -163,16 +158,13 @@ static void GetNativeThemeExtraParams(
   }
 }
 
+#if !defined(__LB_SHELL__)
 WebKit::WebSize WebThemeEngineImpl::getSize(WebThemeEngine::Part part) {
   ui::NativeTheme::ExtraParams extra;
-#if !defined(__LB_SHELL__)
+
   return ui::NativeTheme::instance()->GetPartSize(NativeThemePart(part),
                                                    ui::NativeTheme::kNormal,
                                                    extra);
-#else
-  // called roughly once per frame.  log spam if you NOTIMPLEMENTED() here.
-  return WebKit::WebSize();
-#endif
 }
 
 void WebThemeEngineImpl::paint(
@@ -184,16 +176,12 @@ void WebThemeEngineImpl::paint(
   ui::NativeTheme::ExtraParams native_theme_extra_params;
   GetNativeThemeExtraParams(
       part, state, extra_params, &native_theme_extra_params);
-#if !defined(__LB_SHELL__)
   ui::NativeTheme::instance()->Paint(
       canvas,
       NativeThemePart(part),
       NativeThemeState(state),
       gfx::Rect(rect),
       native_theme_extra_params);
-#else
-  NOTIMPLEMENTED();
-#endif
 }
-
+#endif
 }  // namespace webkit_glue

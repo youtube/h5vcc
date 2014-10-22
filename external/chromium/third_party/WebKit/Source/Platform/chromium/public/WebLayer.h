@@ -26,6 +26,9 @@
 #ifndef WebLayer_h
 #define WebLayer_h
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+#include "H5VCCTargetScreen.h"
+#endif
 #include "WebAnimation.h"
 #include "WebColor.h"
 #include "WebCommon.h"
@@ -89,6 +92,11 @@ public:
 
     virtual void setOpacity(float) = 0;
     virtual float opacity() const = 0;
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    virtual void setH5vccTargetScreen(H5VCCTargetScreen) = 0;
+    virtual H5VCCTargetScreen h5vccTargetScreen() const = 0;
+#endif
 
     virtual void setOpaque(bool) = 0;
     virtual bool opaque() const = 0;

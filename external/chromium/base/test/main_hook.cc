@@ -5,8 +5,9 @@
 #include "base/test/main_hook.h"
 
 #if defined(__LB_SHELL__)
+#include "base/at_exit.h"
+#include "base/command_line.h"
 #include "lb_shell_platform_delegate.h"
-#include "lb_stack.h"
 #endif
 
 #if defined(__LB_SHELL__FOR_RELEASE__)
@@ -14,12 +15,16 @@
 #endif
 
 #if defined(__LB_SHELL__)
+base::AtExitManager* platform_at_exit_manager_;
+
 MainHook::MainHook(MainType main_func, int argc, char* argv[]) {
-  LB::SetStackSize();
+  CommandLine::Init(argc, argv);
+  platform_at_exit_manager_ = new base::AtExitManager();
   LBShellPlatformDelegate::Init();
 }
 MainHook::~MainHook() {
   LBShellPlatformDelegate::Teardown();
+  delete platform_at_exit_manager_;
 }
 #elif !defined(OS_IOS)
 MainHook::MainHook(MainType main_func, int argc, char* argv[]) {}

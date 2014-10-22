@@ -2,15 +2,18 @@
   'targets': [
     {
       'target_name': 'unit_tests_base',
-      'type': 'executable',
+      'type': '<(final_executable_type)',
+      'variables': {
+        'main_thread_stack_size': '<(LB_UNIT_TEST_MAIN_THREAD_STACK_SIZE)',
+      },
       'sources': [
         '<!@(find <(DEPTH)/base -type f -name \'*_unittest*.cc\')',
+        '<!@(find <(lbshell_root)/src/platform/<(target_arch)/chromium/base -type f -name \'*_unittest*.cc\')',
         '<(DEPTH)/base/test/sequenced_worker_pool_owner.h',
         '<(DEPTH)/base/test/sequenced_worker_pool_owner.cc',
       ],
       'sources/': [
         # wildcard filters (don't compile or link)
-        ['exclude', 'android'],
         ['exclude', '/win/'],
         ['exclude', '/mac/'],
         ['exclude', '_win_'],
@@ -48,14 +51,35 @@
         '<(DEPTH)/testing/gtest.gyp:gtest',
         '<(DEPTH)/third_party/icu/icu.gyp:icui18n',
         '<(DEPTH)/third_party/icu/icu.gyp:icuuc',
+        'posix_emulation.gyp:posix_emulation',
+        '../platforms/<(target_arch)_contents.gyp:copy_contents_common',
+        '../platforms/<(target_arch)_contents.gyp:copy_unit_test_data',
       ],
       'libraries': [
         '<@(platform_libraries)',
       ],
+      'conditions': [
+        ['target_arch == "android"', {
+          'dependencies': [
+            '<(DEPTH)/testing/android/native_test.gyp:native_test_native_code',
+          ],
+          'sources!': [
+            # # Broken on Android, and already disabled there. (see base_unittests)
+            '<(DEPTH)/base/debug/stack_trace_unittest.cc',
+          ],
+        }, { # target_arch != "android"
+          'sources/': [
+            ['exclude', 'android'],
+          ],
+        }],
+      ],
     },
     {
       'target_name': 'unit_tests_crypto',
-      'type': 'executable',
+      'type': '<(final_executable_type)',
+      'variables': {
+        'main_thread_stack_size': '<(LB_UNIT_TEST_MAIN_THREAD_STACK_SIZE)',
+      },
       'sources': [
         '<!@(find <(DEPTH)/crypto -type f -name \'*_unittest*.cc\')',
       ],
@@ -78,14 +102,25 @@
         '<(DEPTH)/base/base.gyp:test_support_base',
         '<(DEPTH)/testing/gmock.gyp:gmock',
         '<(DEPTH)/testing/gtest.gyp:gtest',
+        'posix_emulation.gyp:posix_emulation',
       ],
       'libraries': [
         '<@(platform_libraries)',
       ],
+      'conditions': [
+        ['target_arch == "android"', {
+          'dependencies': [
+            '<(DEPTH)/testing/android/native_test.gyp:native_test_native_code',
+          ],
+        }],
+      ],
     },
     {
       'target_name': 'unit_tests_media',
-      'type': 'executable',
+      'type': '<(final_executable_type)',
+      'variables': {
+        'main_thread_stack_size': '<(LB_UNIT_TEST_MAIN_THREAD_STACK_SIZE)',
+      },
       'sources': [
         '<!@(find <(DEPTH)/media -type f -name \'*_unittest*.cc\')',
       ],
@@ -160,16 +195,28 @@
         '<(DEPTH)/base/base.gyp:test_support_base',
         '<(DEPTH)/testing/gmock.gyp:gmock',
         '<(DEPTH)/testing/gtest.gyp:gtest',
+        'posix_emulation.gyp:posix_emulation',
       ],
       'libraries': [
         '<@(platform_libraries)',
       ],
+      'conditions': [
+        ['target_arch == "android"', {
+          'dependencies': [
+            '<(DEPTH)/testing/android/native_test.gyp:native_test_native_code',
+          ],
+        }],
+      ],
     },
     {
       'target_name': 'unit_tests_net',
-      'type': 'executable',
+      'type': '<(final_executable_type)',
+      'variables': {
+        'main_thread_stack_size': '<(LB_UNIT_TEST_MAIN_THREAD_STACK_SIZE)',
+      },
       'sources': [
         '<!@(find <(DEPTH)/net -type f -name \'*_unittest*.cc\')',
+        '<!@(find <(lbshell_root)/src/platform/<(target_arch)/chromium/net -type f -name \'*_unittest*.cc\')',
         '<(DEPTH)/net/base/mock_filter_context.cc',
         '<(DEPTH)/net/base/mock_filter_context.h',
         '<(DEPTH)/net/base/test_certificate_data.h',
@@ -208,6 +255,8 @@
         ['exclude', '_linux_'],
         ['exclude', '_posix_'],
         ['exclude', '_win_'],
+        # Causes duplicate symbol errors on android:
+        ['exclude', 'proxy_config_service_common_unittest'],
         # These tests don't compile or link
         ['exclude', 'url_security_manager_unittest'],
         ['exclude', 'tcp_server_socket_unittest'],
@@ -254,6 +303,12 @@
         ['exclude', 'ftp_network_transaction_unittest'],
         ['exclude', 'ftp_util_unittest'],
         ['exclude', 'url_request_ftp_job_unittest'],
+        ['exclude', 'disk_cache'],
+        # WebSockets not supported
+        ['exclude', 'socket_stream/'],
+        ['exclude', 'websockets/'],
+        ['exclude', 'spdy_websocket_stream_spdy2_unittest'],
+        ['exclude', 'spdy_websocket_stream_spdy3_unittest'],
       ],
       'include_dirs': [
         '<(DEPTH)/testing/gtest/include',
@@ -274,6 +329,9 @@
         '<(DEPTH)/testing/gtest.gyp:gtest',
         '<(DEPTH)/third_party/zlib/zlib.gyp:zlib',
         '../../../external/openssl/openssl.gyp:openssl',
+        'posix_emulation.gyp:posix_emulation',
+        '../platforms/<(target_arch)_contents.gyp:copy_contents_common',
+        '../platforms/<(target_arch)_contents.gyp:copy_unit_test_data',
       ],
       'libraries': [
         '<@(platform_libraries)',
@@ -290,15 +348,67 @@
             ],
           }, {  # else !use_openssl: remove the unneeded files
             'sources/': [
-              'base/x509_util_openssl_unittest.cc',
+              ['exclude', 'base/x509_util_openssl_unittest.cc'],
             ],
           },
         ],
+        ['use_native_http_stack==1', {
+          'sources!': [
+            '<(DEPTH)/net/base/keygen_handler_unittest.cc',
+            '<(DEPTH)/net/http/http_cache_unittest.cc',
+            '<(DEPTH)/net/http/http_network_layer_unittest.cc',
+            '<(DEPTH)/net/http/http_response_body_drainer_unittest.cc',
+            '<(DEPTH)/net/http/http_pipelined_connection_impl_unittest.cc',
+            '<(DEPTH)/net/http/http_pipelined_host_forced_unittest.cc',
+            '<(DEPTH)/net/http/http_pipelined_host_impl_unittest.cc',
+            '<(DEPTH)/net/http/http_pipelined_host_pool_unittest.cc',
+            '<(DEPTH)/net/http/http_pipelined_network_transaction_unittest.cc',
+            '<(DEPTH)/net/http/http_stream_factory_impl_unittest.cc',
+            '<(DEPTH)/net/http/http_stream_parser_unittest.cc',
+            '<(DEPTH)/net/proxy/dhcp_proxy_script_adapter_fetcher_win_unittest.cc',
+            '<(DEPTH)/net/proxy/dhcp_proxy_script_fetcher_factory_unittest.cc',
+            '<(DEPTH)/net/proxy/dhcp_proxy_script_fetcher_win_unittest.cc',
+            '<(DEPTH)/net/proxy/multi_threaded_proxy_resolver_unittest.cc',
+            '<(DEPTH)/net/proxy/network_delegate_error_observer_unittest.cc',
+            '<(DEPTH)/net/proxy/proxy_resolver_js_bindings_unittest.cc',
+            '<(DEPTH)/net/proxy/proxy_resolver_v8_unittest.cc',
+            '<(DEPTH)/net/proxy/proxy_script_decider_unittest.cc',
+            '<(DEPTH)/net/proxy/proxy_script_fetcher_impl_unittest.cc',
+            '<(DEPTH)/net/proxy/proxy_server_unittest.cc',
+            '<(DEPTH)/net/proxy/proxy_service_unittest.cc',
+            '<(DEPTH)/net/proxy/sync_host_resolver_bridge_unittest.cc',
+            '<(DEPTH)/net/url_request/view_cache_helper_unittest.cc',
+            '<(DEPTH)/net/http/mock_http_cache.cc',
+            '<(DEPTH)/net/http/mock_http_cache.h',
+          ],
+          'sources/': [
+            ['exclude', 'socket'],
+            ['exclude', 'spdy'],
+            ['exclude', 'host_resolver'],
+            ['exclude', 'dial'],
+            ['exclude', 'dns'],
+            ['exclude', 'auth'],
+          ]
+        }],
+        ['target_arch=="android"', {
+          'sources/': [
+            # No res_ninit() et al on Android:
+            ['exclude', 'dns/dns_config_service_posix_unittest.cc'],
+            # No in-app DIAL on Android:
+            ['exclude', 'dial'],
+          ],
+          'dependencies': [
+            '<(DEPTH)/testing/android/native_test.gyp:native_test_native_code',
+          ],
+        }],
       ],
     },
     {
       'target_name': 'unit_tests_sql',
-      'type': 'executable',
+      'type': '<(final_executable_type)',
+      'variables': {
+        'main_thread_stack_size': '<(LB_UNIT_TEST_MAIN_THREAD_STACK_SIZE)',
+      },
       'sources': [
         '<!@(find <(DEPTH)/sql -type f -name \'*_unittest*.cc\')',
       ],
@@ -307,6 +417,7 @@
         '<(DEPTH)/sql/sql.gyp:sql',
         '<(DEPTH)/base/base.gyp:test_support_base',
         '<(DEPTH)/testing/gtest.gyp:gtest',
+        'posix_emulation.gyp:posix_emulation',
       ],
       'include_dirs': [
         '<(DEPTH)',
@@ -314,6 +425,119 @@
       'libraries': [
         '<@(platform_libraries)',
       ],
+      'conditions': [
+        ['target_arch == "android"', {
+          'dependencies': [
+            '<(DEPTH)/testing/android/native_test.gyp:native_test_native_code',
+          ],
+        }],
+      ],
     },
-  ] # end of targets
+  ], # end of targets
+  'conditions': [
+    ['target_arch == "ps4"', {
+      'targets': [
+        {
+          'target_name': 'unit_tests_libvpx',
+          'type': '<(final_executable_type)',
+          'variables': {
+            'main_thread_stack_size': '<(LB_UNIT_TEST_MAIN_THREAD_STACK_SIZE)',
+          },
+          'sources': [
+            '<(DEPTH)/third_party/libvpx/test/convolve_test.cc',
+            '<(DEPTH)/third_party/libvpx/test/decode_test_driver.cc',
+            '<(DEPTH)/third_party/libvpx/test/test_libvpx.cc',
+            '<(DEPTH)/third_party/libvpx/test/test_vector_test.cc',
+            '<(DEPTH)/third_party/libvpx/test/vp9_thread_test.cc',
+          ],
+          'dependencies': [
+            'lb_shell_lib',
+            '<(DEPTH)/third_party/libvpx/libvpx.gyp:libvpx',
+            '<(DEPTH)/base/base.gyp:test_support_base',
+            '<(DEPTH)/testing/gtest.gyp:gtest',
+            'posix_emulation.gyp:posix_emulation',
+          ],
+          'include_dirs': [
+            '<(DEPTH)',
+            '<(DEPTH)/third_party/libvpx/',
+            '<(DEPTH)/third_party/libvpx/platforms/<(target_arch)',
+          ],
+          'libraries': [
+            '<@(platform_libraries)',
+          ],
+          'conditions': [
+            ['target_arch == "android"', {
+              'dependencies': [
+                '<(DEPTH)/testing/android/native_test.gyp:native_test_native_code',
+              ],
+            }],
+          ],
+        },
+      ],
+    }],
+    ['target_arch == "android"', {
+      'targets': [
+        {
+          'target_name': 'unit_tests_base_apk',
+          'type': 'none',
+          'dependencies': [
+            'unit_tests_base',
+          ],
+          'variables': {
+            'test_suite_name': 'unit_tests_base',
+            'input_shlib_path': '<(SHARED_LIB_DIR)/<(SHARED_LIB_PREFIX)unit_tests_base<(SHARED_LIB_SUFFIX)',
+          },
+          'includes': [ '../../../external/chromium/build/apk_test.gypi' ],
+        },
+        {
+          'target_name': 'unit_tests_crypto_apk',
+          'type': 'none',
+          'dependencies': [
+            'unit_tests_crypto',
+          ],
+          'variables': {
+            'test_suite_name': 'unit_tests_crypto',
+            'input_shlib_path': '<(SHARED_LIB_DIR)/<(SHARED_LIB_PREFIX)unit_tests_crypto<(SHARED_LIB_SUFFIX)',
+          },
+          'includes': [ '../../../external/chromium/build/apk_test.gypi' ],
+        },
+        {
+          'target_name': 'unit_tests_media_apk',
+          'type': 'none',
+          'dependencies': [
+            'unit_tests_media',
+          ],
+          'variables': {
+            'test_suite_name': 'unit_tests_media',
+            'input_shlib_path': '<(SHARED_LIB_DIR)/<(SHARED_LIB_PREFIX)unit_tests_media<(SHARED_LIB_SUFFIX)',
+          },
+          'includes': [ '../../../external/chromium/build/apk_test.gypi' ],
+        },
+        {
+          'target_name': 'unit_tests_net_apk',
+          'type': 'none',
+          'dependencies': [
+            'unit_tests_net',
+          ],
+          'variables': {
+            'test_suite_name': 'unit_tests_net',
+            'input_shlib_path': '<(SHARED_LIB_DIR)/<(SHARED_LIB_PREFIX)unit_tests_net<(SHARED_LIB_SUFFIX)',
+          },
+          'includes': [ '../../../external/chromium/build/apk_test.gypi' ],
+        },
+        {
+          'target_name': 'unit_tests_sql_apk',
+          'type': 'none',
+          'dependencies': [
+            'unit_tests_sql',
+          ],
+          'variables': {
+            'test_suite_name': 'unit_tests_sql',
+            'input_shlib_path': '<(SHARED_LIB_DIR)/<(SHARED_LIB_PREFIX)unit_tests_sql<(SHARED_LIB_SUFFIX)',
+          },
+          'includes': [ '../../../external/chromium/build/apk_test.gypi' ],
+        },
+      ],
+    }],
+  ], # end of conditions
 }

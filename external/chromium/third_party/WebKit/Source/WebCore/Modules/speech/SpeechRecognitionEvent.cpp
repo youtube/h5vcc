@@ -56,6 +56,13 @@ PassRefPtr<SpeechRecognitionEvent> SpeechRecognitionEvent::createResult(unsigned
     return adoptRef(new SpeechRecognitionEvent(eventNames().resultEvent, resultIndex, results));
 }
 
+#if defined(__LB_SHELL__)
+PassRefPtr<SpeechRecognitionEvent> SpeechRecognitionEvent::createResult(unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results, const String& interpretation)
+{
+    return adoptRef(new SpeechRecognitionEvent(eventNames().resultEvent, resultIndex, results, interpretation));
+}
+#endif
+
 PassRefPtr<SpeechRecognitionEvent> SpeechRecognitionEvent::createNoMatch(PassRefPtr<SpeechRecognitionResult> result)
 {
     return adoptRef(new SpeechRecognitionEvent(eventNames().nomatchEvent, result, 0, 0));
@@ -93,6 +100,16 @@ SpeechRecognitionEvent::SpeechRecognitionEvent(const AtomicString& eventName, un
     , m_results(SpeechRecognitionResultList::create(results))
 {
 }
+
+#if defined(__LB_SHELL__)
+SpeechRecognitionEvent::SpeechRecognitionEvent(const AtomicString& eventName, unsigned long resultIndex, const Vector<RefPtr<SpeechRecognitionResult> >& results, const String& interpretation)
+    : Event(eventName, /*canBubble=*/false, /*cancelable=*/false)
+    , m_resultIndex(resultIndex)
+    , m_results(SpeechRecognitionResultList::create(results))
+    , m_interpretation(interpretation)
+{
+}
+#endif
 
 SpeechRecognitionEvent::~SpeechRecognitionEvent()
 {

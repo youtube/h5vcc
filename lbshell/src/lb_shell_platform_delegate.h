@@ -29,12 +29,13 @@
 
 #include <stdint.h>
 
-class LBShellPlatformDelegate {
+#include "lb_shell_export.h"
+
+class LB_SHELL_EXPORT LBShellPlatformDelegate {
  public:
   // first method called by main()
   static void Init();
   static void PlatformInit();
-  static void PlatformMediaInit();
   // gets the system langauge
   // NOTE: should be in the format described by bcp47.
   // http://www.rfc-editor.org/rfc/bcp/bcp47.txt
@@ -43,7 +44,6 @@ class LBShellPlatformDelegate {
   // last method called by main()
   static void Teardown();
   static void PlatformTeardown();
-  static void PlatformMediaTeardown();
   // perform system update tasks at checkpoints during startup
   static void PlatformUpdateDuringStartup();
   // true if exit game was requested by the platform.

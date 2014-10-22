@@ -30,7 +30,7 @@
 
 #include "config.h"
 
-#if ENABLE(JAVASCRIPT_DEBUGGER) && ENABLE(WORKERS)
+#if ENABLE(JAVASCRIPT_DEBUGGER) && ENABLE(WORKERS) && ENABLE(INSPECTOR)
 #include "WorkerScriptDebugServer.h"
 
 #include "WorkerContext.h"

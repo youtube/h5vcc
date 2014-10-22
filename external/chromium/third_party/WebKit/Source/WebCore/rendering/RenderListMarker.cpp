@@ -32,7 +32,6 @@
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderView.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -1731,15 +1730,6 @@ LayoutRect RenderListMarker::selectionRectForRepaint(const RenderLayerModelObjec
         rect = localToContainerQuad(FloatRect(rect), repaintContainer).enclosingBoundingBox();
     
     return rect;
-}
-
-void RenderListMarker::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    RenderBox::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_text);
-    info.addMember(m_image);
-    info.addMember(m_listItem);
 }
 
 } // namespace WebCore

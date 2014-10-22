@@ -120,7 +120,16 @@ Interpreter::StackPolicy::StackPolicy(Interpreter& interpreter, const StackBound
     const size_t size = stack.size();
 
     const size_t DEFAULT_REQUIRED_STACK = 1024 * 1024;
+#if defined(__LB_SHELL__) && !defined(NDEBUG)
+    // JS requires a larger stack when running in debug on Windows based
+    // platforms, presumably because of extra debugging information.
+    // LBShell uses a default stack size of 1MB which restricts the JS stack
+    // to 128KB. While this is not enough on Debug builds, it works well on
+    // other configurations since they typically don't exceed 50KB.
+    const size_t DEFAULT_MINIMUM_USEABLE_STACK = 512 * 1024;
+#else
     const size_t DEFAULT_MINIMUM_USEABLE_STACK = 128 * 1024;
+#endif
     const size_t DEFAULT_ERROR_MODE_REQUIRED_STACK = 32 * 1024;
 
     // Here's the policy in a nutshell:
@@ -249,7 +258,7 @@ JSValue eval(CallFrame* callFrame)
         JSValue exceptionValue;
         eval = callerCodeBlock->evalCodeCache().getSlow(callFrame, callerCodeBlock->ownerExecutable(), callerCodeBlock->isStrictMode(), programSource, callerScopeChain, exceptionValue);
         
-        ASSERT(!eval == exceptionValue);
+        ASSERT((!eval) == exceptionValue);
         if (UNLIKELY(!eval))
             return throwError(callFrame, exceptionValue);
     }

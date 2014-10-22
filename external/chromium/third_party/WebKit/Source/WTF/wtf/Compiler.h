@@ -150,12 +150,6 @@
 #define WTF_COMPILER_SUPPORTS_CXX_NULLPTR 1
 #endif
 
-#if COMPILER(GHS)
-#define PACKED __packed
-#else
-#define PACKED
-#endif
-
 /* COMPILER(MINGW) - MinGW GCC */
 /* COMPILER(MINGW64) - mingw-w64 GCC - only used as additional check to exclude mingw.org specific functions */
 #if defined(__MINGW32__)
@@ -182,7 +176,7 @@
 /* ALWAYS_INLINE */
 
 #ifndef ALWAYS_INLINE
-#if COMPILER(GCC) && defined(NDEBUG) && !COMPILER(MINGW)
+#if COMPILER(GCC) && defined(NDEBUG) && !COMPILER(MINGW) && !COMPILER(GHS)
 #define ALWAYS_INLINE inline __attribute__((__always_inline__))
 #elif (COMPILER(MSVC) || COMPILER(RVCT)) && defined(NDEBUG)
 #define ALWAYS_INLINE __forceinline
@@ -195,7 +189,7 @@
 /* NEVER_INLINE */
 
 #ifndef NEVER_INLINE
-#if COMPILER(GCC)
+#if COMPILER(GCC) && !COMPILER(GHS)
 #define NEVER_INLINE __attribute__((__noinline__))
 #elif COMPILER(RVCT)
 #define NEVER_INLINE __declspec(noinline)

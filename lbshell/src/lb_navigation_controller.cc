@@ -17,8 +17,8 @@
 
 #include "external/chromium/base/logging.h"
 #include "external/chromium/base/stringprintf.h"
-#include "external/chromium/media/base/shell_filter_graph_log.h"
 #include "lb_graphics.h"
+#include "lb_on_screen_display.h"
 #include "lb_shell.h"
 
 // ----------------------------------------------------------------------------
@@ -28,7 +28,9 @@ static const int kMaxHistoryItem = 16;
 LBNavigationController::LBNavigationController(LBShell* shell)
     : current_entry_index_(-1)
     , pending_entry_index_(-1)
-    , shell_(shell) {
+    , shell_(shell)
+    , current_url_("Nav.CurrentURL", "",
+                   "URL that LBShell is currently loading or loaded.") {
 }
 
 LBNavigationController::~LBNavigationController() {
@@ -100,7 +102,9 @@ void LBNavigationController::CommitPending(
 void LBNavigationController::AddEntry(const WebKit::WebHistoryItem& entry) {
   // erase everything after the current entry:
   std::vector<WebKit::WebHistoryItem>::iterator next, end;
-  next = entries_.begin() + current_entry_index_ + 1;
+  // Order of operations is important here.  current_entry_index_ may be -1,
+  // and (begin() + -1) + 1 == invalid + 1 == invalid.  So add the +1 first.
+  next = entries_.begin() + (current_entry_index_ + 1);
   end = entries_.end();
   entries_.erase(next, end);
   // add the new entry, and make it current:
@@ -110,16 +114,18 @@ void LBNavigationController::AddEntry(const WebKit::WebHistoryItem& entry) {
   if (entries_.size() > kMaxHistoryItem)
     RemoveOldestEntry();
   if (!entry.isNull()) {
-    std::string url = entry.urlString().utf8();
-    DLOG(INFO) << "address now: " << url;
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    LBGraphics::GetPtr()->SetOSDURL(url);
-#endif
-    media::ShellFilterGraphLog::SetGraphLoggingPageURL(url.c_str());
+    current_url_ = entry.urlString().utf8();
+    DLOG(INFO) << "address now: " << static_cast<std::string>(current_url_);
   }
 }
 
-void LBNavigationController::UpdateCurrentEntry(const WebKit::WebHistoryItem& entry) {
+void LBNavigationController::Clear() {
+  entries_.clear();
+  DiscardPendingEntry();
+}
+
+void LBNavigationController::UpdateCurrentEntry(
+    const WebKit::WebHistoryItem& entry) {
   int index = GetCurrentEntryIndex();
   if (index == -1)
     return;
@@ -134,7 +140,7 @@ void LBNavigationController::DiscardPendingEntry() {
 void LBNavigationController::NavigateToPendingEntry() {
   bool ok;
 
-  DCHECK(pending_entry_index_ != -1);
+  DCHECK_NE(pending_entry_index_, -1);
 
   if (pending_entry_index_ == current_entry_index_) {
     // reload

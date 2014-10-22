@@ -25,14 +25,18 @@
 #include "external/chromium/webkit/glue/webpreferences.h"
 #include "lb_debug_console.h"
 #include "lb_navigation_controller.h"
+#include "lb_shell_export.h"
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+#include "lb_tracing_manager.h"
+#endif
 #include "lb_web_view_delegate.h"
 #include "lb_web_view_host.h"
 
 class GURL;
 
-class LBShell : public base::SupportsWeakPtr<LBShell> {
+class LB_SHELL_EXPORT LBShell : public base::SupportsWeakPtr<LBShell> {
  public:
-  LBShell(const std::string& startup_url);
+  LBShell(const std::string& startup_url, MessageLoop* webkit_message_loop);
   virtual ~LBShell();
 
   // platform-specific initialization and cleanup methods
@@ -84,6 +88,16 @@ class LBShell : public base::SupportsWeakPtr<LBShell> {
 
   const std::string& GetStartupURL() const { return startup_url_; }
 
+  MessageLoop* webkit_message_loop() const { return webkit_message_loop_; }
+
+  // Starts the main LBShell run loop and does not return until the app
+  // exits.
+  void RunLoop();
+
+  // This function will not return until all messages on the WebKit message
+  // loop when this function is called have been processed.
+  void SyncWithWebKit();
+
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
   // This will be called when a document is successfully loaded
   typedef base::Callback<void(WebKit::WebFrame*)> NetworkSuccessCallback;
@@ -102,7 +116,8 @@ class LBShell : public base::SupportsWeakPtr<LBShell> {
     network_failure_cb_.Reset();
   }
 
-  typedef base::Callback<void(WebKit::WebFrame*)> StartedProvisionalLoadCallback;
+  typedef base::Callback<void(WebKit::WebFrame*)>
+          StartedProvisionalLoadCallback;
   void SetOnStartedProvisionalLoadCallback(
     const StartedProvisionalLoadCallback& cb) {
     started_provisional_load_cb_ = cb;
@@ -112,12 +127,20 @@ class LBShell : public base::SupportsWeakPtr<LBShell> {
   }
 #endif
 
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+  LB::TracingManager* tracing_manager() { return &tracing_manager_; }
+#endif
+
  protected:
   static void LoadStrings(const std::string& lang);
 
   static std::string preferred_language_;
   static std::string preferred_locale_;
   static std::map<std::string, std::string> strings_;
+
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+  LB::TracingManager tracing_manager_;
+#endif
 
   scoped_ptr<LBWebViewHost> web_view_host_;
   scoped_ptr<LBWebViewDelegate> delegate_;
@@ -135,6 +158,8 @@ class LBShell : public base::SupportsWeakPtr<LBShell> {
 #endif
 
   std::string startup_url_;
+
+  MessageLoop* webkit_message_loop_;
 };
 
 #endif  // SRC_LB_SHELL_H_

@@ -292,7 +292,13 @@ namespace JSC {
 
     inline bool Heap::shouldCollect()
     {
-#if defined (__LB_SHELL__)
+#if defined(__LB_SHELL__)
+#if defined(__LB_PS4__)
+        // On PS4 we have enough memory to sweep less often.
+        const size_t kGCThreshold = 20 * 1024 * 1024;
+#else  // defined(__LB_PS4__)
+        const size_t kGCThreshold = 4 * 1024 * 1024;
+#endif  // defined(__LB_PS4__)
         // m_bytesAllocated is a coarse measure of how
         // much has been allocated since the last collect().
         // It's only incremented by certain large allocations.
@@ -303,7 +309,7 @@ namespace JSC {
             return false;
         }
 
-        if (m_bytesAllocated >= 4096 * 1024) {
+        if (m_bytesAllocated >= kGCThreshold) {
             return true;
         } else if (m_bytesAllocated >= 1024 * 1024 &&
             (WTF::currentTime() - m_lastCollectTime > 60.0f)) {

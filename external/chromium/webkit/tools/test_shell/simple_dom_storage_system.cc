@@ -343,3 +343,22 @@ void SimpleDomStorageSystem::DispatchDomStorageEvent(
         true  /* originatedInProcess */);
   }
 }
+
+void SimpleDomStorageSystem::Flush() {
+  DCHECK(host_);
+  if (host_) {
+    host_->Flush();
+  }
+}
+
+#if defined(__LB_SHELL__)
+void SimpleDomStorageSystem::Reset() {
+  DCHECK(host_);
+  if (host_) {
+    context_ = new DomStorageContext(FilePath(), FilePath(), NULL,
+                                     new TaskRunnerImpl());
+    context_->AddEventObserver(this);
+    host_.reset(new DomStorageHost(context_));
+  }
+}
+#endif

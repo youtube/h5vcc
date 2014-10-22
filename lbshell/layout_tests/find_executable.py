@@ -1,8 +1,12 @@
-import os
-from layout_exceptions import *
+"""Find location of test executable."""
 
-build_target_suggestion_message = \
-  'Did you forget to build the ninja target "lb_layout_tests" first?'
+import os
+
+import layout_exceptions
+
+build_target_suggestion_message = (
+    'Did you forget to build the ninja target "lb_layout_tests" first?')
+
 
 def FindTestExecutable(default_build_order, use_build, exe_name, exe_base_dir):
   def PathToExe(build):
@@ -14,8 +18,9 @@ def FindTestExecutable(default_build_order, use_build, exe_name, exe_base_dir):
     if os.path.exists(path_to_exe):
       return os.path.expanduser(path_to_exe)
     else:
-      raise TestClientError('Unable to find layout test executable\n' \
-        + path_to_exe + '\n' + build_target_suggestion_message)
+      raise layout_exceptions.TestClientError(
+          'Unable to find layout test executable\n{}\n{}'.format(
+              path_to_exe, build_target_suggestion_message))
   else:
     # Search for the layout test executable in the project 'out' directory
     for build in default_build_order:
@@ -23,9 +28,9 @@ def FindTestExecutable(default_build_order, use_build, exe_name, exe_base_dir):
       if os.path.exists(path_to_exe):
         return os.path.expanduser(path_to_exe)
 
-    raise TestClientError('Unable to find layout test executable in ' \
-      + 'base directory\n' \
-      + '"' + exe_base_dir + '"\n' \
-      + 'after searching through sub-directories ' + str(default_build_order) \
-      + '.\n' + build_target_suggestion_message)
-
+    raise layout_exceptions.TestClientError(
+        'Unable to find layout test executable in base directory\n'
+        '"{}"\n after searching through sub-directories {}.\n'
+        '{}'.format(exe_base_dir,
+                    str(default_build_order),
+                    build_target_suggestion_message))

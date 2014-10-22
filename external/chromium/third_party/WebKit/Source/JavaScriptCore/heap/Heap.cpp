@@ -306,8 +306,14 @@ void Heap::reportExtraMemoryCostSlowCase(size_t cost)
     // collecting more frequently as long as it stays alive.
 
     didAllocate(cost);
+#if !defined(__LB_PS4__)
+    // Every time a large allocation happens we may do a sweep immediately. This usually
+    // happens when a new segment is downloaded and appended. Combine these slow
+    // operations with expensive GC in the same tick can result in frame drops. On PS4
+    // we have enough memory to delay the GC to the next tick.
     if (shouldCollect())
         collect(DoNotSweep);
+#endif  // !defined(__LB_PS4__)
 }
 
 void Heap::reportAbandonedObjectGraph()

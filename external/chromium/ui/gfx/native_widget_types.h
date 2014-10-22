@@ -7,7 +7,7 @@
 
 #include "build/build_config.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include <jni.h>
 #endif
 
@@ -105,7 +105,7 @@ typedef struct _GdkPixbuf GdkPixbuf;
 typedef struct _GdkRegion GdkRegion;
 typedef struct _GtkWidget GtkWidget;
 typedef struct _GtkWindow GtkWindow;
-#elif defined(OS_ANDROID)
+#elif defined(OS_ANDROID) || defined(__LB_ANDROID__)
 struct ANativeWindow;
 namespace content {
 class ContentViewCore;
@@ -152,6 +152,12 @@ typedef content::ContentViewCore* NativeView;
 typedef ui::WindowAndroid* NativeWindow;
 typedef void* NativeRegion;
 typedef jobject NativeEvent;
+#elif defined(__LB_SHELL__)
+typedef void* NativeCursor;
+typedef void* NativeView;
+typedef void* NativeWindow;
+typedef void* NativeRegion;
+typedef void* NativeEvent;
 #endif
 
 #if defined(OS_WIN)
@@ -184,6 +190,12 @@ typedef cairo_t* NativeDrawingContext;
 typedef void* NativeMenu;
 typedef void* NativeViewAccessible;
 #elif defined(OS_ANDROID)
+typedef void* NativeFont;
+typedef void* NativeEditView;
+typedef void* NativeDrawingContext;
+typedef void* NativeMenu;
+typedef void* NativeViewAccessible;
+#elif defined(__LB_SHELL__)
 typedef void* NativeFont;
 typedef void* NativeEditView;
 typedef void* NativeDrawingContext;
@@ -306,9 +318,13 @@ const AcceleratedWidget kNullAcceleratedWidget = 0;
 #elif defined(OS_MACOSX)
 typedef NSView* AcceleratedWidget;
 const AcceleratedWidget kNullAcceleratedWidget = 0;
-#elif defined(OS_ANDROID)
+#elif defined(OS_ANDROID) || defined(__LB_ANDROID__)
 typedef ANativeWindow* AcceleratedWidget;
 const AcceleratedWidget kNullAcceleratedWidget = 0;
+#elif defined(__LB_LINUX__)
+typedef unsigned long AcceleratedWidget;
+#elif defined(__LB_SHELL__)
+typedef void* AcceleratedWidget;
 #else
 #error unknown platform
 #endif

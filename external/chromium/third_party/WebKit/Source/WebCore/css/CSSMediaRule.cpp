@@ -28,8 +28,6 @@
 #include "CSSStyleSheet.h"
 #include "ExceptionCode.h"
 #include "StyleRule.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -175,15 +173,6 @@ void CSSMediaRule::reattach(StyleRuleBase* rule)
         if (m_childRuleCSSOMWrappers[i])
             m_childRuleCSSOMWrappers[i]->reattach(m_mediaRule->childRules()[i].get());
     }
-}
-
-void CSSMediaRule::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSRule::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_mediaCSSOMWrapper);
-    info.addMember(m_childRuleCSSOMWrappers);
-    info.addMember(m_ruleListCSSOMWrapper);
 }
 
 } // namespace WebCore

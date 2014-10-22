@@ -40,7 +40,9 @@
 
 #if COMPILER(MSVC) && !OS(WINCE)
 #include <crtdbg.h>
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #include <mmsystem.h>
+#endif
 #include <windows.h>
 #endif
 

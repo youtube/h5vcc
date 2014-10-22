@@ -44,6 +44,10 @@ public:
     virtual void setReplicaLayer(WebLayer*) OVERRIDE;
     virtual void setOpacity(float) OVERRIDE;
     virtual float opacity() const OVERRIDE;
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    virtual void setH5vccTargetScreen(H5VCCTargetScreen) OVERRIDE;
+    virtual H5VCCTargetScreen h5vccTargetScreen() const OVERRIDE;
+#endif
     virtual void setOpaque(bool) OVERRIDE;
     virtual bool opaque() const OVERRIDE;
     virtual void setPosition(const WebFloatPoint&) OVERRIDE;

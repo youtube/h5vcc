@@ -220,16 +220,16 @@ typedef void *NPIdentifier;
     by the browser. Plugins do not need to worry about memory management
     with regards to NPIdentifiers.
 */
-NPIdentifier NPN_GetStringIdentifier(const NPUTF8 *name);
+WEBKIT_EXPORT NPIdentifier NPN_GetStringIdentifier(const NPUTF8 *name);
 void NPN_GetStringIdentifiers(const NPUTF8 **names, int32_t nameCount,
                               NPIdentifier *identifiers);
 NPIdentifier NPN_GetIntIdentifier(int32_t intid);
-bool NPN_IdentifierIsString(NPIdentifier identifier);
+WEBKIT_EXPORT bool NPN_IdentifierIsString(NPIdentifier identifier);
 
 /*
     The NPUTF8 returned from NPN_UTF8FromIdentifier SHOULD be freed.
 */
-NPUTF8 *NPN_UTF8FromIdentifier(NPIdentifier identifier);
+WEBKIT_EXPORT NPUTF8 *NPN_UTF8FromIdentifier(NPIdentifier identifier);
 
 /*
     Get the integer represented by identifier. If identifier is not an
@@ -334,7 +334,7 @@ struct NPObject {
     returned. This method will initialize the referenceCount member of
     the NPObject to 1.
 */
-NPObject *NPN_CreateObject(NPP npp, NPClass *aClass);
+WEBKIT_EXPORT NPObject *NPN_CreateObject(NPP npp, NPClass *aClass);
 
 /*
     Increment the NPObject's reference count.

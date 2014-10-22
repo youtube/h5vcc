@@ -7,7 +7,27 @@
 #ifndef BASE_ATOMICOPS_INTERNALS_X86_MSVC_H_
 #define BASE_ATOMICOPS_INTERNALS_X86_MSVC_H_
 
-#include <windows.h>
+#if defined(__LB_XB1__) && !defined(WIN32)
+# include <intrin.h>
+// These are normally defined by windows.h:
+typedef long LONG;
+typedef long long LONGLONG;
+typedef void* PVOID;
+void __faststorefence(void);
+#pragma intrinsic(__faststorefence)
+inline void MemoryBarrier() {
+  __faststorefence();
+}
+#define InterlockedCompareExchange _InterlockedCompareExchange
+#define InterlockedCompareExchangePointer _InterlockedCompareExchangePointer
+#define InterlockedExchangePointer _InterlockedExchangePointer
+#define InterlockedExchange _InterlockedExchange
+#define InterlockedExchangeAdd _InterlockedExchangeAdd
+#define InterlockedExchangeAdd64 _InterlockedExchangeAdd64
+
+#else
+# include <windows.h>
+#endif
 
 namespace base {
 namespace subtle {
@@ -176,5 +196,14 @@ inline Atomic64 Release_CompareAndSwap(volatile Atomic64* ptr,
 
 }  // namespace base::subtle
 }  // namespace base
+
+#if defined(__LB_XB1__)
+#undef InterlockedCompareExchange
+#undef InterlockedCompareExchangePointer
+#undef InterlockedExchangePointer
+#undef InterlockedExchange
+#undef InterlockedExchangeAdd
+#undef InterlockedExchangeAdd64
+#endif
 
 #endif  // BASE_ATOMICOPS_INTERNALS_X86_MSVC_H_

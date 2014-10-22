@@ -40,7 +40,7 @@
 #endif
 
 #if defined(__LB_SHELL__)
-#include <lb_platform.h>
+#include "lb_rand.h"
 #endif
 
 namespace WTF {

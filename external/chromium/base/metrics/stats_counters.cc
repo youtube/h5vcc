@@ -4,7 +4,47 @@
 
 #include "base/metrics/stats_counters.h"
 
+#include "base/logging.h"
+
 namespace base {
+#if defined (__LB_SHELL__)
+// Intentionally no-ops.
+StatsCounter::StatsCounter() {
+}
+StatsCounter::StatsCounter(const std::string& name) {
+}
+StatsCounter::~StatsCounter() {
+}
+void StatsCounter::Set(int value) {
+}
+void StatsCounter::Add(int value) {
+}
+int* StatsCounter::GetPtr() {
+  return NULL;
+}
+StatsCounterTimer::StatsCounterTimer(const std::string& name) {
+}
+StatsCounterTimer::~StatsCounterTimer() {
+}
+void StatsCounterTimer::Start() {
+}
+void StatsCounterTimer::Stop() {
+}
+bool StatsCounterTimer::Running() {
+  return false;
+}
+void StatsCounterTimer::AddTime(TimeDelta time) {
+}
+void StatsCounterTimer::Record() {
+}
+StatsRate::StatsRate(const std::string& name) :
+    StatsCounterTimer(name), counter_(name), largest_add_("") {
+}
+StatsRate::~StatsRate() {
+}
+void StatsRate::Add(int value) {
+}
+#else
 
 StatsCounter::StatsCounter(const std::string& name)
     : counter_id_(-1) {
@@ -121,5 +161,5 @@ void StatsRate::Add(int value) {
   if (value > largest_add_.value())
     largest_add_.Set(value);
 }
-
+#endif
 }  // namespace base

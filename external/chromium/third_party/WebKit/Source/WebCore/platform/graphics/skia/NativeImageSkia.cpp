@@ -34,9 +34,7 @@
 
 #include "NativeImageSkia.h"
 #include "GraphicsContext3D.h"
-#include "MemoryInstrumentationSkia.h"
 #include "PlatformInstrumentation.h"
-#include "PlatformMemoryInstrumentation.h"
 #include "SkPixelRef.h"
 #include "SkiaUtils.h"
 
@@ -174,18 +172,6 @@ SkIRect NativeImageSkia::CachedImageInfo::rectInSubset(const SkIRect& otherScale
     SkIRect subsetRect = otherScaledImageSubset;
     subsetRect.offset(-scaledImageSubset.x(), -scaledImageSubset.y());
     return subsetRect;
-}
-
-void NativeImageSkia::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-    info.addMember(m_image);
-    info.addMember(m_resizedImage);
-}
-
-void reportMemoryUsage(const NativeImageSkia* image, MemoryObjectInfo* memoryObjectInfo)
-{
-    image->reportMemoryUsage(memoryObjectInfo);
 }
 
 } // namespace WebCore

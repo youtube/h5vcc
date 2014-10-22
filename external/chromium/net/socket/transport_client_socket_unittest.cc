@@ -178,6 +178,7 @@ INSTANTIATE_TEST_CASE_P(StreamSocket,
                         TransportClientSocketTest,
                         ::testing::Values(TCP));
 
+#if !defined(__LB_PS4__)
 TEST_P(TransportClientSocketTest, Connect) {
   TestCompletionCallback callback;
   EXPECT_FALSE(sock_->IsConnected());
@@ -355,7 +356,7 @@ TEST_P(TransportClientSocketTest, Read_Interrupted) {
 
   EXPECT_NE(0, rv);
 }
-
+#endif // !defined(__LB_PS4__)
 TEST_P(TransportClientSocketTest, DISABLED_FullDuplex_ReadFirst) {
   TestCompletionCallback callback;
   int rv = sock_->Connect(callback.callback());

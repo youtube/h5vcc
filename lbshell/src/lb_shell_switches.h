@@ -14,30 +14,39 @@
  * limitations under the License.
  */
 
-#ifndef SRC_LB_SHELL_SWITCHES_H
+#ifndef SRC_LB_SHELL_SWITCHES_H_
 #define SRC_LB_SHELL_SWITCHES_H_
+
+#include "lb_shell_export.h"
 
 namespace LB {
 namespace switches {
 
-extern const char kUrl[];
-extern const char kQueryString[];
-extern const char kWebCoreLogChannels[];
-extern const char kDisableSave[];
-extern const char kLoadSavegame[];
-extern const char kUserAgent[];
-extern const char kFilterGraphLog[];
+LB_SHELL_EXTERN const char kUrl[];
+LB_SHELL_EXTERN const char kQueryString[];
+LB_SHELL_EXTERN const char kWebCoreLogChannels[];
+LB_SHELL_EXTERN const char kDisableSave[];
+LB_SHELL_EXTERN const char kLoadSavegame[];
+LB_SHELL_EXTERN const char kUserAgent[];
+LB_SHELL_EXTERN const char kLang[];
+LB_SHELL_EXTERN const char kIgnorePlatformAuthentication[];
+LB_SHELL_EXTERN const char kProxy[];
+LB_SHELL_EXTERN const char kHideSplashScreenAtInit[];
+
 #if defined(__LB_WIIU__)
-extern const char kErrorTest[];
+LB_SHELL_EXTERN const char kErrorTest[];
 #endif
-extern const char kLang[];
-extern const char kIgnorePlatformAuthentication[];
+
 #if defined(__LB_LINUX__)
-extern const char kVersion[];
+LB_SHELL_EXTERN const char kVersion[];
+LB_SHELL_EXTERN const char kHelp[];
+#endif
+
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+LB_SHELL_EXTERN const char kDrawGestureRecognizerBorder[];
 #endif
 
 }  // namespace switches
 }  // namespace LB
 
 #endif  // SRC_LB_SHELL_SWITCHES_H_
-

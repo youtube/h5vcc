@@ -21,8 +21,11 @@ TEST(AlignedMemoryTest, StaticAlignment) {
 
   EXPECT_EQ(8u, ALIGNOF(raw8));
   EXPECT_EQ(16u, ALIGNOF(raw16));
+#if !defined(__LB_XB360__)
+  // On the Xbox360, AlignedMemory is not aligned, but its data pointer is.
   EXPECT_EQ(256u, ALIGNOF(raw256));
   EXPECT_EQ(4096u, ALIGNOF(raw4096));
+#endif
 
   EXPECT_ALIGNED(raw8.void_data(), 8);
   EXPECT_ALIGNED(raw16.void_data(), 16);
@@ -37,16 +40,22 @@ TEST(AlignedMemoryTest, StackAlignment) {
 
   EXPECT_EQ(8u, ALIGNOF(raw8));
   EXPECT_EQ(16u, ALIGNOF(raw16));
+#if !defined(__LB_XB360__)
+  // On the Xbox360, AlignedMemory is not aligned, but its data pointer is.
   EXPECT_EQ(256u, ALIGNOF(raw256));
+#endif
 
   EXPECT_ALIGNED(raw8.void_data(), 8);
   EXPECT_ALIGNED(raw16.void_data(), 16);
   EXPECT_ALIGNED(raw256.void_data(), 256);
 
-  // TODO(ios): This test hits an armv7 bug in clang. crbug.com/138066
-#if !(defined(OS_IOS) && defined(ARCH_CPU_ARM_FAMILY))
+  // TODO: This test hits an armv7 bug in clang. crbug.com/138066
+#if !defined(ARCH_CPU_ARM_FAMILY)
   AlignedMemory<8, 4096> raw4096;
+#if !defined(__LB_XB360__)
+  // On the Xbox360, AlignedMemory is not aligned, but its data pointer is.
   EXPECT_EQ(4096u, ALIGNOF(raw4096));
+#endif
   EXPECT_ALIGNED(raw4096.void_data(), 4096);
 #endif  // !(defined(OS_IOS) && defined(ARCH_CPU_ARM_FAMILY))
 }

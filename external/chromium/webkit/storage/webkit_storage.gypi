@@ -48,27 +48,37 @@
       ],
       'conditions': [
         ['OS=="lb_shell"', {
+          'sources': [
+            '<(lbshell_root)/src/lb_session_storage_database.cc',
+          ],
           'sources/': [
             # dom_storage
             ['exclude', 'dom_storage/session_storage_database.cc*'],
+            ['exclude', 'appcache/'],
 
             # fileapi
-            ['exclude', 'fileapi/syncable/sync_status_code.cc'],
-            ['exclude', 'fileapi/syncable/sync_status_code.h'],
-            ['exclude', 'fileapi/syncable/local_file_change_tracker.cc'],
-            ['exclude', 'fileapi/syncable/local_file_change_tracker.h'],
-            ['exclude', 'fileapi/file_system_directory_database.cc'],
-            ['exclude', 'fileapi/file_system_directory_database.h'],
-            ['exclude', 'fileapi/file_system_origin_database.cc'],
-            ['exclude', 'fileapi/file_system_origin_database.h'],
-            ['exclude', 'fileapi/obfuscated_file_util.cc'],
-            ['exclude', 'fileapi/obfuscated_file_util.h'],
-            ['exclude', 'fileapi/sandbox_mount_point_provider.cc'],
-            ['exclude', 'fileapi/sandbox_mount_point_provider.h'],
+            ['exclude', 'database/vfs_backend.cc'],
+            ['exclude', 'database/vfs_backend.h'],
+            ['exclude', 'fileapi/'],
+            ['include', 'fileapi/file_system_util.cc'],
+            ['exclude', 'blob/'],
+            ['include', 'blob/blob_data.cc'],
+            ['include', 'blob/blob_storage_controller.cc'],
+            ['include', 'blob/blob_url_request_job.cc'],
+            ['include', 'blob/blob_url_request_job_factory.cc'],
+            ['include', 'blob/local_file_stream_reader.cc'],
+            ['include', 'blob/shareable_file_reference.cc'],
+
+            # database
+            ['exclude', 'database/vfs_backend.cc'],
+            ['exclude', 'database/vfs_backend.h'],
           ],
           'include_dirs': [
             '../../../..', # for lbshell/src/ includes
-          ]
+          ],
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+          ],
         }],
         ['inside_chromium_build==0', {
           'dependencies': [

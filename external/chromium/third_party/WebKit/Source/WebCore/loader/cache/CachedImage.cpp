@@ -465,16 +465,6 @@ void CachedImage::changedInRect(const Image* image, const IntRect& rect)
     notifyObservers(&rect);
 }
 
-void CachedImage::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResourceImage);
-    CachedResource::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_image);
-#if ENABLE(SVG)
-    info.addMember(m_svgImageCache);
-#endif
-}
-
 bool CachedImage::currentFrameHasAlpha(const RenderObject* renderer)
 {
     Image* image = imageForRenderer(renderer);

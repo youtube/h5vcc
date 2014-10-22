@@ -24,10 +24,17 @@ class Transform;
 namespace ui {
 class EventTarget;
 
+#if !defined(TOOLKIT_VIEWS)
+#if defined (__LB_XB1__) || defined(__LB_XB360__)
+#pragma push_macro("UI_EXPORT")
+#undef UI_EXPORT
+#define UI_EXPORT
+#endif
+#endif
+
 class UI_EXPORT Event {
  public:
   virtual ~Event();
-
   class DispatcherApi {
    public:
     explicit DispatcherApi(Event* event) : event_(event) {}
@@ -685,5 +692,11 @@ class UI_EXPORT GestureEvent : public LocatedEvent {
 };
 
 }  // namespace ui
+
+#if !defined(TOOLKIT_VIEWS)
+#if defined (__LB_XB1__) || defined(__LB_XB360__)
+#pragma pop_macro("UI_EXPORT")
+#endif
+#endif
 
 #endif  // UI_BASE_EVENTS_EVENT_H_

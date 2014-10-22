@@ -535,19 +535,6 @@ AsyncFileStream* ResourceLoader::createAsyncFileStream(FileStreamClient* client)
 }
 #endif
 
-void ResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_handle.get());
-    info.addMember(m_frame);
-    info.addMember(m_documentLoader);
-    info.addMember(m_request);
-    info.addMember(m_originalRequest);
-    info.addMember(m_resourceData);
-    info.addMember(m_deferredRequest);
-    info.addMember(m_options);
-}
-
 #if PLATFORM(MAC)
 void ResourceLoader::setIdentifier(unsigned long identifier)
 {

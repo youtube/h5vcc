@@ -83,7 +83,9 @@ void DocumentFragment::parseHTML(const String& source, Element* contextElement, 
 
 bool DocumentFragment::parseXML(const String& source, Element* contextElement, FragmentScriptingPermission scriptingPermission)
 {
-#if ENABLE(NEW_XML)
+#if defined(__LB_SHELL__)
+    return false;  // Not supported
+#elif ENABLE(NEW_XML)
     return NewXMLDocumentParser::parseDocumentFragment(source, this, contextElement, scriptingPermission);
 #else
     return XMLDocumentParser::parseDocumentFragment(source, this, contextElement, scriptingPermission);

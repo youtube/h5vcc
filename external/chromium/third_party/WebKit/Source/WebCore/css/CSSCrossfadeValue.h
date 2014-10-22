@@ -66,8 +66,6 @@ public:
 
     bool hasFailedOrCanceledSubresources() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     CSSCrossfadeValue(PassRefPtr<CSSValue> fromValue, PassRefPtr<CSSValue> toValue)
         : CSSImageGeneratorValue(CrossfadeClass)

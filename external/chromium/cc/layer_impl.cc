@@ -39,6 +39,9 @@ LayerImpl::LayerImpl(LayerTreeImpl* treeImpl, int id)
     , m_masksToBounds(false)
     , m_contentsOpaque(false)
     , m_opacity(1.0)
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    , m_h5vccTargetScreen(WebKit::ScreenSmall)
+#endif
     , m_preserves3D(false)
     , m_useParentBackfaceVisibility(false)
     , m_drawCheckerboardForMissingTiles(false)
@@ -117,13 +120,23 @@ void LayerImpl::createRenderSurface()
 
 scoped_ptr<SharedQuadState> LayerImpl::createSharedQuadState() const
 {
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    WebKit::H5VCCTargetScreen target_screen = useParentBackfaceVisibility() ?
+        parent()->m_h5vccTargetScreen : m_h5vccTargetScreen;
+#endif
+
   scoped_ptr<SharedQuadState> state = SharedQuadState::Create();
   state->SetAll(m_drawProperties.target_space_transform,
                 m_drawProperties.visible_content_rect,
                 m_drawProperties.drawable_content_rect,
                 m_drawProperties.clip_rect,
                 m_drawProperties.is_clipped,
-                m_drawProperties.opacity);
+                m_drawProperties.opacity
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+                , target_screen
+#endif
+                );
+
   return state.Pass();
 }
 
@@ -482,6 +495,18 @@ void LayerImpl::setOpacityFromAnimation(float opacity)
 {
     setOpacity(opacity);
 }
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+WebKit::H5VCCTargetScreen LayerImpl::h5vccTargetScreen() const {
+    return m_h5vccTargetScreen;
+}
+void LayerImpl::setH5vccTargetScreen(WebKit::H5VCCTargetScreen h5vccTargetScreen) {
+    if (m_h5vccTargetScreen == h5vccTargetScreen)
+        return;
+    m_h5vccTargetScreen = h5vccTargetScreen;
+    noteLayerSurfacePropertyChanged();
+}
+#endif
 
 const gfx::Transform& LayerImpl::transform() const
 {

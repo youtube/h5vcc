@@ -134,6 +134,7 @@
         'audio/scoped_loop_observer.h',
         'audio/shell_wav_test_probe.cc',
         'audio/shell_wav_test_probe.h',
+        'audio/shell_audio_sink.cc',
         'audio/shell_audio_sink.h',
         'audio/simple_sources.cc',
         'audio/simple_sources.h',
@@ -238,6 +239,8 @@
         'base/pipeline_status.h',
         'base/ranges.cc',
         'base/ranges.h',
+        'base/sample_format.cc',
+        'base/sample_format.h',
         'base/seekable_buffer.cc',
         'base/seekable_buffer.h',
         'base/serial_runner.cc',
@@ -246,9 +249,10 @@
         'base/shell_buffer_factory.h',
         'base/shell_data_source_reader.cc',
         'base/shell_data_source_reader.h',
-        'base/shell_filter_graph_log.cc',
-        'base/shell_filter_graph_log.h',
-        'base/shell_filter_graph_log_constants.h',
+        'base/shell_media_platform.cc',
+        'base/shell_media_platform.h',
+        'base/shell_media_statistics.cc',
+        'base/shell_media_statistics.h',
         'base/sinc_resampler.cc',
         'base/sinc_resampler.h',
         'base/stream_parser.cc',
@@ -318,7 +322,11 @@
         'filters/shell_au.cc',
         'filters/shell_au.h',
         'filters/shell_audio_decoder.h',
+        'filters/shell_audio_decoder_impl.cc',
+        'filters/shell_audio_decoder_impl.h',
         'filters/shell_audio_renderer.h',
+        'filters/shell_audio_renderer_impl.cc',
+        'filters/shell_audio_renderer_impl.h',
         'filters/shell_avc_parser.cc',
         'filters/shell_avc_parser.h',
         'filters/shell_demuxer.cc',
@@ -334,6 +342,8 @@
         'filters/shell_rbsp_stream.cc',
         'filters/shell_rbsp_stream.h',
         'filters/shell_video_decoder.h',
+        'filters/shell_video_decoder_impl.cc',
+        'filters/shell_video_decoder_impl.h',
         'filters/source_buffer_stream.cc',
         'filters/source_buffer_stream.h',
         'filters/video_decoder_selector.cc',
@@ -376,6 +386,8 @@
         'video/picture.h',
         'video/video_decode_accelerator.cc',
         'video/video_decode_accelerator.h',
+        'webm/webm_audio_client.cc',
+        'webm/webm_audio_client.h',
         'webm/webm_cluster_parser.cc',
         'webm/webm_cluster_parser.h',
         'webm/webm_constants.h',
@@ -391,6 +403,8 @@
         'webm/webm_stream_parser.h',
         'webm/webm_tracks_parser.cc',
         'webm/webm_tracks_parser.h',
+        'webm/webm_video_client.cc',
+        'webm/webm_video_client.h',
       ],
       'direct_dependent_settings': {
         'include_dirs': [
@@ -436,36 +450,125 @@
             'filters/ffmpeg_h264_to_annex_b_bitstream_converter.h',
             'filters/ffmpeg_video_decoder.cc',
             'filters/ffmpeg_video_decoder.h',
-            'webm/webm_cluster_parser.cc',
-            'webm/webm_cluster_parser.h',
-            'webm/webm_stream_parser.cc',
-            'webm/webm_stream_parser.h',
           ],
         }],
         ['OS == "lb_shell"', {
+          'include_dirs': [
+            '<(DEPTH)/../..', # for our explicit external/ inclusion of headers
+            '<(lbshell_root)/src/platform/<(target_arch)/chromium',
+            '<(lbshell_root)/src/platform/<(target_arch)/lb_shell',
+          ],
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+          ],
           'sources/': [
-          # media is not excluding windows sources automatically.
-          # forcibly exclude them.
-          ['exclude', 'win'],
-          ['exclude', 'audio/audio_device_thread'],
-          ['exclude', 'audio/audio_manager'],
-          # we use hardware mixers
-          ['exclude', 'base/audio_converter'],
-          ['exclude', 'base/audio_renderer_mixer'],
-          ['exclude', 'base/channel_mixer'],
-          # we use our own encryption
-          ['exclude', 'crypto/aes'],
-          # we use our own AudioRendererAlgorithm and Impl
-          ['exclude', 'filters/audio_renderer'],
-          # but re-use various other parts of the stack
-          ['include', 'filters/chunk_demuxer'],
-          # we stream from network only
-          ['exclude', 'filters/file_data_source'],
-          # gpu-based decoding is interesting, perhaps explore further
-          ['exclude', 'filters/gpu'],
-          # avc/aac only (for now)
-          ['exclude', 'filters/opus'],
-         ],
+            ['exclude', 'android'],
+            # media is not excluding windows sources automatically.
+            # forcibly exclude them.
+            ['exclude', 'win'],
+            ['exclude', 'audio/audio_device_thread'],
+            ['exclude', 'audio/audio_input_stream_impl'],
+            ['exclude', 'audio/audio_io.h'],
+            ['exclude', 'audio/audio_input_controller'],
+            ['exclude', 'audio/audio_input_device'],
+            ['exclude', 'audio/audio_manager'],
+            ['exclude', 'audio/audio_manager_base'],
+            ['exclude', 'audio/audio_output_controller'],
+            ['exclude', 'audio/audio_output_device'],
+            ['exclude', 'audio/audio_output_dispatcher'],
+            ['exclude', 'audio/audio_output_dispatcher_impl'],
+            ['exclude', 'audio/audio_output_ipc'],
+            ['exclude', 'audio/audio_output_proxy'],
+            ['exclude', 'audio/audio_output_resampler'],
+            ['exclude', 'audio/cross_process_notification'],
+            ['exclude', 'audio/cross_process_notification_posix'],
+            ['exclude', 'audio/cross_process_notification_win'],
+            ['exclude', 'audio/fake_audio_input_stream'],
+            ['exclude', 'audio/fake_audio_output_stream'],
+            ['exclude', 'audio/ios/audio_manager_ios'],
+            ['exclude', 'audio/linux/alsa_input'],
+            ['exclude', 'audio/linux/alsa_output'],
+            ['exclude', 'audio/linux/alsa_util'],
+            ['exclude', 'audio/linux/alsa_wrapper'],
+            ['exclude', 'audio/linux/audio_manager_linux'],
+            ['exclude', 'audio/linux/cras_input'],
+            ['exclude', 'audio/linux/cras_output'],
+            ['exclude', 'audio/mac/audio_input_mac'],
+            ['exclude', 'audio/mac/audio_low_latency_input_mac'],
+            ['exclude', 'audio/mac/audio_low_latency_output_mac'],
+            ['exclude', 'audio/mac/audio_manager_mac'],
+            ['exclude', 'audio/mac/audio_output_mac'],
+            ['exclude', 'audio/mac/audio_synchronized_mac'],
+            ['exclude', 'audio/mac/audio_unified_mac'],
+            ['exclude', 'audio/openbsd/audio_manager_openbsd'],
+            ['exclude', 'audio/pulse/pulse_output'],
+            ['exclude', 'audio/scoped_loop_observer'],
+            ['exclude', 'audio/simple_sources'],
+            ['exclude', 'audio/virtual_audio_input_stream'],
+            ['exclude', 'audio/virtual_audio_output_stream'],
+            ['exclude', 'audio/win/audio_device_listener_win'],
+            ['exclude', 'audio/win/audio_low_latency_input_win'],
+            ['exclude', 'audio/win/audio_low_latency_output_win'],
+            ['exclude', 'audio/win/audio_manager_win'],
+            ['exclude', 'audio/win/audio_unified_win'],
+            ['exclude', 'audio/win/avrt_wrapper_win'],
+            ['exclude', 'audio/win/device_enumeration_win'],
+            ['exclude', 'audio/win/core_audio_util_win'],
+            ['exclude', 'audio/win/wavein_input_win'],
+            ['exclude', 'audio/win/waveout_output_win'],
+            # we use hardware mixers
+            ['exclude', 'base/audio_converter'],
+            ['exclude', 'base/audio_renderer_mixer'],
+            ['exclude', 'base/channel_mixer'],
+            # we use our own encryption
+            ['exclude', 'crypto/aes'],
+            # we use our own AudioRendererAlgorithm and Impl
+            ['exclude', 'filters/audio_renderer'],
+            # but re-use various other parts of the stack
+            ['include', 'filters/chunk_demuxer'],
+            # we stream from network only
+            ['exclude', 'filters/file_data_source'],
+            # gpu-based decoding is interesting, perhaps explore further
+            ['exclude', 'filters/gpu'],
+            # avc/aac only (for now)
+            ['exclude', 'filters/opus'],
+            ['exclude', 'video/capture/fake_video_capture_device'],
+          ],
+          'conditions': [
+            ['target_arch=="xb1"', {
+              'dependencies' : [
+                '../third_party/modp_b64/modp_b64.gyp:modp_b64',
+                '<(lbshell_root)/build/projects/shell_scheme_handler.gyp:shell_scheme_handler',
+              ],
+              'msvs_settings': {
+                'VCCLCompilerTool': {
+                  'ComponentExtensions': 'true'
+                },
+              },
+            }],
+            ['target_arch=="android" or target_arch=="ps3" or target_arch=="xb1" or target_arch=="xb360"', {
+              'sources': [
+                '<!@(find <(lbshell_root)/src/platform/<(target_arch)/chromium/media -type f)',
+              ],
+            }],
+            ['target_arch=="ps3" or target_arch=="xb1" or target_arch=="xb360"', {
+              'sources/': [
+                # These platforms have their own implementations.
+                ['exclude', 'filters/shell_audio_decoder_impl'],
+                ['exclude', 'filters/shell_audio_renderer_impl'],
+                ['exclude', 'filters/shell_video_decoder_impl'],
+              ]
+            }],
+            ['use_widevine==1', {
+              'sources': [
+                'crypto/shell_widevine_decryptor.cc',
+                'crypto/shell_widevine_decryptor.h',
+              ],
+              'dependencies': [
+                'crypto/widevine.gyp:wvcdm_static',
+              ],
+            }],
+          ],
         }, { # OS != lb_shell
           'dependencies': [
             'yuv_convert',
@@ -900,6 +1003,8 @@
         }],
         ['OS == "lb_shell"', {
           'sources': [
+            'audio/mock_shell_audio_streamer.h',
+            'audio/shell_audio_sink_unittest.cc',
             'base/mock_shell_data_source_reader.h',
             'base/shell_buffer_factory_unittest.cc',
             'filters/shell_mp4_map_unittest.cc',
@@ -936,6 +1041,13 @@
         'base/test_helpers.cc',
         'base/test_helpers.h',
       ],
+      'conditions': [
+        ['OS == "lb_shell"', {
+          'sources/': [
+            ['exclude', 'base/mock_audio_renderer_sink'],
+          ],
+        }],
+      ],
     },
   ],
   'conditions': [
@@ -962,6 +1074,11 @@
           'sources': [
             '<@(shared_memory_support_sources)',
           ],
+          'conditions': [
+            ['OS == "lb_shell"', {
+              'type': 'static_library',
+            }],
+          ],
         },
         {
           'target_name': 'yuv_convert',
@@ -975,7 +1092,7 @@
                 'yuv_convert_simd_x86',
               ],
             }],
-            [ 'target_arch == "arm" or target_arch == "mipsel"', {
+            [ 'target_arch == "arm" or target_arch == "mipsel" or (OS == "lb_shell" and target_arch == "android")', {
               'dependencies': [
                 'yuv_convert_simd_c',
               ],
@@ -1283,9 +1400,9 @@
         },
       ],
     }],
-    ['OS == "android"', {
+    ['OS == "android" or (OS == "lb_shell" and target_arch == "android")', {
       'targets': [
-         {
+        {
           'target_name': 'media_player_jni_headers',
           'type': 'none',
           'variables': {
@@ -1302,6 +1419,10 @@
             'media_player_jni_headers',
           ],
           'sources': [
+            'base/android/java/src/org/chromium/media/AudioFocusBridge.java',
+            'base/android/java/src/org/chromium/media/AudioTrackBridge.java',
+            'base/android/java/src/org/chromium/media/MediaCodecBridge.java',
+            'base/android/java/src/org/chromium/media/MediaDrmBridge.java',
             'base/android/java/src/org/chromium/media/MediaPlayerBridge.java',
             'base/android/java/src/org/chromium/media/MediaPlayerListener.java',
           ],
@@ -1314,6 +1435,14 @@
           'target_name': 'player_android',
           'type': 'static_library',
           'sources': [
+            'base/android/audio_focus_bridge.cc',
+            'base/android/audio_focus_bridge.h',
+            'base/android/audio_track_bridge.cc',
+            'base/android/audio_track_bridge.h',
+            'base/android/media_codec_bridge.cc',
+            'base/android/media_codec_bridge.h',
+            'base/android/media_drm_bridge.cc',
+            'base/android/media_drm_bridge.h',
             'base/android/media_jni_registrar.cc',
             'base/android/media_jni_registrar.h',
             'base/android/media_player_bridge.cc',

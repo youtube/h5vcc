@@ -470,8 +470,17 @@ PassRefPtr<FontData> FontCache::getFontData(const Font& font, int& familyIndex, 
             if (fontSelector)
                 result = fontSelector->getFontData(font.fontDescription(), currFamily->family());
 
+#if !defined(__LB_SHELL__)
+            // This causes issues with CSS font fallbacks for us.
+            // The issue seems to be rooted in the fact that we use the
+            // Skia implementation of FontCache, which never returns NULL.
+            // The result is that even fonts we do not have are treated as
+            // valid, which prevents fallback.
+            // For reference, see the bug report "should attempt to render
+            // text using fallback font from CSS rule."
             if (!result)
                 result = getCachedFontData(font.fontDescription(), currFamily->family());
+#endif
         }
         currFamily = currFamily->next();
     }

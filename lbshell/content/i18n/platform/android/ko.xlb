@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<localizationbundle locale="ko">
+<messages>
+<msg desc="This error message is shown to the user when the software detects that YouTube's servers are repeatedly returning error messages. The message is shown in the center of the TV screen in white text over a dark background." name="UNABLE_TO_CONTACT_YOUTUBE">YouTube에 연결할 수 없습니다.</msg>
+<msg desc="This message is shown to users who are under 13 years of age." name="AGE_RESTRICTED">13세 미만의 어린이는 YouTube를 사용할 수 없습니다.</msg>
+</messages>
+</localizationbundle>

@@ -726,7 +726,7 @@ int OPENSSL_NONPIC_relocated = 0;
 void OPENSSL_cpuid_setup(void) {}
 #endif
 
-#if (defined(_WIN32) || defined(__CYGWIN__)) && defined(_WINDLL)
+#if (defined(_WIN32) || defined(__CYGWIN__)) && defined(_WINDLL) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #ifdef __CYGWIN__
 /* pick DLL_[PROCESS|THREAD]_[ATTACH|DETACH] definitions */
 #include <windows.h>
@@ -771,7 +771,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason,
 	}
 #endif
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__LB_SHELL__)
 #include <tchar.h>
 #include <signal.h>
 #ifdef __WATCOMC__
@@ -921,7 +921,7 @@ void OpenSSLDie(const char *file,int line,const char *assertion)
 #if defined(__LB_SHELL__) && defined(_DEBUG)
 	DEBUG_BREAK();
 #endif
-#if !defined(_WIN32) || defined(__CYGWIN__)
+#if !defined(_WIN32) || defined(__CYGWIN__) || defined(__LB_SHELL__)
 	abort();
 #else
 	/* Win32 abort() customarily shows a dialog, but we just did that... */

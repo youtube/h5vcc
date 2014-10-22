@@ -161,8 +161,6 @@ public:
 
     bool isBeingDispatched() const { return eventPhase(); }
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
     virtual PassRefPtr<Event> cloneFor(HTMLIFrameElement*) const;
 
 protected:

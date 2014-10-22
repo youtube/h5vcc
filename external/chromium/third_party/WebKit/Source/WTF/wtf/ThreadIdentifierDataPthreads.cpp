@@ -36,7 +36,7 @@
 
 #include "Threading.h"
 
-#if OS(ANDROID) || OS(HURD)
+#if OS(ANDROID) || OS(HURD) || defined(__ANDROID__)
 // PTHREAD_KEYS_MAX is not defined in bionic nor in Hurd, so explicitly define it here.
 #define PTHREAD_KEYS_MAX 1024
 #else
@@ -50,7 +50,14 @@ std::map<ThreadIdentifier, ThreadIdentifierData*> ThreadIdentifierData::local_ha
 Mutex ThreadIdentifierData::lock_local_handle;
 #endif
 
+#if defined(PTW32_VERSION)
+// pthreads-win32 uses a pointer for pthread_key_t, meaning you can't go
+// assigning any old number you want to it without casting. NULL is a more
+// reasonable uninitialized value.
+pthread_key_t ThreadIdentifierData::m_key = NULL;
+#else
 pthread_key_t ThreadIdentifierData::m_key = PTHREAD_KEYS_MAX;
+#endif
 
 void threadDidExit(ThreadIdentifier);
 
@@ -67,7 +74,11 @@ void ThreadIdentifierData::initializeOnce()
 
 ThreadIdentifier ThreadIdentifierData::identifier()
 {
+#if defined(PTW32_VERSION)
+    ASSERT(m_key != NULL);
+#else
     ASSERT(m_key != PTHREAD_KEYS_MAX);
+#endif
     ThreadIdentifierData* threadIdentifierData = static_cast<ThreadIdentifierData*>(pthread_getspecific(m_key));
 
     return threadIdentifierData ? threadIdentifierData->m_identifier : 0;

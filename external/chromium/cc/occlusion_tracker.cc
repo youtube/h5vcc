@@ -17,6 +17,19 @@ using namespace std;
 
 namespace cc {
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+template<typename LayerType>
+static bool disableOcclusionForLayer(const LayerIteratorPosition<LayerType>& layerIterator) {
+    LayerType* renderTarget = layerIterator.targetRenderSurfaceLayer;
+    LayerType* currentLayer = layerIterator.currentLayer;
+
+    WebKit::H5VCCTargetScreen target_screen = currentLayer->useParentBackfaceVisibility() ?
+        currentLayer->parent()->h5vccTargetScreen() : currentLayer->h5vccTargetScreen();
+
+    return target_screen != renderTarget->h5vccTargetScreen();
+}
+#endif
+
 template<typename LayerType, typename RenderSurfaceType>
 OcclusionTrackerBase<LayerType, RenderSurfaceType>::OcclusionTrackerBase(gfx::Rect screenSpaceClipRect, bool recordMetricsForFrame)
     : m_screenSpaceClipRect(screenSpaceClipRect)
@@ -36,6 +49,16 @@ void OcclusionTrackerBase<LayerType, RenderSurfaceType>::enterLayer(const LayerI
 {
     LayerType* renderTarget = layerIterator.targetRenderSurfaceLayer;
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    if (disableOcclusionForLayer(layerIterator)) {
+        // Push a new StackObject. This will clear all accumulated occlusion on
+        // the current renderTarget, and prevent occlusion calculated for this
+        // layer from affecting others layers on the current renderTarget
+        m_stack.push_back(StackObject(renderTarget));
+        return;
+    }
+#endif
+
     if (layerIterator.representsItself)
         enterRenderTarget(renderTarget);
     else if (layerIterator.representsTargetRenderSurface)
@@ -46,6 +69,15 @@ template<typename LayerType, typename RenderSurfaceType>
 void OcclusionTrackerBase<LayerType, RenderSurfaceType>::leaveLayer(const LayerIteratorPosition<LayerType>& layerIterator)
 {
     LayerType* renderTarget = layerIterator.targetRenderSurfaceLayer;
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    if (disableOcclusionForLayer(layerIterator)) {
+        // Occlusion was disabled for this layer. Pop the stack to restore the
+        // occlusion state from before this layer was encountered
+        m_stack.pop_back();
+        return;
+    }
+#endif
 
     if (layerIterator.representsItself)
         markOccludedBehindLayer(layerIterator.currentLayer);

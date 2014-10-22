@@ -6,7 +6,7 @@
 #define UI_COMPOSITOR_COMPOSITOR_EXPORT_H_
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(COMPOSITOR_IMPLEMENTATION)
 #define COMPOSITOR_EXPORT __declspec(dllexport)

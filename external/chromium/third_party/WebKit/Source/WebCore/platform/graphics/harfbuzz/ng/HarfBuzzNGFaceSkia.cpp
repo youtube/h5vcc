@@ -144,7 +144,7 @@ static hb_font_funcs_t* harfbuzzSkiaGetFontFuncs()
 
 static hb_blob_t* harfbuzzSkiaGetTable(hb_face_t* face, hb_tag_t tag, void* userData)
 {
-    SkFontID uniqueID = static_cast<SkFontID>(reinterpret_cast<uint64_t>(userData));
+    SkFontID uniqueID = static_cast<SkFontID>(reinterpret_cast<uintptr_t>(userData));
 
     const size_t tableSize = SkFontHost::GetTableSize(uniqueID, tag);
     if (!tableSize)

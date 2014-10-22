@@ -39,7 +39,6 @@
 #include "Document.h"
 #include "StyleCachedShader.h"
 #include "StylePendingShader.h"
-#include "WebCoreMemoryInstrumentation.h"
 
 namespace WebCore {
 
@@ -81,12 +80,6 @@ StyleShader* WebKitCSSShaderValue::cachedOrPendingShader()
 String WebKitCSSShaderValue::customCssText() const
 {
     return "url(" + quoteCSSURLIfNeeded(m_url) + ")";
-}
-
-void WebKitCSSShaderValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_url);
 }
     
 } // namespace WebCore

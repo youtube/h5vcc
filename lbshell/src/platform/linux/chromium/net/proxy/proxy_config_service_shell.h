@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef NET_PROXY_PROXY_CONFIG_SERVICE_SHELL_H_
-#define NET_PROXY_PROXY_CONFIG_SERVICE_SHELL_H_
+#ifndef SRC_PLATFORM_LINUX_CHROMIUM_NET_PROXY_PROXY_CONFIG_SERVICE_SHELL_H_
+#define SRC_PLATFORM_LINUX_CHROMIUM_NET_PROXY_PROXY_CONFIG_SERVICE_SHELL_H_
 
 #include "net/proxy/polling_proxy_config_service.h"
 
 namespace net {
-  class ProxyConfigServiceShell : public PollingProxyConfigService {
-   public:
-    ProxyConfigServiceShell();
-    virtual ~ProxyConfigServiceShell();
-    static void GetCurrentProxyConfig(ProxyConfig* config);
-  };
-}
 
-#endif  // NET_PROXY_PROXY_CONFIG_SERVICE_SHELL_H_
+class NET_EXPORT ProxyConfigServiceShell : public PollingProxyConfigService {
+ public:
+  ProxyConfigServiceShell();
+  virtual ~ProxyConfigServiceShell();
+  static void GetCurrentProxyConfig(ProxyConfig* config);
+};
+
+}  // namespace net
+
+#endif  // SRC_PLATFORM_LINUX_CHROMIUM_NET_PROXY_PROXY_CONFIG_SERVICE_SHELL_H_

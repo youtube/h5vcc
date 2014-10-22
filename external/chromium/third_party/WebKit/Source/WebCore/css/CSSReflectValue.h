@@ -51,8 +51,6 @@ public:
 
     void addSubresourceStyleURLs(ListHashSet<KURL>&, const StyleSheetContents*) const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     CSSReflectValue(CSSReflectionDirection direction, PassRefPtr<CSSPrimitiveValue> offset, PassRefPtr<CSSValue> mask)
         : CSSValue(ReflectClass)

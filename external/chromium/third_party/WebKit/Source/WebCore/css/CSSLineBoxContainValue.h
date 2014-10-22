@@ -50,8 +50,6 @@ public:
 
     LineBoxContain value() const { return m_value; }
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     LineBoxContain m_value;
 

@@ -91,12 +91,6 @@ WebMediaPlayer* WebMediaPlayerClientImpl::mediaPlayer() const
 
 WebMediaPlayerClientImpl::~WebMediaPlayerClientImpl()
 {
-#ifdef __LB_SHELL__
-    // In lb_shell, m_webMediaPlayer depends on m_videoLayer so here we destroy
-    // m_webMediaPlayer manually to make sure it is destroyed before
-    // m_videoLayer.
-    m_webMediaPlayer.clear();
-#endif
 #if USE(ACCELERATED_COMPOSITING)
     if (m_videoFrameProviderClient)
         m_videoFrameProviderClient->stopUsingProvider();
@@ -452,6 +446,13 @@ bool WebMediaPlayerClientImpl::sourceAbort(const String& id)
         return false;
 
     return m_webMediaPlayer->sourceAbort(id);
+}
+
+double WebMediaPlayerClientImpl::sourceGetDuration() const
+{
+    if (m_webMediaPlayer)
+        return m_webMediaPlayer->sourceGetDuration();
+    return 0.0;
 }
 
 void WebMediaPlayerClientImpl::sourceSetDuration(double duration)

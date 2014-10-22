@@ -406,7 +406,8 @@ public:
 
     // shell-specific optimizations
 #if defined(__LB_SHELL__)
-    virtual void texSubImageSub(int dstOffX,
+    virtual void texSubImageSub(WGC3Denum format,
+                                int dstOffX,
                                 int dstOffY,
                                 int dstWidth,
                                 int dstHeight,
@@ -414,6 +415,13 @@ public:
                                 int srcY,
                                 int srcWidth,
                                 const void* image) = 0;
+#endif
+
+#if defined(__LB_WIIU__)
+    // This method can be called to redirect draw output from one surface to
+    // another.  On WiiU, we keep two surfaces around (0 and 1) so that we can
+    // render some items to the TV and some to the GamePad.
+    virtual void setOutputSurfaceLBSHELL(int surface_id) = 0;
 #endif
 
     virtual void setContextLostCallback(WebGraphicsContextLostCallback* callback) { }
@@ -484,8 +492,10 @@ public:
     virtual void asyncTexSubImage2DCHROMIUM(WGC3Denum target, WGC3Dint level, WGC3Dint xoffset, WGC3Dint yoffset, WGC3Dsizei width, WGC3Dsizei height, WGC3Denum format, WGC3Denum type, const void* pixels) { }
 
     GrGLInterface* createGrGLInterface();
-
+#if !defined(__LB_SHELL__)
+// Allow LBWebGraphicsContextProxy to call this.
 protected:
+#endif
     virtual GrGLInterface* onCreateGrGLInterface() { return 0; }
 
 };

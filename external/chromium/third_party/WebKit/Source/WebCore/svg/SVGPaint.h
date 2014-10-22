@@ -95,8 +95,6 @@ public:
 
     PassRefPtr<SVGPaint> cloneForCSSOM() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     friend class CSSComputedStyleDeclaration;
 

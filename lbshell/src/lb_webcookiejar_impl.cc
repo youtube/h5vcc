@@ -25,7 +25,8 @@ using WebKit::WebURL;
 void LBWebCookieJarImpl::setCookie(const WebURL& url,
                                    const WebURL& first_party_for_cookies,
                                    const WebString& cookie) {
-  LBResourceLoaderBridge::SetCookie(url, first_party_for_cookies, cookie.utf8());
+  LBResourceLoaderBridge::SetCookie(
+      url, first_party_for_cookies, cookie.utf8());
 }
 
 WebString LBWebCookieJarImpl::cookies(const WebURL& url,

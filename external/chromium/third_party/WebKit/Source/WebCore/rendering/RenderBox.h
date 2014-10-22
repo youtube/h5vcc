@@ -47,7 +47,13 @@ public:
 
     // hasAutoZIndex only returns true if the element is positioned or a flex-item since
     // position:static elements that are not flex-items get their z-index coerced to auto.
-    virtual bool requiresLayer() const OVERRIDE { return isRoot() || isPositioned() || createsGroup() || hasClipPath() || hasOverflowClip() || hasTransform() || hasHiddenBackface() || hasReflection() || style()->specifiesColumns() || !style()->hasAutoZIndex(); }
+    virtual bool requiresLayer() const OVERRIDE {
+      bool requires = isRoot() || isPositioned() || createsGroup() || hasClipPath() || hasOverflowClip() || hasTransform() || hasHiddenBackface() || hasReflection() || style()->specifiesColumns() || !style()->hasAutoZIndex();
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+      requires |= isH5vccTargetScreenParentDifferent();
+#endif
+      return requires;
+    }
 
     // Use this with caution! No type checking is done!
     RenderBox* firstChildBox() const;
@@ -570,9 +576,6 @@ public:
     }
 
     bool hasSameDirectionAs(const RenderBox* object) const { return style()->direction() == object->style()->direction(); }
-
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-    static void reportStaticMembersMemoryUsage(MemoryInstrumentation*);
 
 #if ENABLE(CSS_EXCLUSIONS)
     ExclusionShapeOutsideInfo* exclusionShapeOutsideInfo() const

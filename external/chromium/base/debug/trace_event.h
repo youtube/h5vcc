@@ -616,6 +616,14 @@
       } \
     } while (0)
 
+#if defined(__LB_SHELL__FOR_RELEASE__)
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED(category, name, ...) \
+    do {} while (false)
+
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID(phase, category, name, id, flags, \
+                                         ...) \
+    do {} while (false)
+#else  // defined(__LB_SHELL__FOR_RELEASE__)
 // Implementation detail: internal macro to create static category and add begin
 // event if the category is enabled. Also adds the end event when the scope
 // ends.
@@ -649,6 +657,7 @@
             ##__VA_ARGS__); \
       } \
     } while (0)
+#endif  // defined(__LB_SHELL__FOR_RELEASE__)
 
 // Notes regarding the following definitions:
 // New values can be added and propagated to third party libraries, but existing

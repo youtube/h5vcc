@@ -131,12 +131,14 @@ static WebPopupType convertPopupType(PopupContainer::PopupType type)
     }
 }
 
+#if HAVE(ACCESSIBILITY)
 // Converts a WebCore::AXObjectCache::AXNotification to a WebKit::WebAccessibilityNotification
 static WebAccessibilityNotification toWebAccessibilityNotification(AXObjectCache::AXNotification notification)
 {
     // These enums have the same values; enforced in AssertMatchingEnums.cpp.
     return static_cast<WebAccessibilityNotification>(notification);
 }
+#endif
 
 ChromeClientImpl::ChromeClientImpl(WebViewImpl* webView)
     : m_webView(webView)
@@ -904,12 +906,14 @@ void ChromeClientImpl::getPopupMenuInfo(PopupContainer* popupContainer,
     info->rightAligned = popupContainer->menuStyle().textDirection() == RTL;
 }
 
+#if HAVE(ACCESSIBILITY)
 void ChromeClientImpl::postAccessibilityNotification(AccessibilityObject* obj, AXObjectCache::AXNotification notification)
 {
     // Alert assistive technology about the accessibility object notification.
     if (obj)
         m_webView->client()->postAccessibilityNotification(WebAccessibilityObject(obj), toWebAccessibilityNotification(notification));
 }
+#endif
 
 WebKit::WebScreenInfo ChromeClientImpl::screenInfo()
 {

@@ -31,10 +31,8 @@
 #include "ImageObserver.h"
 #include "IntRect.h"
 #include "MIMETypeRegistry.h"
-#include "PlatformMemoryInstrumentation.h"
 #include "Timer.h"
 #include <wtf/CurrentTime.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -571,27 +569,6 @@ bool BitmapImage::mayFillWithSolidColor()
 Color BitmapImage::solidColor() const
 {
     return m_solidColor;
-}
-
-void BitmapImage::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-    Image::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_source);
-    info.addMember(m_frameTimer);
-    info.addMember(m_frames);
-}
-
-void FrameData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-#if OS(WINCE) && !PLATFORM(QT)
-    info.addRawBuffer(m_frame.get(), m_frameBytes);
-#elif USE(SKIA)
-    info.addMember(m_frame);
-#else
-    info.addRawBuffer(m_frame, m_frameBytes);
-#endif
 }
 
 }

@@ -7,6 +7,9 @@
 
 #include "base/memory/scoped_ptr.h"
 #include "cc/cc_export.h"
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+#include "third_party/WebKit/Source/Platform/chromium/public/H5VCCTargetScreen.h"
+#endif
 #include "ui/gfx/rect.h"
 #include "ui/gfx/transform.h"
 
@@ -29,6 +32,15 @@ class CC_EXPORT SharedQuadState {
               const gfx::Rect& clip_rect,
               bool is_clipped,
               float opacity);
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+  void SetAll(const gfx::Transform& content_to_target_transform,
+              const gfx::Rect& visible_content_rect,
+              const gfx::Rect& clipped_rect_in_target,
+              const gfx::Rect& clip_rect,
+              bool is_clipped,
+              float opacity,
+              WebKit::H5VCCTargetScreen h5vcc_target_screen);
+#endif
 
   // Transforms from quad's original content space to its target content space.
   gfx::Transform content_to_target_transform;
@@ -38,6 +50,9 @@ class CC_EXPORT SharedQuadState {
   gfx::Rect clip_rect;
   bool is_clipped;
   float opacity;
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+  WebKit::H5VCCTargetScreen h5vcc_target_screen;
+#endif
 
  private:
   SharedQuadState();

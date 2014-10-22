@@ -78,7 +78,6 @@ public:
     // FIXME: Support these methods for JSC. See bug 90358.
     static void visitExternalStrings(ExternalStringVisitor*) { }
     static void visitExternalArrays(ExternalArrayVisitor*) { }
-    static void collectBindingMemoryInfo(MemoryInstrumentation*) { }
     static size_t profilerSnapshotsSize() { return 0; }
 };
 

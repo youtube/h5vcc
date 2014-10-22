@@ -112,8 +112,6 @@ public:
 
     PassRefPtr<Node> cloneNode(bool, ExceptionCode&);
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 private:
     explicit ShadowRoot(Document*);
     virtual ~ShadowRoot();

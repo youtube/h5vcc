@@ -26,6 +26,8 @@
 #ifndef SpeechRecognitionClient_h
 #define SpeechRecognitionClient_h
 
+#include "config.h"
+
 #if ENABLE(SCRIPTED_SPEECH)
 
 #include <wtf/text/WTFString.h>
@@ -41,6 +43,8 @@ public:
     virtual void start(SpeechRecognition*, const SpeechGrammarList*, const String& lang, bool continuous, bool interimResults, unsigned long maxAlternatives) = 0;
     virtual void stop(SpeechRecognition*) = 0;
     virtual void abort(SpeechRecognition*) = 0;
+    virtual void setRecognitionInstance(SpeechRecognition*) = 0;
+    virtual void removeRecognitionInstance(SpeechRecognition*) = 0;
 
     virtual ~SpeechRecognitionClient() { }
 };

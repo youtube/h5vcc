@@ -15,8 +15,8 @@
  */
 // Constants useful for LB_Shell project.
 
-#ifndef SRC_LB_SHELL_CONSTANTS_H_
-#define SRC_LB_SHELL_CONSTANTS_H_
+#ifndef SRC_PLATFORM_LINUX_LB_SHELL_LB_SHELL_CONSTANTS_H_
+#define SRC_PLATFORM_LINUX_LB_SHELL_LB_SHELL_CONSTANTS_H_
 
 #include <stdint.h>
 
@@ -26,6 +26,7 @@
 // Main Thread/WebKit
 const int kWebKitThreadStackSize = 1024 * 1024;
 const int kWebKitThreadPriority = 3;
+const int kWebKitThreadAffinity = 0;  // Unused dummy.
 
 // For IO
 const int kIOThreadStackSize = 256 * 1024;
@@ -37,6 +38,10 @@ const int kObjectWatcherThreadStackSize = 4 * 1024;
 const int kObjectWatcherThreadPriority = 1;
 
 // LBWebViewHost thread
+// Note:  As the view host thread is the main thread, and we cannot
+//        set the Linux main thread stack size at compile time, we never
+//        explicitly set the main thread stack size to this value, we
+//        only double check via assert that it is at least this size.
 const int kViewHostThreadStackSize = 32 * 1024;
 const int kViewHostThreadPriority = 4;
 
@@ -44,18 +49,19 @@ const int kViewHostThreadPriority = 4;
 const int kSaveGameDaemonStackSize = 128 * 1024;
 const int kSaveGameDaemonPriority = 5;
 
-const int kAppCountersStackSize = 64 * 1024;
-
 // Chrome Compositor Thread
-const int kCompositorThreadAffinity = 0; // Unused dummy.
+const int kCompositorThreadAffinity = 0;  // Unused dummy.
 const int kCompositorThreadStackSize = 256 * 1024;
 const int kCompositorThreadPriority = 2;
 
 // Network I/O threads
-const int kNetworkIOThreadAffinity = -1; // Unused
+const int kNetworkIOThreadAffinity = -1;  // Unused
 
 // Alignment and size for socket receive buffer.
 static const uint32_t kNetworkIOBufferAlign = 16;
 static const uint32_t kNetworkReceiveBufferSize = 16 * 1024;
 
-#endif  // SRC_LB_SHELL_CONSTANTS_H_
+// Unit tests
+const int kUnitTestMainThreadStackSize = 1024 * 1024;
+
+#endif  // SRC_PLATFORM_LINUX_LB_SHELL_LB_SHELL_CONSTANTS_H_

@@ -1,11 +1,25 @@
 {
   'variables': {
-    'use_widevine%' : 1,
+    # Enable Widevine by default for any build which has the source.
+    'use_widevine%' : '<!(test -d ../../../external/cdm && echo 1 || echo 0)',
+    'posix_emulation_target_type%' : 'static_library',
   },
   'target_defaults': {
     'defines' : [
       '__LB_SHELL__',
       '__LB_SHELL_USE_WIDEVINE__=<(use_widevine)',
+    ],
+    'conditions' : [
+      ['js_engine == "jsc"', {
+        'defines' : [
+          '__LB_SHELL_USE_JSC__',
+        ],
+      }],
+      ['js_engine == "v8"', {
+        'defines' : [
+          '__LB_SHELL_USE_V8__',
+        ],
+      }],
     ],
     # These are mix-in defines for various configurations.
     'configurations' : {

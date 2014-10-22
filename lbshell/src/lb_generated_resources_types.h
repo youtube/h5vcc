@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-#ifndef _LB_GENERATED_RESOURCES_TYPES_
-#define _LB_GENERATED_RESOURCES_TYPES_
+#ifndef SRC_LB_GENERATED_RESOURCES_TYPES_H_
+#define SRC_LB_GENERATED_RESOURCES_TYPES_H_
 
+#include <map>
 #include <string>
 
 struct FileContents {
   FileContents() {}
-  FileContents(const char *data, int size)
+  FileContents(const unsigned char *data, int size)
       : data(data), size(size) {}
 
-  const char *data;
+  const unsigned char *data;
   int size;
 };
 
 typedef std::map<std::string, FileContents> GeneratedResourceMap;
 
- #endif  // _LB_GENERATED_RESOURCES_TYPES_
+#endif  // SRC_LB_GENERATED_RESOURCES_TYPES_H_

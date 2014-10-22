@@ -35,7 +35,6 @@
 #include "CSSParser.h"
 #include "CSSRuleList.h"
 #include "StyleRule.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(CSS_REGIONS)
@@ -109,15 +108,6 @@ void WebKitCSSRegionRule::reattach(StyleRuleBase* rule)
         if (m_childRuleCSSOMWrappers[i])
             m_childRuleCSSOMWrappers[i]->reattach(m_regionRule->childRules()[i].get());
     }
-}
-
-void WebKitCSSRegionRule::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSRule::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_regionRule);
-    info.addMember(m_childRuleCSSOMWrappers);
-    info.addMember(m_ruleListCSSOMWrapper);
 }
 
 } // namespace WebCore

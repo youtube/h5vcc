@@ -38,7 +38,7 @@
 #include <wtf/text/WTFString.h>
 
 // FIXME: Find a better way to avoid the name confliction for NO_ERROR.
-#if ((PLATFORM(CHROMIUM) && OS(WINDOWS)) || PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS)))
+#if ((PLATFORM(CHROMIUM) && OS(WINDOWS)) || PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS)) || defined(__LB_XB1__) || defined(__LB_XB360__))
 #undef NO_ERROR
 #elif PLATFORM(GTK)
 // This define is from the X11 headers, but it's used below, so we must undefine it.

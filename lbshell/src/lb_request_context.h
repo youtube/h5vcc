@@ -16,8 +16,8 @@
 // This file is a fork of:
 // external/chromium/webkit/tools/test_shell/test_shell_request_context.h
 
-#ifndef _LB_REQUEST_CONTEXT_H_
-#define _LB_REQUEST_CONTEXT_H_
+#ifndef SRC_LB_REQUEST_CONTEXT_H_
+#define SRC_LB_REQUEST_CONTEXT_H_
 
 #include "base/threading/thread.h"
 #include "net/cookies/cookie_monster.h"
@@ -45,12 +45,20 @@ class LBRequestContext : public net::URLRequestContext {
   webkit_blob::BlobStorageController* blob_storage_controller() const {
     return blob_storage_controller_.get();
   }
+
+  // Delete and re-initialize the net::CookieMonster. This has the effect of
+  // clearing all cookies in memory, but has no effect on cookies already
+  // flushed to storage.
+  void ResetCookieMonster();
+
  private:
   void Init(net::CookieMonster::PersistentCookieStore *persistent_cookie_store,
             bool no_proxy);
 
   net::URLRequestContextStorage storage_;
   scoped_ptr<webkit_blob::BlobStorageController> blob_storage_controller_;
+  scoped_refptr<net::CookieMonster::PersistentCookieStore>
+      persistent_cookie_store_;
 };
 
-#endif  // _LB_REQUEST_CONTEXT_H_
+#endif  // SRC_LB_REQUEST_CONTEXT_H_

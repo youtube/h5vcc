@@ -198,8 +198,6 @@ public:
         }
     }
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     NodeListsNodeData()
         : m_childNodeList(0)
@@ -363,8 +361,6 @@ public:
         m_microDataTokenLists->m_itemType->setValue(value);
     }
 #endif
-
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
 
 protected:
     short m_tabIndex;

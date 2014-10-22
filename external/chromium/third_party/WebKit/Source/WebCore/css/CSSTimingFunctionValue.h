@@ -40,8 +40,6 @@ public:
 
     String customCssText() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     CSSLinearTimingFunctionValue()
         : CSSValue(LinearTimingFunctionClass)
@@ -62,8 +60,6 @@ public:
     double y1() const { return m_y1; }
     double x2() const { return m_x2; }
     double y2() const { return m_y2; }
-
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     CSSCubicBezierTimingFunctionValue(double x1, double y1, double x2, double y2)
@@ -92,8 +88,6 @@ public:
     bool stepAtStart() const { return m_stepAtStart; }
 
     String customCssText() const;
-
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     CSSStepsTimingFunctionValue(int steps, bool stepAtStart)

@@ -31,11 +31,13 @@ class BitmapPlatformDevice::BitmapPlatformDeviceData :
   typedef cairo_t* PlatformContext;
 #endif
 
+#if !defined(__LB_SHELL__)
 #if defined(WIN32) || defined(__APPLE__)
   explicit BitmapPlatformDeviceData(PlatformContext bitmap);
 #elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__sun)
   explicit BitmapPlatformDeviceData(cairo_surface_t* surface);
 #endif
+#endif // !defined(__LB_SHELL__)
 
 #if defined(WIN32)
   // Create/destroy hdc_, which is the memory DC for our bitmap data.
@@ -74,12 +76,14 @@ class BitmapPlatformDevice::BitmapPlatformDeviceData :
   // Lazily-created graphics context used to draw into the bitmap.
   PlatformContext bitmap_context_;
 
+#if !defined(__LB_SHELL__)
 #if defined(WIN32)
   // Lazily-created DC used to draw into the bitmap, see GetBitmapDC().
   HDC hdc_;
 #elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__sun)
   cairo_surface_t *const surface_;
 #endif
+#endif //!defined(__LB_SHELL__)
 
   // True when there is a transform or clip that has not been set to the
   // context.  The context is retrieved for every text operation, and the

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<localizationbundle locale="vi">
+<messages>
+<msg desc="This error message is shown to the user when the software detects that YouTube's servers are repeatedly returning error messages. The message is shown in the center of the TV screen in white text over a dark background." name="UNABLE_TO_CONTACT_YOUTUBE">Không thể kết nối với YouTube.</msg>
+<msg desc="This message is shown to users who are under 13 years of age." name="AGE_RESTRICTED">YouTube không dành cho trẻ em dưới 13 tuổi sử dụng.</msg>
+</messages>
+</localizationbundle>

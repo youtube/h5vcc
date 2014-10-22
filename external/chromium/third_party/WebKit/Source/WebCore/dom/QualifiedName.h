@@ -26,6 +26,12 @@
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
 
+// LB_SHELL: Moved these macros to the .h to ensure it's consistently defined
+// whenever the header is used.
+#ifndef QNAME_DEFAULT_CONSTRUCTOR
+#define QNAME_DEFAULT_CONSTRUCTOR 1
+#endif
+
 namespace WebCore {
 
 struct QualifiedNameComponents {
@@ -51,8 +57,6 @@ public:
         const AtomicString m_localName;
         const AtomicString m_namespace;
         mutable AtomicString m_localNameUpper;
-
-        void reportMemoryUsage(MemoryObjectInfo*) const;
 
     private:
         QualifiedNameImpl(const AtomicString& prefix, const AtomicString& localName, const AtomicString& namespaceURI)
@@ -97,8 +101,6 @@ public:
     
     // Init routine for globals
     static void init();
-    
-    void reportMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     void ref() const { m_impl->ref(); }
@@ -109,11 +111,7 @@ private:
     QualifiedNameImpl* m_impl;
 };
 
-#ifndef WEBCORE_QUALIFIEDNAME_HIDE_GLOBALS
-extern const QualifiedName anyName;
-inline const QualifiedName& anyQName() { return anyName; }
-#endif
-
+const QualifiedName& anyQName();
 const QualifiedName& nullQName();
 
 inline bool operator==(const AtomicString& a, const QualifiedName& q) { return a == q.localName(); }

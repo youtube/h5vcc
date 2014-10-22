@@ -6,7 +6,7 @@
 #define WEBKIT_GPU_WEBKIT_GPU_EXPORT_H_
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(WEBKIT_GPU_IMPLEMENTATION)
 #define WEBKIT_GPU_EXPORT __declspec(dllexport)

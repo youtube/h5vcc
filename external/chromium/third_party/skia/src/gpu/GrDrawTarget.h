@@ -856,9 +856,7 @@ public:
 
     static void VertexLayoutUnitTest();
 
-#if !defined(__LB_BLUE__)
 protected:
-#endif
     /**
      * Optimizations for blending / coverage to be applied based on the current
      * state.

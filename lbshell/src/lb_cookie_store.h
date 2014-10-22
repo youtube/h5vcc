@@ -16,8 +16,8 @@
 // Implements a cookie store on top of LBSavegameSyncer and sqlite.
 // This is similar in concept to SQLitePersistentCookieStore, but much simpler.
 
-#ifndef _LB_COOKIE_STORE_H_
-#define _LB_COOKIE_STORE_H_
+#ifndef SRC_LB_COOKIE_STORE_H_
+#define SRC_LB_COOKIE_STORE_H_
 
 #include <string>
 #include <vector>
@@ -26,7 +26,10 @@
 #include "base/synchronization/lock.h"
 #include "net/cookies/cookie_monster.h"
 
-class LBCookieStore : public net::CookieMonster::PersistentCookieStore {
+#include "lb_shell_export.h"
+
+class LB_SHELL_EXPORT LBCookieStore
+    : public net::CookieMonster::PersistentCookieStore {
  public:
   LBCookieStore();
   virtual ~LBCookieStore();
@@ -73,6 +76,8 @@ class LBCookieStore : public net::CookieMonster::PersistentCookieStore {
   // Flushes the store and posts |callback| when complete.
   virtual void Flush(const base::Closure& callback) OVERRIDE;
 
+  // Reinitialize the tables for cookies in the savegame database
+  static void Reinitialize();
 
  private:
   static void Init();
@@ -81,4 +86,4 @@ class LBCookieStore : public net::CookieMonster::PersistentCookieStore {
   static bool initialized_;
 };
 
-#endif
+#endif  // SRC_LB_COOKIE_STORE_H_

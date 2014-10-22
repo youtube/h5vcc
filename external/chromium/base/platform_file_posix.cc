@@ -15,7 +15,7 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/utf_string_conversions.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include "base/os_compat_android.h"
 #endif
 
@@ -27,7 +27,8 @@ COMPILE_ASSERT(PLATFORM_FILE_FROM_BEGIN   == SEEK_SET &&
                PLATFORM_FILE_FROM_END     == SEEK_END, whence_matches_system);
 
 #if defined(OS_BSD) || defined(OS_MACOSX) || defined(__LB_WIIU__) || \
-    defined(__LB_PS3__)
+    defined(__LB_PS3__) || defined(__LB_XB1__) || defined(__LB_PS4__) || \
+    defined(__LB_XB360__)
 typedef struct stat stat_wrapper_t;
 static int CallFstat(int fd, stat_wrapper_t *sb) {
   base::ThreadRestrictions::AssertIOAllowed();
@@ -85,8 +86,12 @@ PlatformFile CreatePlatformFileUnsafe(const FilePath& name,
     NOTREACHED();
   }
 
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+  open_flags |= O_BINARY;
+#else
   if (flags & PLATFORM_FILE_TERMINAL_DEVICE)
     open_flags |= O_NOCTTY | O_NDELAY;
+#endif
 
   COMPILE_ASSERT(O_RDONLY == 0, O_RDONLY_must_equal_zero);
 
@@ -116,9 +121,11 @@ PlatformFile CreatePlatformFileUnsafe(const FilePath& name,
       (flags & (PLATFORM_FILE_CREATE_ALWAYS | PLATFORM_FILE_CREATE)))
     *created = true;
 
+#if !defined (__LB_SHELL__)
   if ((descriptor >= 0) && (flags & PLATFORM_FILE_DELETE_ON_CLOSE)) {
     unlink(name.value().c_str());
   }
+#endif
 
   if (error) {
     if (descriptor >= 0)
@@ -163,6 +170,10 @@ PlatformFile CreatePlatformFileUnsafe(const FilePath& name,
 
 bool ClosePlatformFile(PlatformFile file) {
   base::ThreadRestrictions::AssertIOAllowed();
+  if (file < 0) {
+    errno = EINVAL;
+    return false;
+  }
   return !HANDLE_EINTR(close(file));
 }
 
@@ -302,7 +313,8 @@ bool FlushPlatformFile(PlatformFile file) {
   return !HANDLE_EINTR(fsync(file));
 }
 
-#if !defined(__LB_WIIU__) && !defined(__LB_PS3__)
+#if !defined(__LB_WIIU__) && !defined(__LB_PS3__) && !defined(__LB_XB1__) && \
+    !defined(__LB_XB360__)
 bool TouchPlatformFile(PlatformFile file, const base::Time& last_access_time,
                        const base::Time& last_modified_time) {
   base::ThreadRestrictions::AssertIOAllowed();
@@ -317,7 +329,7 @@ bool TouchPlatformFile(PlatformFile file, const base::Time& last_access_time,
 #endif
 
 bool GetPlatformFileInfo(PlatformFile file, PlatformFileInfo* info) {
-  if (!info)
+  if (!info || file < 0)
     return false;
 
   stat_wrapper_t file_info;

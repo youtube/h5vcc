@@ -6,7 +6,7 @@
 #define WEBKIT_STORAGE_STORAGE_EXPORT_H_
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(WEBKIT_STORAGE_IMPLEMENTATION)
 #define WEBKIT_STORAGE_EXPORT __declspec(dllexport)

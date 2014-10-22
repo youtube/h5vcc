@@ -78,7 +78,9 @@ Cleanly installed Solaris can use this #define.
 #include <time.h>
 
 /* include system headers */
-#ifdef U_WINDOWS
+#if defined(__LB_XB1__)
+#   include "wintz.h"
+#elif defined(U_WINDOWS)
 #   define WIN32_LEAN_AND_MEAN
 #   define VC_EXTRALEAN
 #   define NOUSER
@@ -618,7 +620,7 @@ uprv_tzset()
 U_CAPI int32_t U_EXPORT2
 uprv_timezone()
 {
-#ifdef U_TIMEZONE
+#if defined(U_TIMEZONE) && !defined(__ANDROID__)
     return U_TIMEZONE;
 #else
     time_t t, t1, t2;
@@ -637,7 +639,7 @@ uprv_timezone()
     uprv_memcpy( &tmrec, gmtime(&t), sizeof(tmrec) );
     t2 = mktime(&tmrec);                 /* GMT (or UTC) in seconds*/
     tdiff = t2 - t1;
-#ifndef U_IOS
+#if !defined(U_IOS) && !defined(__LB_PS4__)
     /* On iOS the calculated tdiff is correct so and doesn't need this dst
        shift applied. */
     /* imitate NT behaviour, which returns same timezone offset to GMT for
@@ -970,7 +972,7 @@ U_CAPI const char* U_EXPORT2
 uprv_tzname(int n)
 {
     const char *tzid = NULL;
-#ifdef U_WINDOWS
+#if defined(U_WINDOWS) || defined(__LB_XB1__)
     tzid = uprv_detectWindowsTimeZone();
 
     if (tzid != NULL) {
@@ -1051,7 +1053,7 @@ uprv_tzname(int n)
 #endif
 
 #ifdef U_TZNAME
-#ifdef U_WINDOWS
+#if defined(U_WINDOWS) || defined(__LB_XB1__)
     /* The return value is free'd in timezone.cpp on Windows because
      * the other code path returns a pointer to a heap location. */
     return uprv_strdup(U_TZNAME[n]);

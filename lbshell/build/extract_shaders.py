@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
-'''
+"""Extracts shaders from a C++ source file to output directory.
+
 Usage:  extract_shaders.py [OUTPUT_DIR VERTEX_EXT FRAGMENT_EXT]
 
 Called by itself, the script will open the file at shader_source_path and
@@ -9,12 +10,10 @@ If OUTPUT_DIR argument is provided, the shaders will get written to shader files
 in OUTPUT_DIR.  In this case, VERTEX_EXT and FRAGMENT_EXT must also be
 specified, and they represent the extension that should be given to vertex
 shaders and fragment shaders, respectively.
-'''
+"""
 
 import os
 import sys
-# for uint32_t hash calculation
-import ctypes
 
 # hard-coded path to the Chromium file that contains all of Chrome's GLSL
 # shaders
@@ -24,8 +23,9 @@ shader_source_path = '../../external/chromium/cc/shader.cc'
 # break that assumption we will have to revist
 shader_search_key = 'SHADER(\n'
 
-# returns a list of all strings within SHADER() macros in the given file
+
 def ExtractShaderSources(file_path):
+  """Returns a list of all strings within SHADER() macros in the given file."""
   f = open(file_path)
   cpp_source = f.read()
   f.close()
@@ -57,39 +57,43 @@ def ExtractShaderSources(file_path):
     # find next shader in file
     shader_start = cpp_source.find(shader_search_key, shader_stop)
   # strip off leading and trailing macro, paren, and whitespace
-  source_list = [(s[0], s[1][len(shader_search_key):-1].strip("\n\t "))
-    for s in source_list]
+  source_list = [(s[0], s[1][len(shader_search_key):-1].strip('\n\t '))
+                 for s in source_list]
   # strip out internal whitespace and newlines, replace with a single newline
   source_list = [(s[0], '\n'.join([x.strip() for x in s[1].splitlines()]))
-    for s in source_list]
+                 for s in source_list]
 
   return source_list
 
-def add_uint32(a, b):
+
+def AddUint32(a, b):
   return (a + b) & 0xffffffff
 
-def xor_uint32(a, b):
+
+def XorUint32(a, b):
   return (a ^ b) & 0xffffffff
+
 
 # returns a numeric hash of the  provided source string calculated in the same
 # manner as the shader emulation code in lb_web_graphics_context_3d.cc
 def HashShaderSource(shader):
-  hash = 0
+  hash_val = 0
   for c in shader.replace('\n', ' '):
-    hash = add_uint32(hash, ord(c))
-    hash = add_uint32(hash, hash << 10)
-    hash = xor_uint32(hash, hash >> 6)
-  hash = add_uint32(hash, hash << 3)
-  hash = xor_uint32(hash, hash >> 11)
-  hash = add_uint32(hash, hash << 15)
-  return hash
+    hash_val = AddUint32(hash_val, ord(c))
+    hash_val = AddUint32(hash_val, hash_val << 10)
+    hash_val = XorUint32(hash_val, hash_val >> 6)
+  hash_val = AddUint32(hash_val, hash_val << 3)
+  hash_val = XorUint32(hash_val, hash_val >> 11)
+  hash_val = AddUint32(hash_val, hash_val << 15)
+  return hash_val
+
 
 def main(args):
   shaders = ExtractShaderSources(shader_source_path)
 
   # If an argument is passed, shader files are automatically dumped in
   # to the directory specified by the argument
-  if len(args) > 0:
+  if args:
     out_dir = args[0]
     vs_ext = args[1]
     fs_ext = args[2]
@@ -113,12 +117,13 @@ def main(args):
     for s in shaders:
       print '%s (%08x): %s\n' % (s[0], HashShaderSource(s[1]), s[1])
 
+  return 0
 
 
 if __name__ == '__main__':
-  args = sys.argv[1:]
-  if len(args) != 0 and len(args) != 3:
+  opts = sys.argv[1:]
+  if opts and len(opts) != 3:
     print __doc__
     sys.exit(-1)
 
-  main(args)
+  sys.exit(main(opts))

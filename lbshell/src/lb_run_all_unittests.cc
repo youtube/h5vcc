@@ -18,11 +18,7 @@
 #include "external/chromium/base/test/main_hook.h"
 #include "external/chromium/base/test/test_suite.h"
 
-#include "lb_stack.h"
-
-int main(int argc, char* argv[]) {
-  LB::SetStackSize();
-
+int main(int argc, char **argv) {
   MainHook hook(main, argc, argv);
   return base::TestSuite(argc, argv).Run();
 }

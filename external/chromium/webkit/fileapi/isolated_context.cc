@@ -27,8 +27,8 @@ FilePath::StringType GetRegisterNameForPath(const FilePath& path) {
   for (size_t i = 0;
         i < path.value().size() && !FilePath::IsSeparator(path.value()[i]);
         ++i) {
-    if (path.value()[i] == L':') {
-      name.append(L"_drive");
+    if (path.value()[i] == FILE_PATH_LITERAL(':')) {
+      name.append(FILE_PATH_LITERAL("_drive"));
       break;
     }
     name.append(1, path.value()[i]);

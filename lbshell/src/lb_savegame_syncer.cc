@@ -23,6 +23,8 @@
 #include "base/logging.h"
 #include "base/message_loop.h"
 #include "base/stringprintf.h"
+#include "lb_graphics.h"
+#include "lb_local_storage_database_adapter.h"
 #include "sql/statement.h"
 
 // Database version "2" indicates that this was created by v1.x.
@@ -43,6 +45,9 @@ int LBSavegameSyncer::num_created_tables_ = 0;
 sql::Connection *LBSavegameSyncer::connection_ = NULL;
 
 // static
+FilePath LBSavegameSyncer::database_file_path_;
+
+// static
 bool LBSavegameSyncer::shutdown_ = false;
 
 #if !defined(__LB_SHELL__FOR_RELEASE__)
@@ -57,7 +62,7 @@ FilePath LBSavegameSyncer::load_from_file_;
 base::WaitableEvent LBSavegameSyncer::loaded_(true, false);
 
 // static
-base::WaitableEvent LBSavegameSyncer::flushed_(true, false);
+base::WaitableEvent LBSavegameSyncer::forced_sync_complete_(false, false);
 
 #if !defined(__LB_SHELL__FOR_RELEASE__) && !defined(__LB_SHELL__FOR_QA__)
 class AutoTimer {
@@ -96,13 +101,38 @@ void LBSavegameSyncer::Init() {
 
   // To allow re-init after shutdown, such as we might do in testing:
   shutdown_ = false;
-  flushed_.Reset();
+  forced_sync_complete_.Reset();
 
   PlatformInit();
+  database_file_path_ = GetFilePath();
 
+#if !defined(__LB_PS4__) && !defined(__LB_XB360__)
   CreateInMemoryDatabase();
+  SavegameToFile(base::Bind(FinishInit));
+#else
+  // TODO(wpwang): The virtual filesystem allows us to read/write from a
+  // block of memory instead of the actual database, which means we no longer
+  // need to keep around both a file database and a memory-only mirror of that.
+  // Refactor the syncer for the other platforms to also take advantage of
+  // this.
 
-  SavegameToFile(FinishInit);
+  bool ok = PlatformMountStart(true /* readonly mount */);
+  DCHECK(ok);
+
+  // Deserialize data from the disk to the vfs, and once that's done, open a
+  // database connection to the savegame in the vfs.
+  SavegameToFile(base::Bind(FinishVfsLoad));
+#endif
+}
+
+// static
+void LBSavegameSyncer::FinishVfsLoad() {
+  connection_ = new sql::Connection();
+  bool ok = connection_->Open(database_file_path_);
+  DCHECK(ok);
+
+  ignore_result(PlatformMountEnd());
+  FinishInit();
 }
 
 // static
@@ -136,7 +166,7 @@ void LBSavegameSyncer::FinishInit() {
       "PRAGMA user_version = %d", kDatabaseUserVersion);
   sql::Statement set_db_version(connection_->GetUniqueStatement(
       set_db_version_str.c_str()));
-  ok = get_db_version.Run();
+  ok = set_db_version.Run();
   DCHECK(ok);
 
 #if defined(__LB_SHELL__FORCE_LOGGING__)
@@ -156,46 +186,26 @@ void LBSavegameSyncer::Shutdown() {
   shutdown_ = true;
 
   if (!loaded_.IsSignaled()) {
-    // Nothing to sync to the savegame.
     // Wait for the load operation to complete/abort.
     loaded_.Wait();
-    // Invoke the rest of the shutdown process right away.
-    FinishShutdown();
-  } else {
-    MemoryToFile();
-
-#if defined(__LB_SHELL__FOR_RELEASE__)
-    const bool write_savegame = true;
-#else
-    bool write_savegame = !save_disabled_;
-#endif
-    if (write_savegame) {
-     FileToSavegame(FinishShutdown);
-    }
   }
-}
 
-// static
-void LBSavegameSyncer::FinishShutdown() {
-#if defined(__LB_SHELL__FORCE_LOGGING__)
-  DLOG(INFO) << "Pushed these tables to disk:";
-  PrintTables();
-#endif
-
+  // NOTE:  We no longer sync on shutdown.  That is now JavaScript's job.
   DestroyInMemoryDatabase();
+
+  database_file_path_ = FilePath();
 
   // Reset loaded_ for a possible future Init.
   loaded_.Reset();
-
-  // Signal that we are done flushing.
-  flushed_.Signal();
 }
 
 // static
 void LBSavegameSyncer::WaitForLoad() {
   DEBUG_TIMING("LBSavegameSyncer::WaitForLoad");
 
+  LBGraphics::GetPtr()->ShowSpinner();
   loaded_.Wait();
+  LBGraphics::GetPtr()->HideSpinner();
 }
 
 // static
@@ -204,11 +214,10 @@ bool LBSavegameSyncer::TimedWaitForLoad(base::TimeDelta max_wait) {
 }
 
 // static
-void LBSavegameSyncer::WaitForFlush() {
-  DEBUG_TIMING("LBSavegameSyncer::WaitForFlush");
+void LBSavegameSyncer::WaitForShutdown() {
+  DEBUG_TIMING("LBSavegameSyncer::WaitForShutdown");
 
-  flushed_.Wait();
-
+  // PlatformShutdown is responsible for joining any operations in progress.
   PlatformShutdown();
 }
 
@@ -258,31 +267,49 @@ sql::Connection* LBSavegameSyncer::connection() {
 }
 
 // static
-void LBSavegameSyncer::ForceSync() {
+void LBSavegameSyncer::ForceSync(bool block) {
 #if !defined(__LB_SHELL__FOR_RELEASE__)
   if (save_disabled_) {
     return;
   }
 #endif
 
-#if defined(__LB_WIIU__)
-  base::AutoLock lock(background_lock_);
-#endif
+  // Chrome seems to want to hold onto LS data to batch changes together.
+  // Flush all pending LS changes before dumping the DB to disk.
+  LBLocalStorageDatabaseAdapter::Flush();
 
-  MemoryToFile();
-  FileToSavegame(FinishForceSync);
-  flushed_.Wait();  // signalled by FinishForceSync
-  flushed_.Reset();  // so that future WaitForFlush operations work as intended
-}
-
-// static
-void LBSavegameSyncer::FinishForceSync() {
 #if defined(__LB_SHELL__FORCE_LOGGING__)
-  DLOG(INFO) << "Pushed these tables to disk:";
+  DLOG(INFO) << "Pushing these tables to disk:";
   PrintTables();
 #endif
 
-  flushed_.Signal();
+  DEBUG_TIMING("LBSavegameSyncer::ForceSync");
+  MemoryToFile();
+#if defined(__LB_SHELL__FOR_RELEASE__)
+  const bool write_savegame = true;
+#else
+  bool write_savegame = !save_disabled_;
+#endif
+
+  if (write_savegame) {
+    FileToSavegame(base::Bind(FinishForceSync, block));
+    if (block) {
+      LBGraphics::GetPtr()->ShowSpinner();
+      forced_sync_complete_.Wait();
+      LBGraphics::GetPtr()->HideSpinner();
+    }
+  }
+}
+
+// static
+void LBSavegameSyncer::FinishForceSync(bool caller_is_blocking) {
+#if defined(__LB_SHELL__FORCE_LOGGING__)
+  DLOG(INFO) << "Finished push.";
+#endif
+
+  if (caller_is_blocking) {
+    forced_sync_complete_.Signal();
+  }
 }
 
 // static
@@ -299,13 +326,18 @@ void LBSavegameSyncer::DestroyInMemoryDatabase() {
 
 // static
 void LBSavegameSyncer::FileToMemory() {
-  FilePath path = GetFilePath();
+  FilePath path = database_file_path_;
 #if !defined(__LB_SHELL__FOR_RELEASE__)
   if (!load_from_file_.empty()) {
     // override the filename we load from.
     path = load_from_file_;
   }
 #endif
+  if (!PlatformMountStart(true /* readonly mount */)) {
+    return;
+  }
+
+#if !defined(__LB_PS4__) && !defined(__LB_XB360__)
   if (file_util::PathExists(path)) {
     sql::Connection file_db;
     bool ok = file_db.Open(path);
@@ -314,18 +346,30 @@ void LBSavegameSyncer::FileToMemory() {
       connection_->CloneFrom(&file_db);
     }
   }
+#endif
+  ignore_result(PlatformMountEnd());
 }
 
 // static
 void LBSavegameSyncer::MemoryToFile() {
   sql::Connection file_db;
-  file_util::Delete(GetFilePath(), false);
-  bool ok = file_db.Open(GetFilePath());
-  // If it fails, we will continue the app since this is not fatal error.
-  DLOG(INFO) << "Memory to file failed.";
+
+  if (!PlatformMountStart(false /* readonly mount */)) {
+    return;
+  }
+
+#if !defined(__LB_PS4__) && !defined(__LB_XB360__)
+  file_util::Delete(database_file_path_, false);
+  bool ok = file_db.Open(database_file_path_);
   if (ok) {
     file_db.CloneFrom(connection_);
+    file_db.Close();
+  } else {
+    // If it fails, we will continue the app since this is not fatal error.
+    DLOG(INFO) << "Memory to file failed.";
   }
+#endif
+  ignore_result(PlatformMountEnd());
 }
 
 #if defined(__LB_SHELL__FORCE_LOGGING__)

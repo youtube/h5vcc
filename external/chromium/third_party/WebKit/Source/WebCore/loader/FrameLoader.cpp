@@ -99,11 +99,9 @@
 #include "SerializedScriptValue.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WindowFeatures.h"
 #include "XMLDocumentParser.h"
 #include <wtf/CurrentTime.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -3260,16 +3258,6 @@ void FrameLoader::tellClientAboutPastMemoryCacheLoads()
 NetworkingContext* FrameLoader::networkingContext() const
 {
     return m_networkingContext.get();
-}
-
-void FrameLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_documentLoader);
-    info.addMember(m_provisionalDocumentLoader);
-    info.addMember(m_policyDocumentLoader);
-    info.addMember(m_outgoingReferrer);
-    info.addMember(m_openedFrames);
 }
 
 bool FrameLoaderClient::hasHTMLView() const

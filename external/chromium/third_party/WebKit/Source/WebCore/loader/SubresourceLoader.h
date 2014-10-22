@@ -49,8 +49,6 @@ public:
     virtual bool isSubresourceLoader();
     CachedResource* cachedResource();
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 private:
     SubresourceLoader(Frame*, CachedResource*, const ResourceLoaderOptions&);
     virtual ~SubresourceLoader();

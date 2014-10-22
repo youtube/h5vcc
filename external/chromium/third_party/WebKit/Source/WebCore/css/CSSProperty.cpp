@@ -24,7 +24,6 @@
 #include "CSSValueList.h"
 #include "RenderStyleConstants.h"
 #include "StylePropertyShorthand.h"
-#include "WebCoreMemoryInstrumentation.h"
 
 #if ENABLE(CSS_VARIABLES)
 #include "CSSVariableValue.h"
@@ -380,6 +379,10 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
 #if ENABLE(TOUCH_EVENTS)
     case CSSPropertyWebkitTapHighlightColor:
 #endif
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    case CSSPropertyH5vccTargetScreen:
+    case CSSPropertyH5vccGesturable:
+#endif
         return true;
     case CSSPropertyDisplay:
     case CSSPropertyZoom:
@@ -695,12 +698,6 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     }
     ASSERT_NOT_REACHED();
     return false;
-}
-
-void CSSProperty::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_value);
 }
 
 } // namespace WebCore

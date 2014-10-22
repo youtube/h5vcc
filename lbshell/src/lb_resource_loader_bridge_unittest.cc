@@ -40,13 +40,13 @@
 
 #include "lb_resource_loader_check.h"
 
-using namespace webkit_glue;
-
 using ::testing::_;
 using ::testing::DoAll;
 using ::testing::Eq;
 using ::testing::InvokeWithoutArgs;
 using ::testing::Return;
+
+static const bool whitelist_mime_type = !EnforceSSL();
 
 struct ResourceLoaderTestParam {
   const char* url;
@@ -63,13 +63,27 @@ struct ResourceLoaderTestParam {
   // SSL needed
   { "http://www.youtube.com/htm", 200, 13, "text/html", false },
   { "http://www.youtube.com/ajs", 200, 13, "text/javascript", false },
-  { "http://www.youtube.com/blb", 200, 13, "application/octet-stream", false },
+  // "text/plain" is in the whitelist
+  { "http://www.youtube.com/txt", 200, 13, "text/plain", whitelist_mime_type },
 
   // Falls under the whitelisted Mime-list
-  { "http://www.youtube.com/xml", 200, 13, "text/xml", true },
-  { "http://www.youtube.com/blb", 200, 13, "binary/octet-stream", true },
-  { "http://www.youtube.com/img", 200, 13, "image/weird-img-mime", true },
-  { "http://www.youtube.com/vid", 200, 13, "video/weird-video-mime", true },
+  { "http://www.youtube.com/xml", 200, 13, "text/xml",
+      whitelist_mime_type },
+  { "http://www.youtube.com/blb", 200, 13, "binary/octet-stream",
+      whitelist_mime_type },
+  { "http://www.youtube.com/alr", 200, 13, "application/octet-stream",
+      whitelist_mime_type },
+  { "http://www.youtube.com/img", 200, 13, "image/weird-img-mime",
+      whitelist_mime_type },
+  { "http://www.youtube.com/vid", 200, 13, "video/weird-video-mime",
+      whitelist_mime_type },
+
+  // Should succeed no matter what.
+  { "https://www.youtube.com/xml", 200, 13, "text/xml", true },
+  { "https://www.youtube.com/blb", 200, 13, "binary/octet-stream", true },
+  { "https://www.youtube.com/alr", 200, 13, "application/octet-stream", true },
+  { "https://www.youtube.com/img", 200, 13, "image/weird-img-mime", true },
+  { "https://www.youtube.com/vid", 200, 13, "video/weird-video-mime", true },
 
   // Sends a 204 but with non-zero content-length
   { "http://www.youtube.com/htm", 204, 13, "text/html", false },
@@ -86,11 +100,10 @@ struct ResourceLoaderTestParam {
   // Local url's always pass
   { "local:///var/log/syslog",  200, 15, "text/html", true },
   { "local:///usr/bin/rm",  200, 40, "application/octet-stream", true },
-
 };
 
-class ResourceLoaderCheckTest :
-    public ::testing::TestWithParam<ResourceLoaderTestParam> {
+class ResourceLoaderCheckTest
+    : public ::testing::TestWithParam<ResourceLoaderTestParam> {
   virtual void SetUp() OVERRIDE {
 #if !defined(__LB_SHELL__FOR_RELEASE__)
     LBResourceLoaderBridge::SetPerimeterCheckLogging(false);
@@ -101,7 +114,7 @@ class ResourceLoaderCheckTest :
 
 TEST_P(ResourceLoaderCheckTest, Behaves) {
   const ResourceLoaderTestParam& instance = GetParam();
-  ResourceResponseInfo info;
+  webkit_glue::ResourceResponseInfo info;
   info.headers = make_scoped_refptr(new net::HttpResponseHeaders(StringPrintf(
       "HTTP/1.1 %d OK\r\n", instance.response_code)));
   ASSERT_EQ(instance.response_code, info.headers->response_code());

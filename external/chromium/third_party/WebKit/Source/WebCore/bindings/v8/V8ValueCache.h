@@ -54,7 +54,6 @@ public:
     }
 
     void remove(StringImpl*);
-    void reportMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     v8::Local<v8::String> v8ExternalStringSlow(StringImpl*, v8::Isolate*);

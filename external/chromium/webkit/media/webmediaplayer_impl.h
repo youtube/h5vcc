@@ -54,7 +54,13 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/message_loop.h"
+#if defined(__LB_XB1__)
+#include "chromium/media/base/shell_pipeline.h"
+#endif  // defined(__LB_XB1__)
 #include "googleurl/src/gurl.h"
+#if defined(__LB_ANDROID__)
+#include "media/base/android/audio_focus_bridge.h"
+#endif  // defined(__LB_ANDROID__)
 #include "media/base/audio_renderer_sink.h"
 #include "media/base/decryptor.h"
 #include "media/base/message_loop_factory.h"
@@ -77,9 +83,6 @@ namespace media {
 class AudioRendererSink;
 class ChunkDemuxer;
 class MediaLog;
-#if defined(__LB_SHELL__)
-class ShellFilterGraphLog;
-#endif
 }
 
 namespace webkit_media {
@@ -202,6 +205,7 @@ class WebMediaPlayerImpl
                             const unsigned char* data,
                             unsigned length);
   virtual bool sourceAbort(const WebKit::WebString& id);
+  virtual double sourceGetDuration() const;
   virtual void sourceSetDuration(double new_duration);
   virtual void sourceEndOfStream(EndOfStreamStatus status);
   virtual bool sourceSetTimestampOffset(const WebKit::WebString& id,
@@ -234,8 +238,13 @@ class WebMediaPlayerImpl
   void OnPipelineSeek(media::PipelineStatus status);
   void OnPipelineEnded(media::PipelineStatus status);
   void OnPipelineError(media::PipelineStatus error);
+#if defined(__LB_XB1__)
+  void OnPipelineBufferingState(
+      media::ShellPipeline::BufferingState buffering_state);
+#else  // defined(__LB_XB1__)
   void OnPipelineBufferingState(
       media::Pipeline::BufferingState buffering_state);
+#endif  // defined(__LB_XB1__)
   void OnDemuxerOpened();
   void OnKeyAdded(const std::string& key_system, const std::string& session_id);
   void OnKeyError(const std::string& key_system,
@@ -277,6 +286,9 @@ class WebMediaPlayerImpl
   // Lets V8 know that player uses extra resources not managed by V8.
   void IncrementExternallyAllocatedMemory();
 
+  // Callbacks that forward duration change from |pipeline_| to |client_|.
+  void OnDurationChanged();
+
   // Actually do the work for generateKeyRequest/addKey so they can easily
   // report results to UMA.
   MediaKeyException GenerateKeyRequestInternal(
@@ -307,7 +319,12 @@ class WebMediaPlayerImpl
   MessageLoop* main_loop_;
 
   scoped_ptr<media::FilterCollection> filter_collection_;
+#if defined(__LB_XB1__)
+  scoped_refptr<media::ShellPipeline> pipeline_;
+  scoped_ptr<WebKit::WebVideoFrame> punch_out_web_video_frame_;
+#else  // defined(__LB_XB1__)
   scoped_refptr<media::Pipeline> pipeline_;
+#endif  // defined(__LB_XB1__)
 
   // The currently selected key system. Empty string means that no key system
   // has been selected.
@@ -371,9 +388,9 @@ class WebMediaPlayerImpl
   // through GenerateKeyRequest() directly from WebKit.
   std::string init_data_type_;
 
-#if defined(__LB_SHELL__)
-  scoped_refptr<media::ShellFilterGraphLog> filter_graph_log_;
-#endif
+#if defined(__LB_ANDROID__)
+  media::AudioFocusBridge audio_focus_bridge_;
+#endif  // defined(__LB_ANDROID__)
 
   DISALLOW_COPY_AND_ASSIGN(WebMediaPlayerImpl);
 };

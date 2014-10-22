@@ -42,8 +42,6 @@ public:
     int value() const { return m_value; }
     String customCssText() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     FontFeatureValue(const String&, int);
 

@@ -15,6 +15,7 @@
  */
 
 #include "config.h"
+#include "lb_globals.h"
 #include "lb_platform.h"
 #include "WebFontInfo.h"
 #include "WebFontRenderStyle.h"
@@ -65,6 +66,9 @@ typedef enum {
   LohitTamil,
   LohitTelugu,
 
+  // Open Sans fonts:
+  OpenSans,
+
   // MUST COME LAST!
   kNumBuiltInFonts
 } ShellFont;
@@ -110,6 +114,8 @@ static inline const char *fontFamilyByEnum(ShellFont font) {
       return "Lohit Tamil";
     case LohitTelugu:
       return "Lohit Telugu";
+    case OpenSans:
+      return "Open Sans";
     case kNoSuchFont:
       // this means we are missing a glyph we need!
       return "";
@@ -159,6 +165,8 @@ static inline const char *fontFileByEnum(ShellFont font) {
       return "Lohit-Tamil";
     case LohitTelugu:
       return "Lohit-Telugu";
+    case OpenSans:
+      return "OpenSans-Regular";
     default:
       break;
   }
@@ -248,8 +256,6 @@ static char best_font_for_char[kNumUnicodeCodePoints];
 // FT_STYLE_FLAG_ITALIC == 1, FT_STYLE_FLAG_BOLD == 2
 static char flags_for_font[kNumBuiltInFonts];
 
-extern std::string *global_game_content_path;
-
 // This function runs in about 1 second on the PS3.
 static void buildFontMap(const char *preferredLocale) {
   bool japanese_mode = (strcmp(preferredLocale, "ja") == 0);
@@ -271,7 +277,7 @@ static void buildFontMap(const char *preferredLocale) {
     ShellFont font = static_cast<ShellFont>(font_num);
     flags_for_font[font_num] = 0;
 
-    std::string filename = *global_game_content_path;
+    std::string filename(GetGlobalsPtr()->game_content_path);
     filename.append("/fonts/");
     filename.append(fontFileByEnum(font));
     filename.append(".ttf");

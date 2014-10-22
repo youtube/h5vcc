@@ -942,6 +942,16 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
   return out << wstr.c_str();
 }
 
+#if defined(__LB_SHELL__)
+#if defined(__cplusplus_winrt)
+// Support for logging C++/CX strings. This function must be inlined because
+// the Chromium library is not compiled with C++/CX extensions enabled.
+inline std::ostream& operator<<(std::ostream& out, ::Platform::String^ str) {
+  return out << std::wstring(str->Begin(), str->End());
+}
+#endif
+#endif
+
 // The NOTIMPLEMENTED() macro annotates codepaths which have
 // not been implemented yet.
 //
@@ -970,6 +980,8 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
 // On Linux, with GCC, we can use __PRETTY_FUNCTION__ to get the demangled name
 // of the current function in the NOTIMPLEMENTED message.
 #define NOTIMPLEMENTED_MSG "Not implemented reached in " << __PRETTY_FUNCTION__
+#elif defined(__LB_SHELL__)
+#define NOTIMPLEMENTED_MSG "Not implemented reached in " << __FUNCTION__
 #else
 #define NOTIMPLEMENTED_MSG "NOT IMPLEMENTED"
 #endif

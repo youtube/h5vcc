@@ -18,6 +18,7 @@
 #ifndef SkMemory_new_handler_DEFINED
 #define SkMemory_new_handler_DEFINED
 
+#include "SkPreConfig.h"
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -29,9 +30,9 @@ extern "C" {
 #endif
   typedef size_t (*BlockSizeFunc)(void*);
 
-  size_t sk_get_bytes_allocated();
-  size_t sk_get_max_bytes_allocated();
-  void sk_set_block_size_func(BlockSizeFunc f);
+  SK_API size_t sk_get_bytes_allocated();
+  SK_API size_t sk_get_max_bytes_allocated();
+  SK_API void sk_set_block_size_func(BlockSizeFunc f);
 #ifdef __cplusplus
 }
 #endif

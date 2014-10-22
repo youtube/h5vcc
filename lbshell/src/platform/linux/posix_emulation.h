@@ -13,7 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _POSIX_EMULATION_H
-#define _POSIX_EMULATION_H
+#ifndef SRC_PLATFORM_LINUX_POSIX_EMULATION_H_
+#define SRC_PLATFORM_LINUX_POSIX_EMULATION_H_
+#include "lb_base_export.h"
 
+#if defined(__cplusplus)
+// Copied from chromium: base/basictypes.h
+#if !defined(COMPILE_ASSERT)
+template<bool> struct LBCompileAssert { };
+
+#define COMPILE_ASSERT(expr, msg)                    \
+  typedef LBCompileAssert<(static_cast<bool>(expr))> \
+          msg[static_cast<bool>(expr) ? 1 : -1]
 #endif
+#endif  // defined (__cplusplus)
+
+#endif  // SRC_PLATFORM_LINUX_POSIX_EMULATION_H_

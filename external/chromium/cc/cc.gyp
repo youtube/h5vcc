@@ -307,12 +307,23 @@
           'dependencies' : [
             # Not all of gl, just the headers.
             '../third_party/khronos/khronos.gyp:khronos_headers',
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
           ]
         }, {
           'dependencies' : [
             '<(DEPTH)/ui/gl/gl.gyp:gl',
           ]},
         ],
+        ['use_shell_reusable_allocator==1', {
+          'defines' : [
+            '__LB_USE_SHELL_REUSABLE_ALLOCATOR__',
+          ],
+        }],
+        ['has_tex_sub_image_sub==1', {
+          'defines' : [
+            '__LB_SHELL_HAS_TEX_SUB_IMAGE_SUB__'
+          ],
+        }],
       ],
       'defines': [
         'CC_IMPLEMENTATION=1',

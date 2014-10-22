@@ -90,16 +90,17 @@
  * than "WIN32_LEAN_AND_MEAN" may include windows.h before
  * glut.h or gl.h.
  */
-#if defined(_WIN32) && !defined(APIENTRY) && !defined(__CYGWIN__)
+#if !defined(__LB_SHELL__) && defined(_WIN32) && !defined(APIENTRY) \
+     && !defined(__CYGWIN__)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN 1
 #endif
 #include <windows.h>
 #endif
 
-#if defined(_WIN32) && !defined(_WINGDI_) && !defined(_WIN32_WCE) \
-     && !defined(_GNU_H_WINDOWS32_DEFINES) && !defined(OPENSTEP) \
-     && !defined(__CYGWIN__) || defined(__MINGW32__)
+#if !defined(__LB_SHELL__) && defined(_WIN32) && !defined(_WINGDI_) \
+     && !defined(_WIN32_WCE) && !defined(_GNU_H_WINDOWS32_DEFINES) \
+     && !defined(OPENSTEP) && !defined(__CYGWIN__) || defined(__MINGW32__)
 #include <GL/mesa_wgl.h>
 #endif
 

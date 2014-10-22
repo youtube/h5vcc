@@ -30,9 +30,7 @@
 #include "base/string_util.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time.h"
-
-extern std::string *global_game_content_path;
-extern std::string *global_tmp_path;
+#include "lb_globals.h"
 
 namespace file_util {
 
@@ -114,7 +112,7 @@ bool GetFileInfo(const FilePath& file_path, base::PlatformFileInfo* results) {
 }
 
 bool GetTempDir(FilePath* path) {
-  *path = FilePath(*global_tmp_path).Append("tmp");
+  *path = FilePath(GetGlobalsPtr()->tmp_path).Append("tmp");
 
   // Ensure path exists
   int result = mkdir(path->value().c_str(), 0700);
@@ -233,7 +231,7 @@ bool NormalizeFilePath(const FilePath& path, FilePath* normalized_path) {
 
 bool DirectoryExists(const FilePath& path) {
   base::PlatformFileInfo info;
-  if(!GetFileInfo(path, &info)) {
+  if (!GetFileInfo(path, &info)) {
     return false;
   }
   return info.is_directory;
@@ -254,7 +252,7 @@ bool GetPosixFilePermissions(const FilePath& path, int* mode) {
 bool SetPosixFilePermissions(const FilePath& path,
                              int mode) {
   base::ThreadRestrictions::AssertIOAllowed();
-  DCHECK((mode & ~FILE_PERMISSION_MASK) == 0);
+  DCHECK_EQ(mode & ~FILE_PERMISSION_MASK, 0);
 
   struct stat stat_buf;
   if (stat(path.value().c_str(), &stat_buf) != 0)
@@ -475,7 +473,7 @@ bool Delete(const FilePath& path, bool recursive) {
   if (!PathExists(path)) {
     return true;
   }
-  if(!GetFileInfo(path, &info)) {
+  if (!GetFileInfo(path, &info)) {
     return false;
   }
 
@@ -521,7 +519,7 @@ int ReadFile(const FilePath& filename, char* data, int size) {
 }
 
 bool GetCurrentDirectory(FilePath* dir) {
-  *dir = FilePath(*global_game_content_path);
+  *dir = FilePath(GetGlobalsPtr()->game_content_path);
   return true;
 }
 
@@ -628,7 +626,8 @@ FileEnumerator::FileEnumerator(const FilePath& root_path,
   // Allow a trailing asterisk, but no other wildcards.
   size_t pattern_len = pattern_.size();
   size_t asterisk_pos = pattern_.find('*');
-  DCHECK((asterisk_pos == pattern_len - 1) || (asterisk_pos == std::string::npos));
+  DCHECK((asterisk_pos == pattern_len - 1) ||
+         (asterisk_pos == std::string::npos));
   DCHECK_EQ(pattern_.find_first_of("[]?"), std::string::npos);
   pending_paths_.push(root_path);
 }
@@ -760,4 +759,4 @@ bool FileEnumerator::ReadDirectory(std::vector<DirectoryEntryInfo>* entries,
   return true;
 }
 
-} // namespace file_util
+}  // namespace file_util

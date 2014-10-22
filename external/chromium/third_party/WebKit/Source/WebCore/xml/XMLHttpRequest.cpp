@@ -52,7 +52,6 @@
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "XMLHttpRequestException.h"
 #include "XMLHttpRequestProgressEvent.h"
 #include "XMLHttpRequestUpload.h"
@@ -325,14 +324,8 @@ ArrayBuffer* XMLHttpRequest::responseArrayBuffer(ExceptionCode& ec)
         return 0;
 
     if (!m_responseArrayBuffer.get() && m_binaryResponseBuilder.get() && m_binaryResponseBuilder->size() > 0) {
-#if defined(__LB_SHELL__)
-        unsigned length = static_cast<unsigned>(m_binaryResponseBuilder->size());
-        char* data = const_cast<char*>(m_binaryResponseBuilder->releaseBuffer());
-        m_responseArrayBuffer = ArrayBuffer::takeOwnership(data, length);
-#else
         m_responseArrayBuffer = ArrayBuffer::create(const_cast<char*>(m_binaryResponseBuilder->data()), static_cast<unsigned>(m_binaryResponseBuilder->size()));
         m_binaryResponseBuilder.clear();
-#endif
     }
 
     return m_responseArrayBuffer.get();
@@ -1313,32 +1306,6 @@ EventTargetData* XMLHttpRequest::eventTargetData()
 EventTargetData* XMLHttpRequest::ensureEventTargetData()
 {
     return &m_eventTargetData;
-}
-
-void XMLHttpRequest::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    ScriptWrappable::reportMemoryUsage(memoryObjectInfo);
-    ActiveDOMObject::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_upload);
-    info.addMember(m_url);
-    info.addMember(m_method);
-    info.addMember(m_requestHeaders);
-    info.addMember(m_requestEntityBody);
-    info.addMember(m_mimeTypeOverride);
-    info.addMember(m_responseBlob);
-    info.addMember(m_loader);
-    info.addMember(m_response);
-    info.addMember(m_responseEncoding);
-    info.addMember(m_decoder);
-    info.addMember(m_responseBuilder);
-    info.addMember(m_responseDocument);
-    info.addMember(m_binaryResponseBuilder);
-    info.addMember(m_responseArrayBuffer);
-    info.addMember(m_lastSendURL);
-    info.addMember(m_eventTargetData);
-    info.addMember(m_progressEventThrottle);
-    info.addMember(m_securityOrigin);
 }
 
 } // namespace WebCore

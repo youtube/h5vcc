@@ -495,7 +495,11 @@ void ProgramManager::ForceCompileShader(const std::string* source,
     DCHECK(max_len == 0 || len < max_len);
     DCHECK(len == 0 || temp[len] == '\0');
     info->SetStatus(false, std::string(temp.get(), len).c_str(), NULL);
+#if !defined(__LB_SHELL__)
     LOG_IF(ERROR, translator)
+#else
+    LOG(ERROR)
+#endif
         << "Shader translator allowed/produced an invalid shader "
         << "unless the driver is buggy:"
         << "\n--original-shader--\n" << (source ? *source : "")
@@ -561,11 +565,13 @@ bool ProgramManager::ProgramInfo::Link(ShaderManager* manager,
 
   if (link) {
     before_time = TimeTicks::HighResNow();
+#if !defined(__LB_SHELL__)
     if (cache && gfx::g_driver_gl.ext.b_GL_ARB_get_program_binary) {
       glProgramParameteri(service_id(),
                           PROGRAM_BINARY_RETRIEVABLE_HINT,
                           GL_TRUE);
     }
+#endif
     glLinkProgram(service_id());
   }
 

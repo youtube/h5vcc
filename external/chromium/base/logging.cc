@@ -64,8 +64,14 @@ typedef pthread_mutex_t* MutexHandle;
 #include "base/safe_strerror_posix.h"
 #endif
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include <android/log.h>
+#endif
+
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+#undef MAX_PATH
+#include <Windows.h>
+#undef MAX_PATH
 #endif
 
 namespace logging {
@@ -591,7 +597,7 @@ LogMessage::~LogMessage() {
       logging_destination == LOG_TO_BOTH_FILE_AND_SYSTEM_DEBUG_LOG) {
 #if defined(OS_WIN)
     OutputDebugStringA(str_newline.c_str());
-#elif defined(OS_ANDROID)
+#elif defined(OS_ANDROID) || defined(__LB_ANDROID__)
     android_LogPriority priority = ANDROID_LOG_UNKNOWN;
     switch (severity_) {
       case LOG_INFO:

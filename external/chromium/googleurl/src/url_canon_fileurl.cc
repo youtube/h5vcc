@@ -124,8 +124,13 @@ bool DoCanonicalizeFileURL(const URLComponentSource<CHAR>& source,
   // Scheme (known, so we don't bother running it through the more
   // complicated scheme canonicalizer).
   new_parsed->scheme.begin = output->length();
+#if defined(__LB_SHELL__)
+  output->Append("local://", 8);
+  new_parsed->scheme.len = 5;
+#else
   output->Append("file://", 7);
   new_parsed->scheme.len = 4;
+#endif
 
   // Append the host. For many file URLs, this will be empty. For UNC, this
   // will be present.

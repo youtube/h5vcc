@@ -40,7 +40,7 @@ GrSLType GrGLEffectMatrix::emitCode(GrGLShaderBuilder* builder,
                                     const char** vsCoordName,
                                     const char* suffix) {
     GrSLType varyingType;
-    const char* uniName;
+    const char* uniName = NULL;
     key &= kKeyMask;
     switch (key) {
         case kIdentity_Key:

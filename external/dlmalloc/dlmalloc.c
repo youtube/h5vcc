@@ -530,8 +530,19 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DLMALLOC_EXPORT extern
 #endif
 
+#ifdef __LB_SHELL__
+#include <time.h>
+
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+// We don't want dlmalloc's WIN32, but
+// we do need some Windows types.
+#include <windows.h>
+#undef WIN32
+#endif // __LB_XB1__ || __LB_XB360__
+#endif // __LB_SHELL__
+
 #ifndef WIN32
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #define WIN32 1
 #endif  /* _WIN32 */
 #ifdef _WIN32_WCE
@@ -539,7 +550,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define WIN32 1
 #endif /* _WIN32_WCE */
 #endif  /* WIN32 */
-#ifdef WIN32
+#if defined(WIN32) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <tchar.h>
@@ -584,8 +595,11 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #if defined(__LB_SHELL__)
 #include "dlmalloc_config.h"
 #include "lb_memory_debug_platform.h"
-extern void oom_fprintf(int fd, const char *fmt, ...);
+#ifdef MAX
+#undef MAX
+#endif
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 #define CRASH() ((void(*)())0)()
 #endif
 
@@ -791,10 +805,13 @@ struct mallinfo {
 
 #ifndef FORCEINLINE
   #if defined(__GNUC__)
-#define FORCEINLINE __inline __attribute__ ((always_inline))
+    #define FORCEINLINE __inline __attribute__ ((always_inline))
   #elif defined(_MSC_VER)
     #define FORCEINLINE __forceinline
   #endif
+#elif defined(__LB_XB360__)
+  #undef FORCEINLINE
+  #define FORCEINLINE __forceinline
 #endif
 #ifndef NOINLINE
   #if defined(__GNUC__)
@@ -1535,7 +1552,7 @@ LONG __cdecl _InterlockedExchange(LONG volatile *Target, LONG Value);
 #endif
 
 /* Declarations for bit scanning on win32 */
-#if defined(_MSC_VER) && _MSC_VER>=1300
+#if defined(_MSC_VER) && _MSC_VER>=1300 && !defined(__LB_XB360__)
 #ifndef BitScanForward /* Try to avoid pulling in WinNT.h */
 #ifdef __cplusplus
 extern "C" {
@@ -1829,6 +1846,17 @@ static FORCEINLINE int win32munmap(void* ptr, size_t size) {
 /* #define RELEASE_LOCK(lk)  ... */
 /* #define TRY_LOCK(lk) ... */
 /* static MLOCK_T malloc_global_mutex = ... */
+
+// See dlmalloc_config.h for definitions of *_LOCK macros.
+static MLOCK_T malloc_global_mutex;
+static volatile int malloc_global_mutex_status;
+static void init_malloc_global_mutex() {
+  if (malloc_global_mutex_status > 0) {
+    return;
+  }
+  INITIAL_LOCK(&malloc_global_mutex);
+  malloc_global_mutex_status = 1;
+}
 
 #elif USE_SPIN_LOCKS
 
@@ -2871,7 +2899,7 @@ static size_t traverse_and_check(mstate m);
   }\
 }
 
-#elif defined(_MSC_VER) && _MSC_VER>=1300
+#elif defined(_MSC_VER) && _MSC_VER>=1300 && !defined(__LB_XB360__)
 #define compute_tree_index(S, I)\
 {\
   size_t X = S >> TREEBIN_SHIFT;\
@@ -2962,7 +2990,7 @@ static size_t traverse_and_check(mstate m);
   I = (bindex_t)J;\
 }
 
-#elif defined(_MSC_VER) && _MSC_VER>=1300
+#elif defined(_MSC_VER) && _MSC_VER>=1300 && !defined(__LB_XB360__)
 #define compute_bit2idx(X, I)\
 {\
   unsigned int J;\
@@ -3107,6 +3135,10 @@ static void post_fork_parent(void) { RELEASE_LOCK(&(gm)->mutex); }
 static void post_fork_child(void)  { INITIAL_LOCK(&(gm)->mutex); }
 #endif /* LOCK_AT_FORK */
 
+#if defined(__LB_SHELL__)
+static void dl_heap_init();
+#endif
+
 /* Initialize mparams */
 static int init_mparams(void) {
 #ifdef NEED_GLOBAL_LOCK_INIT
@@ -3191,11 +3223,10 @@ static int init_mparams(void) {
       /* Until memory modes commonly available, use volatile-write */
       (*(volatile size_t *)(&(mparams.magic))) = magic;
     }
-#if defined(__LB_LINUX__)
-    // On Linux this can be called before our malloc_init hook.
-    dl_malloc_init();
+#if defined(__LB_SHELL__)
+    // Call our own initialization functions.
+    dl_heap_init();
 #endif
-
   }
   RELEASE_MALLOC_GLOBAL_LOCK();
   return 1;
@@ -6040,36 +6071,36 @@ typedef struct MappedSpaceInfo {
   // Assume a maximum VM space of 2GB
   // With 64K pages, that's 32K bits or 1K ints.
   // With 1MB pages, that's 64.
-  uint32_t mapped[kMaxPageCount / 32];
+  size_t mapped[kMaxPageCount / SIZE_T_BITSIZE];
   lb_virtual_mem_t mem_base;
 } MappedSpaceInfo;
 
 // This tracks our large block heap.
 static MappedSpaceInfo mmapped_heap;
 
-static int is_mapped(uint32_t page_index) {
-  uint32_t block = page_index / 32;
-  uint32_t bit = page_index % 32;
-  return mmapped_heap.mapped[block] & (1 << bit) ? 1 : 0;
+static int is_mapped(size_t page_index) {
+  size_t block = page_index / SIZE_T_BITSIZE;
+  size_t bit = page_index % SIZE_T_BITSIZE;
+  return mmapped_heap.mapped[block] & (SIZE_T_ONE << bit) ? 1 : 0;
 }
 
-static FORCEINLINE uint32_t align(uint32_t val, uint32_t boundary) {
+static FORCEINLINE size_t align(size_t val, size_t boundary) {
   return (val + boundary - 1) & ~(boundary - 1);
 }
 
-static FORCEINLINE uint32_t min(uint32_t lhs, uint32_t rhs) {
+static FORCEINLINE size_t min(size_t lhs, size_t rhs) {
   return lhs < rhs ? lhs : rhs;
 }
 
 // find a place in 'mapped' with a run of 0 bits.
-static int find_contiguous(uint32_t page_count) {
+static ssize_t find_contiguous(size_t page_count) {
   int num_contiguous = 0;
   int start = 0;
 
   // Skip over any full blocks.
-  for (int i = 0; i < kMaxPageCount / 32; ++i) {
-    if (mmapped_heap.mapped[i] == 0xffffffff) {
-      start += 32;
+  for (int i = 0; i < kMaxPageCount / SIZE_T_BITSIZE; ++i) {
+    if (mmapped_heap.mapped[i] == MAX_SIZE_T) {
+      start += SIZE_T_BITSIZE;
     }
     else {
       break;
@@ -6090,81 +6121,80 @@ static int find_contiguous(uint32_t page_count) {
   return -1;
 }
 
-static void set_mapped_range(uint32_t start, uint32_t page_count) {
+static void set_mapped_range(size_t start, size_t page_count) {
   // Do this in 3 parts.
   // 1- any partial-word at the start
-  // 2- blocks of 32 pages (all 1s)
+  // 2- blocks of SIZE_T_BITSIZE pages (all 1s)
   // 3- any partial-word at the end.
 
-  const uint32_t end = start + page_count;
-  const uint32_t word_aligned_start = align(start, 32);
-  const uint32_t head_offset = start % 32;
+  const size_t end = start + page_count;
+  const size_t word_aligned_start = align(start, SIZE_T_BITSIZE);
+  const size_t head_offset = start % SIZE_T_BITSIZE;
   if (head_offset) {
-    const uint32_t head_page_count =
+    const size_t head_page_count =
         min(page_count, word_aligned_start - start);
-    const uint32_t head_mask = ((1 << head_page_count) - 1) << head_offset;
-    mmapped_heap.mapped[start / 32] |= head_mask;
+    const size_t head_mask = ((SIZE_T_ONE << head_page_count) - 1) << head_offset;
+    mmapped_heap.mapped[start / SIZE_T_BITSIZE] |= head_mask;
     page_count -= head_page_count;
   }
 
-  const uint32_t num_full_words = page_count / 32;
-  page_count -= num_full_words * 32;
+  const size_t num_full_words = page_count / SIZE_T_BITSIZE;
+  page_count -= num_full_words * SIZE_T_BITSIZE;
 
-  for (uint32_t i = 0; i < num_full_words; ++i) {
-    mmapped_heap.mapped[word_aligned_start / 32 + i] = 0xffffffff;
+  for (size_t i = 0; i < num_full_words; ++i) {
+    mmapped_heap.mapped[word_aligned_start / SIZE_T_BITSIZE + i] = MAX_SIZE_T;
   }
 
-  const uint32_t tail_pages = page_count % 32;
+  const size_t tail_pages = page_count % SIZE_T_BITSIZE;
   if (tail_pages) {
-    const uint32_t tail_mask = (1 << tail_pages) - 1;
-    mmapped_heap.mapped[end / 32] |= tail_mask;
+    const size_t tail_mask = (SIZE_T_ONE << tail_pages) - 1;
+    mmapped_heap.mapped[end / SIZE_T_BITSIZE] |= tail_mask;
     page_count -= tail_pages;
   }
   assert(page_count == 0);
 }
 
-static void set_unmapped_range(uint32_t start, uint32_t page_count) {
+static void set_unmapped_range(size_t start, size_t page_count) {
   // Same as set_mapped_range(), but writes 0 instead of 1.
-  const uint32_t end = start + page_count;
-  const uint32_t word_aligned_start = align(start, 32);
-  const uint32_t head_offset = start % 32;
+  const size_t end = start + page_count;
+  const size_t word_aligned_start = align(start, SIZE_T_BITSIZE);
+  const size_t head_offset = start % SIZE_T_BITSIZE;
   if (head_offset) {
-    const uint32_t head_page_count =
+    const size_t head_page_count =
         min(page_count, word_aligned_start - start);
-    const uint32_t head_mask = ((1 << head_page_count) - 1) << head_offset;
-    mmapped_heap.mapped[start / 32] &= ~head_mask;
+    const size_t head_mask = ((SIZE_T_ONE << head_page_count) - 1) << head_offset;
+    mmapped_heap.mapped[start / SIZE_T_BITSIZE] &= ~head_mask;
     page_count -= head_page_count;
   }
 
-  const uint32_t num_full_words = page_count / 32;
-  page_count -= num_full_words * 32;
+  const size_t num_full_words = page_count / SIZE_T_BITSIZE;
+  page_count -= num_full_words * SIZE_T_BITSIZE;
 
-  for (uint32_t i = 0; i < num_full_words; ++i) {
-    mmapped_heap.mapped[word_aligned_start / 32 + i] = 0x00000000;
+  for (size_t i = 0; i < num_full_words; ++i) {
+    mmapped_heap.mapped[word_aligned_start / SIZE_T_BITSIZE + i] = 0;
   }
 
-  const uint32_t tail_pages = page_count % 32;
+  const size_t tail_pages = page_count % SIZE_T_BITSIZE;
   if (tail_pages) {
-    const uint32_t tail_mask = (1 << tail_pages) - 1;
-    mmapped_heap.mapped[end / 32] &= ~tail_mask;
+    const size_t tail_mask = (SIZE_T_ONE << tail_pages) - 1;
+    mmapped_heap.mapped[end / SIZE_T_BITSIZE] &= ~tail_mask;
     page_count -= tail_pages;
   }
   assert(page_count == 0);
 }
 
-void dl_malloc_init() {
-  INITIAL_LOCK(&malloc_global_mutex);
-  const size_t system_size = lb_get_total_system_memory();
-  assert(system_size / kMaxPageCount <= kPageSize);
+static void dl_heap_init() {
+  const size_t region_size = lb_get_virtual_region_size();
+  assert(region_size / kPageSize <= kMaxPageCount);
   global_heap.mem_base =
-      lb_allocate_virtual_address(system_size,
+      lb_allocate_virtual_address(region_size,
                                   kPageSize);
-  global_heap.sbrk_top = global_heap.mem_base;
+  global_heap.sbrk_top = (uintptr_t)global_heap.mem_base;
 
 #if HAVE_MMAP
   // Allocate another virtual region for our mmapped pages.
   mmapped_heap.mem_base =
-      lb_allocate_virtual_address(system_size,
+      lb_allocate_virtual_address(region_size,
                                   kPageSize);
 #endif
 
@@ -6175,16 +6205,26 @@ void dl_malloc_init() {
 #endif
 }
 
+void dl_malloc_init() {
+  // No-op. Let all initialization happen in init_mparams().
+  // On most systems, we can't guarantee this
+  // will run before the first call to malloc().
+  // This is just provided so the linker can succeed when ALLOCATOR
+  // is set to 'dl' in lb_memory_manager.h.
+}
+
 void dl_malloc_finalize() {
   // Free all pages owned by the global heap.
-  while (global_heap.sbrk_top > global_heap.mem_base) {
+  while (global_heap.sbrk_top > (uintptr_t)global_heap.mem_base) {
     global_heap.sbrk_top -= kPageSize;
     lb_physical_mem_t phys_mem_id;
-    lb_unmap_memory(global_heap.sbrk_top, &phys_mem_id);
+    lb_unmap_memory(
+        (lb_virtual_mem_t)global_heap.sbrk_top, &phys_mem_id);
     lb_free_physical_memory(phys_mem_id);
   }
   lb_free_virtual_address(global_heap.mem_base);
 
+#if HAVE_MMAP
   // Now the mmapped heap.
   for (int i = 0; i < kMaxPageCount; ++i) {
     if (is_mapped(i)) {
@@ -6195,13 +6235,15 @@ void dl_malloc_finalize() {
       lb_free_physical_memory(phys_mem_id);
     }
   }
+  lb_free_virtual_address(mmapped_heap.mem_base);
+#endif
 }
 
 void dlmalloc_ranges_np(uintptr_t *start1, uintptr_t *end1,
                         uintptr_t *start2, uintptr_t *end2,
                         uintptr_t *start3, uintptr_t *end3) {
-  *start1 = global_heap.mem_base;
-  *end1 = global_heap.mem_base + lb_get_total_system_memory();
+  *start1 = (uintptr_t)global_heap.mem_base;
+  *end1 = (uintptr_t)global_heap.mem_base + lb_get_total_system_memory();
   // No second range.
   *start2 = *end2 = *end1;
   // No third range.
@@ -6306,9 +6348,9 @@ void lbshell_inspect_mmap_heap(void(*handler)(void*, void *, size_t, void*),
     return;
   }
 
-  for (uint32_t i = 0; i <= last_mapped; ++i) {
-    uintptr_t start = mmapped_heap.mem_base + i * kPageSize;
-    uintptr_t end = mmapped_heap.mem_base + (i + 1) * kPageSize;
+  for (size_t i = 0; i <= (size_t)last_mapped; ++i) {
+    uintptr_t start = (uintptr_t)(mmapped_heap.mem_base) + i * kPageSize;
+    uintptr_t end = (uintptr_t)(mmapped_heap.mem_base) + (i + 1) * kPageSize;
 
     if (is_mapped(i)) {
       size_t region_size = end - start;
@@ -6386,8 +6428,8 @@ int dlmalloc_stats_np(size_t *system_size, size_t *in_use_size) {
 
 static void* lbshell_mmap(size_t size) {
   size = align(size, kPageSize);
-  uint32_t page_count = size / kPageSize;
-  int vm_start = find_contiguous(page_count);
+  size_t page_count = size / kPageSize;
+  ssize_t vm_start = find_contiguous(page_count);
   if (vm_start == -1) {
     // Virtual space is too fragmented.  Unlikely, but possible.
     return (void*)-1;
@@ -6412,24 +6454,24 @@ static void* lbshell_mmap(size_t size) {
 
 static int lbshell_munmap(void* ptr, size_t size) {
   assert(size % kPageSize == 0);
-  int page_count = size / kPageSize;
+  size_t page_count = size / kPageSize;
   lb_virtual_mem_t cur_mem = (lb_virtual_mem_t)ptr;
-  for (int i = 0; i < page_count; ++i) {
+  for (size_t i = 0; i < page_count; ++i) {
     lb_physical_mem_t phys_mem_id;
     lb_unmap_memory(cur_mem + i * kPageSize, &phys_mem_id);
     lb_free_physical_memory(phys_mem_id);
   }
-  uint32_t page_index = (cur_mem - mmapped_heap.mem_base) / kPageSize;
+  size_t page_index = (cur_mem - mmapped_heap.mem_base) / kPageSize;
   set_unmapped_range(page_index, page_count);
   return 0;
 }
 
-static void* lbshell_morecore(int size) {
+static void* lbshell_morecore(ssize_t size) {
   void* ptr = (void*)global_heap.sbrk_top;
   if (size > 0) {
-    int page_count = align(size, kPageSize) / kPageSize;
+    size_t page_count = align(size, kPageSize) / kPageSize;
     // Grab physical pages and map them into our virtual address space.
-    for (int i = 0; i < page_count; ++i) {
+    for (size_t i = 0; i < page_count; ++i) {
       lb_physical_mem_t mem_id;
       int ret = lb_allocate_physical_memory(kPageSize,
                                             kPageSize,
@@ -6438,17 +6480,19 @@ static void* lbshell_morecore(int size) {
         return (void*)-1;
       }
 
-      ret = lb_map_memory(global_heap.sbrk_top, mem_id);
+      ret = lb_map_memory(
+          (lb_virtual_mem_t)global_heap.sbrk_top, mem_id);
       assert(ret == 0);
       global_heap.sbrk_top += kPageSize;
     }
   } else if (size < 0) {
     assert(size % kPageSize == 0);
-    int num_pages = -size / kPageSize;
-    for (int i = 0; i < num_pages; ++i) {
+    size_t num_pages = -size / kPageSize;
+    for (size_t i = 0; i < num_pages; ++i) {
       global_heap.sbrk_top -= kPageSize;
       lb_physical_mem_t mem_id;
-      lb_unmap_memory(global_heap.sbrk_top, &mem_id);
+      lb_unmap_memory(
+          (lb_virtual_mem_t)global_heap.sbrk_top, &mem_id);
       lb_free_physical_memory(mem_id);
     }
     ptr = (void*)global_heap.sbrk_top;

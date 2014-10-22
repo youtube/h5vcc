@@ -59,8 +59,6 @@ public:
     void removeReferencedElement(SVGElement*);
 #endif
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     CSSCursorImageValue(PassRefPtr<CSSValue> imageValue, bool hasHotSpot, const IntPoint& hotSpot);
 

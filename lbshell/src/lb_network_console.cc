@@ -16,54 +16,52 @@
 
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
 
-#include "external/chromium/base/stringprintf.h"
-
-#include "lb_memory_manager.h"
-#include "lb_platform.h"
-#include "lb_shell.h"
-#include "lb_web_graphics_context_3d.h"
-
-#include <netinet/in.h>
-#include <sys/socket.h>
-
 #include "lb_network_console.h"
 
+#include "base/debug/trace_event.h"
+#include "base/stringprintf.h"
+#include "lb_resource_loader_bridge.h"
+#include "lb_shell.h"
+#include "lb_web_view_host.h"
+#include "net/base/tcp_listen_socket.h"
+
+#if defined(__LB_XB1__)
+// non-standard port number
+static int kPort = 4600;
+#elif defined(__LB_PS4__)
+// get the port number automatically
+static int kPort = 0;
+#else
 static int kPort = 1713;
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // LBNetworkConnection
 LBNetworkConnection::LBNetworkConnection(
-    LBDebugConsole *console,
-    int socket) :
-    debug_console_(console),
-    socket_(socket),
-    request_close_(false) {
+    LBDebugConsole *debug_console,
+    LBNetworkConsole *network_console,
+    scoped_refptr<net::StreamListenSocket> socket)
+    : debug_console_(debug_console)
+    , network_console_(network_console)
+    , socket_(socket) {
   DLOG(INFO) << "Connection established.";
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
 }
 
 LBNetworkConnection::~LBNetworkConnection() {
-  if (socket_ > 0) {
-    LB::Platform::close_socket(socket_);
-    debug_console_->shell()->webViewHost()->SetTelnetConnection(NULL);
-    DLOG(INFO) << "Connection closed.";
-  }
+  DLOG(INFO) << "Connection closed.";
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+
+  // Shutdown socket.
+  socket_ = NULL;
 }
 
-// Checks the connection for input and executes it if there is any
-bool LBNetworkConnection::Poll() {
-  char buffer[1024];
-  int bytes;
+// Processes input and executes it if complete.
+void LBNetworkConnection::OnInput(const char *data, int len) {
+  TRACE_EVENT0("lb_shell", "LBNetworkConnection::OnInput");
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
 
-  // Receive some data. Commands that are split up into multiple buffers
-  // are processed across multiple Poll() calls.
-  bytes = recv(socket_, buffer, sizeof(buffer), MSG_DONTWAIT);
-  if (bytes <= 0) {
-    // Either an error occurred or the client disconnected.
-    return false;
-  }
-
-  std::string input;
-  input.assign(buffer, bytes);
+  std::string input(data, len);
   size_t begin = 0;
   size_t end = 0;
 
@@ -74,8 +72,12 @@ bool LBNetworkConnection::Poll() {
     if (end != std::string::npos) {
       // Found newline/carriage return
       command_.append(input, begin, end - begin);
-      debug_console_->shell()->webViewHost()->SetTelnetConnection(this);
-      debug_console_->ParseAndExecuteCommand(command_);
+
+      // Post ParseAndExecuteCommand as a task in case that command wants to
+      // terminate this connection.
+      MessageLoop::current()->PostTask(FROM_HERE, base::Bind(
+          &LBDebugConsole::ParseAndExecuteCommand,
+          base::Unretained(debug_console_), this, command_));
 
       begin = input.find_first_not_of("\n\r", end);
       command_.clear();
@@ -84,18 +86,32 @@ bool LBNetworkConnection::Poll() {
       command_.append(input, begin, input.size() - begin);
     }
   }
-
-  return true;
 }
 
-// Sends a string of text to the telnet client
-void LBNetworkConnection::Output(const std::string &text) const {
-  send(socket_, text.c_str(), text.size(), MSG_DONTWAIT);
+void LBNetworkConnection::Output(const std::string& data) {
+  scoped_refptr<base::MessageLoopProxy> io_message_loop =
+      LBResourceLoaderBridge::GetIoThread();
+
+  if (io_message_loop->BelongsToCurrentThread()) {
+    if (socket_) {
+      socket_->Send(data);
+    }
+  } else {
+    io_message_loop->PostTask(FROM_HERE,
+        base::Bind(&LBNetworkConnection::Output, base::Unretained(this), data));
+  }
 }
 
 void LBNetworkConnection::Close() {
-  request_close_ = true;
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+  // Called when the debug console gets a command to kill the connction.
+  // NOTE: Simply destroying the socket does not cause DidClose to fire.
+  // Therefore, we call it directly ourselves, which leads to |this|
+  // being deleted.
+  network_console_->DidClose(socket_.get());
+  // PLEASE DO NOT ADD CODE HERE.
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // LBNetworkConsole
@@ -103,155 +119,83 @@ LBNetworkConsole* LBNetworkConsole::instance_ = NULL;
 
 // static
 void LBNetworkConsole::Initialize(LBDebugConsole *console) {
+  if (!LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread()) {
+    LBResourceLoaderBridge::GetIoThread()->PostTask(FROM_HERE,
+        base::Bind(&LBNetworkConsole::Initialize, console));
+    return;
+  }
+
   if (!LBNetworkConsole::instance_) {
-    LBNetworkConsole::instance_ = LB_NEW LBNetworkConsole(console);
+    LBNetworkConsole::instance_ = new LBNetworkConsole(console);
   }
 }
 
 // static
 void LBNetworkConsole::Teardown() {
+  if (!LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread()) {
+    LBResourceLoaderBridge::GetIoThread()->PostTask(FROM_HERE,
+        base::Bind(&LBNetworkConsole::Teardown));
+    return;
+  }
+
   delete instance_;
   instance_ = NULL;
 }
 
 LBNetworkConsole::LBNetworkConsole(LBDebugConsole *console)
     : debug_console_(console)
-    , listen_socket_(-1) {
+    , console_display_("Telnet.Port", "0", "Telnet port number.") {
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+  factory_.reset(new net::TCPListenSocketFactory("0.0.0.0", kPort));
+  listen_socket_ = factory_->CreateAndListen(this);
+  int port;
+  if (GetTelnetPort(&port)) {
+    // Note: Don't remove this line. It's needed for tests that
+    // connect via telnet.
+    DLOG(INFO) << "Listening for connections on port: " << port;
+  }
+  // Add the CVal string to the system display.
+  console_display_ = base::StringPrintf("%d", port);
 }
 
 LBNetworkConsole::~LBNetworkConsole() {
-  // Shutdown listening socket
-  if (listen_socket_ != -1) {
-    LB::Platform::close_socket(listen_socket_);
-  }
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+  // Shutdown listening socket.
+  listen_socket_ = NULL;
 
   // Delete/close all connections
-  connection_map::iterator itr;
+  ConnectionMap::iterator itr;
   for (itr = connections_.begin(); itr != connections_.end(); itr++) {
     delete itr->second;
   }
 }
 
-// Runs once per frame. Checks for incoming connections, checks for
-// input from each connection, and removes dead connections.
-void LBNetworkConsole::Poll() {
-  std::vector<int> dead_connections;
+void LBNetworkConsole::DidAccept(net::StreamListenSocket* listener,
+                                 net::StreamListenSocket* client) {
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+  LBNetworkConnection *connection =
+      new LBNetworkConnection(debug_console_, this, client);
+  connections_[client] = connection;
+}
 
-  // Figure out which connections have new data to be read
-  SelectConnections();
-
-  // Check for new connections
-  ProcessIncomingConnections();
-
-  // Poll each connection for input
-  connection_map::iterator itr;
-  for (itr = connections_.begin(); itr != connections_.end(); itr++) {
-    bool should_delete = false;
-    if (itr->second->request_close_) {
-      should_delete = true;
-    } else if (FD_ISSET(itr->second->socket_, &fds_)) {
-      if (!itr->second->Poll()) {
-        // Connection has been terminated. Mark for deletion
-        should_delete = true;
-      }
-    }
-
-    if (should_delete) {
-        delete itr->second;
-        dead_connections.push_back(itr->first);
-    }
-  }
-
-  // Cull dead connections
-  for (int i = 0; i < dead_connections.size(); i++) {
-    connections_.erase(dead_connections[i]);
+void LBNetworkConsole::DidRead(net::StreamListenSocket* client,
+                               const char* data,
+                               int len) {
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+  ConnectionMap::iterator itr = connections_.find(client);
+  DCHECK(itr != connections_.end());
+  if (itr != connections_.end()) {
+    itr->second->OnInput(data, len);
   }
 }
 
-// Checks the listening port for new connections
-void LBNetworkConsole::ProcessIncomingConnections() {
-  // Check for new connections, and add if we have one
-  struct sockaddr_in sin;
-
-  // Create the listening socket if it is invalid.
-  if (listen_socket_ < 0) {
-    listen_socket_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_socket_ < 0) {
-      DLOG(ERROR) << "Failed to create listening socket.";
-      return;
-    }
-
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(kPort);
-
-    if (bind(listen_socket_, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
-      DLOG(ERROR) << "Failed to bind listening socket.";
-      return;
-    }
-    if (listen(listen_socket_, 5) < 0) {
-      DLOG(ERROR) << "Failed to listen for incoming connections.";
-      return;
-    }
-    struct in_addr addr;
-    LB::Platform::GetLocalIpAddress(&addr);
-    char ip_address[128];
-    snprintf(ip_address, sizeof(ip_address), "%d.%d.%d.%d:%d",
-             (addr.s_addr >> 24) & 0xff,
-             (addr.s_addr >> 16) & 0xff,
-             (addr.s_addr >> 8) & 0xff,
-             (addr.s_addr) & 0xff,
-             htons(sin.sin_port));
-    DLOG(INFO) << "Listening for connections on " << ip_address;
-  }
-
-  // if there's activity on the listening socket, check for new connection
-  if (FD_ISSET(listen_socket_, &fds_)) {
-    socklen_t len = sizeof(sin);
-    int new_socket = accept(listen_socket_, (struct sockaddr *)&sin, &len);
-    if (new_socket >= 0) {
-      // Connection is successful; store it.
-      LBNetworkConnection *connection = LB_NEW LBNetworkConnection(
-          debug_console_,
-          new_socket);
-      connections_[new_socket] = connection;
-    } else {
-      DLOG(ERROR) << "Failed to establish incoming connection.";
-
-      // Listening socket has died.  Reset the socket and clean up any open
-      // telnet connections.
-      close(listen_socket_);
-      listen_socket_ = -1;
-      connection_map::iterator itr;
-      for (itr = connections_.begin(); itr != connections_.end(); itr++) {
-        itr->second->request_close_ = true;
-      }
-    }
-  }
-}
-
-// Calls select on all of the connections (to determine which sockets are
-// ready for read and write)
-void LBNetworkConsole::SelectConnections() {
-  FD_ZERO(&fds_);
-  if (listen_socket_ >= 0) {
-    FD_SET(listen_socket_, &fds_);
-  }
-
-  std::map<int,LBNetworkConnection*>::iterator itr;
-  for (itr = connections_.begin(); itr != connections_.end(); itr++) {
-    FD_SET(itr->first, &fds_);
-  }
-
-  timeval tv;
-  memset(&tv, 0, sizeof(tv));   // timeout of 0 == don't block on select
-  int result = select(FD_SETSIZE, &fds_, NULL, NULL, &tv);
-  if (result < 0) {
-    DLOG(ERROR) << "Failed to read socket status.";
-    return;
-  } else if (result == 0) {
-    // No ready sockets.
-    FD_ZERO(&fds_);
+void LBNetworkConsole::DidClose(net::StreamListenSocket* client) {
+  DCHECK(LBResourceLoaderBridge::GetIoThread()->BelongsToCurrentThread());
+  ConnectionMap::iterator itr = connections_.find(client);
+  DCHECK(itr != connections_.end());
+  if (itr != connections_.end()) {
+    delete itr->second;
+    connections_.erase(itr);
   }
 }
 
@@ -263,7 +207,7 @@ bool LBNetworkConsole::TelnetLogHandler(
 
   // Send output to each connection
   if (console) {
-    connection_map::iterator itr;
+    ConnectionMap::iterator itr;
     for (itr = console->connections_.begin();
          itr != console->connections_.end();
          itr++) {
@@ -273,6 +217,18 @@ bool LBNetworkConsole::TelnetLogHandler(
 
   // Don't eat this event
   return false;
+}
+
+bool LBNetworkConsole::GetTelnetPort(int* port) {
+#if defined(__LB_PS4__)
+  net::IPEndPoint port_addr;
+  int ret = listen_socket_->GetLocalAddress(&port_addr);
+  *port = (ret == 0) ? port_addr.port() : 0;
+  return (ret == 0);
+#else  // defined(__LB_PS4__)
+  *port = kPort;
+  return true;
+#endif  // defined(__LB_PS4__)
 }
 
 #endif  // __LB_SHELL__ENABLE_CONSOLE__

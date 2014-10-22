@@ -100,6 +100,10 @@ public:
 
     virtual void setOpacity(float);
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    virtual void setH5vccTargetScreen(H5VCCTargetScreen);
+#endif
+
 #if ENABLE(CSS_FILTERS)
     // Returns true if filter can be rendered by the compositor
     virtual bool setFilters(const FilterOperations&);
@@ -152,8 +156,6 @@ public:
 
     // Exposed for tests.
     WebKit::WebLayer* contentsLayer() const { return m_contentsLayer; }
-
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
 private:
     void updateNames();

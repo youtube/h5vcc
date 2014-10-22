@@ -12,6 +12,10 @@
 
 #include <GL/gl.h>
 #include <GL/glext.h>
+#if !defined(__LB_SHELL__) || defined(__LB_ANDROID__)
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
 
 #include "base/logging.h"
 #include "build/build_config.h"
@@ -22,6 +26,11 @@
 #include <GL/wglext.h>
 #elif defined(OS_MACOSX)
 #include <OpenGL/OpenGL.h>
+#elif defined(__LB_LINUX__)
+#include <X11/xpm.h>
+#include <GL/glx.h>
+#include <GL/glxext.h>
+#elif defined(__LB_SHELL__)
 #elif defined(USE_X11)
 #include <GL/glx.h>
 #include <GL/glxext.h>
@@ -50,9 +59,13 @@
 typedef struct osmesa_context *OSMesaContext;
 typedef void (*OSMESAproc)();
 
-#if !defined(OS_MACOSX)
-
 // Forward declare EGL types.
+
+#if defined(__LB_SHELL__) && !defined(__LB_ANDROID__)
+// We might be able to get rid of all of this after a refactor to using
+// EGL on Linux, and just simply including egl.h and eglext.h, as above.
+// This code is already removed in upstream Chromium and we are relying
+// on these types to be properly defined within the Khronos EGL headers.
 typedef uint64 EGLTimeKHR;
 typedef unsigned int EGLBoolean;
 typedef unsigned int EGLenum;
@@ -67,21 +80,16 @@ typedef void *EGLSyncKHR;
 typedef void (*__eglMustCastToProperFunctionPointerType)(void);
 typedef void* GLeglImageOES;
 
-#if defined(OS_WIN)
-typedef HDC     EGLNativeDisplayType;
-typedef HBITMAP EGLNativePixmapType;
-typedef HWND    EGLNativeWindowType;
-#elif defined(OS_ANDROID)
-typedef void                       *EGLNativeDisplayType;
-typedef struct egl_native_pixmap_t *EGLNativePixmapType;
-typedef struct ANativeWindow       *EGLNativeWindowType;
-#else
+#if defined(__LB_LINUX__)
 typedef Display *EGLNativeDisplayType;
 typedef Pixmap   EGLNativePixmapType;
 typedef Window   EGLNativeWindowType;
+#elif defined(__LB_SHELL__)
+typedef void*    EGLNativeDisplayType;
+typedef void*    EGLNativePixmapType;
+typedef void*    EGLNativeWindowType;
 #endif
-
-#endif  // !OS_MACOSX
+#endif
 
 #include "gl_bindings_autogen_gl.h"
 #include "gl_bindings_autogen_osmesa.h"
@@ -94,9 +102,25 @@ typedef Window   EGLNativeWindowType;
 #include "gl_bindings_autogen_glx.h"
 #elif defined(OS_ANDROID)
 #include "gl_bindings_autogen_egl.h"
+#elif defined(__LB_LINUX__)
+#include "gl_bindings_autogen_egl.h"
+#include "gl_bindings_autogen_glx.h"
+#elif defined(__LB_SHELL__)
+#include "gl_bindings_autogen_egl.h"
 #endif
 
 namespace gfx {
+
+#if defined(__LB_SHELL__) && !defined(__LB_ANDROID__)
+// We don't compile the cpps that have these.
+// But they are needed to link DLLs.
+inline OSMESAApi::~OSMESAApi() {
+  NOTREACHED();
+}
+inline EGLApi::~EGLApi() {
+  NOTREACHED();
+}
+#endif
 
 GL_EXPORT extern GLApi* g_current_gl_context;
 GL_EXPORT extern OSMESAApi* g_current_osmesa_context;
@@ -117,7 +141,7 @@ GL_EXPORT extern GLXApi* g_current_glx_context;
 GL_EXPORT extern DriverEGL g_driver_egl;
 GL_EXPORT extern DriverGLX g_driver_glx;
 
-#elif defined(OS_ANDROID)
+#elif defined(OS_ANDROID) || defined(__LB_ANDROID__)
 
 GL_EXPORT extern EGLApi* g_current_egl_context;
 GL_EXPORT extern DriverEGL g_driver_egl;

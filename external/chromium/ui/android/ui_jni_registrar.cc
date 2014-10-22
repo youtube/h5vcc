@@ -13,7 +13,9 @@ namespace ui {
 
 static base::android::RegistrationMethod kUiRegisteredMethods[] = {
   { "NativeWindow", WindowAndroid::RegisterWindowAndroid },
+#if !defined(__LB_ANDROID__)
   { "SelectFileDialog", SelectFileDialogImpl::RegisterSelectFileDialog },
+#endif
 };
 
 bool RegisterJni(JNIEnv* env) {

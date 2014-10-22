@@ -33,7 +33,6 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "VisiblePosition.h"
-#include "WebCoreMemoryInstrumentation.h"
 
 using namespace std;
 
@@ -585,12 +584,6 @@ LayoutRect RenderReplaced::clippedOverflowRectForRepaint(const RenderLayerModelO
     }
     computeRectForRepaint(repaintContainer, r);
     return r;
-}
-
-void RenderReplaced::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    RenderBox::reportMemoryUsage(memoryObjectInfo);
 }
 
 }

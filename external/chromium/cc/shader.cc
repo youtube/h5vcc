@@ -8,6 +8,14 @@
 #include "base/logging.h"
 #include <public/WebGraphicsContext3D.h>
 
+#if defined(__LB_XB1__)
+// On XB1, main is defined to main_xb1 in order to provide a wrapper
+// around the real main in lbshell as well as the unit tests.  However,
+// if left defined here, it will also be substituted in to the shaders
+// specified within this source file, giving errors when compiling them.
+#undef main
+#endif
+
 #define SHADER0(Src) #Src
 #define SHADER(Src) SHADER0(Src)
 

@@ -132,11 +132,7 @@
 #define PLATFORM_MUTEX_LOCK(m) pthread_mutex_lock(m)
 #define PLATFORM_MUTEX_UNLOCK(m) pthread_mutex_unlock(m)
 #define PLATFORM_MUTEX_DESTROY(m) pthread_mutex_destroy(m)
-#if defined(__LB_WIIU__)
-#define PLATFORM_MUTEX_INITIALIZER LB_SHELL_PTHREAD_MUTEX_INITIALIZER
-#else
 #define PLATFORM_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
-#endif
 #if (U_HAVE_GCC_ATOMICS == 1)
 #define SYNC_COMPARE_AND_SWAP(dest, oldval, newval) \
             __sync_val_compare_and_swap(dest, oldval, newval)
@@ -200,9 +196,6 @@ struct ICUMutex {
 static UMTX  globalUMTX;
 static ICUMutex globalMutex = {&globalUMTX, FALSE, NULL, 0, PLATFORM_MUTEX_INITIALIZER, NULL};
 static UMTX  globalUMTX = &globalMutex;
-#if defined(__LB_WIIU__)
-MUTEX_TYPE* icu_global_mutex = &globalMutex.platformMutex;
-#endif
 #else
 static UMTX  globalUMTX = NULL;
 #endif

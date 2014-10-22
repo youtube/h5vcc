@@ -79,7 +79,7 @@
 # include <sys/stat.h>
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #define stat	_stat
 #define chmod	_chmod
 #define open	_open

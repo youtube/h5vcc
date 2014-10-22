@@ -51,6 +51,9 @@ namespace WebCore {
         static ImageDecoder* createICODecoder(
             ImageSource::AlphaOption alpha,
             ImageSource::GammaAndColorProfileOption profile);
+        static ImageDecoder* createWEBPDecoder(
+            ImageSource::AlphaOption alpha,
+            ImageSource::GammaAndColorProfileOption profile);
 
         // Set encoded image data.
         virtual void setData(SharedBuffer*, bool allDataReceived) OVERRIDE;

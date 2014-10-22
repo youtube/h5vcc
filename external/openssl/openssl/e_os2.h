@@ -101,7 +101,7 @@ extern "C" {
 #  undef OPENSSL_SYS_UNIX
 #  define OPENSSL_SYS_WIN32_CYGWIN
 # else
-#  if defined(_WIN32) || defined(OPENSSL_SYSNAME_WIN32)
+#  if (defined(_WIN32) || defined(OPENSSL_SYSNAME_WIN32)) && !defined(__LB_SHELL__)
 #   undef OPENSSL_SYS_UNIX
 #   define OPENSSL_SYS_WIN32
 #  endif
@@ -303,6 +303,11 @@ extern "C" {
 
 #if defined(__ultrix) && !defined(ssize_t)
 #  define ossl_ssize_t int 
+#endif
+
+#if defined(_MSC_VER)
+# include <BaseTsd.h>
+# define ossl_ssize_t SSIZE_T
 #endif
 
 #ifndef ossl_ssize_t

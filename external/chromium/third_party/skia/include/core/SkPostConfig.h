@@ -131,6 +131,9 @@
         #define WIN32_IS_MEAN_WAS_LOCALLY_DEFINED
     #endif
 
+    #if defined(__LB_SHELL__)
+        #error windows.h may not be used here!
+    #endif
     #include <windows.h>
 
     #ifdef WIN32_IS_MEAN_WAS_LOCALLY_DEFINED

@@ -10,6 +10,7 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
+#include "net/base/net_errors.h"
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_info.h"
 
@@ -21,9 +22,9 @@ class ProxyInfo;
 // from external classes. These function needs to be implemented on
 // different platforms to create the right type of loader (derived from
 // HttpStreamShellLoader) used in application.
-void HttpStreamShellLoaderGlobalInit();
-void HttpStreamShellLoaderGlobalDeinit();
-HttpStreamShellLoader* CreateHttpStreamShellLoader();
+NET_EXPORT_PRIVATE void HttpStreamShellLoaderGlobalInit();
+NET_EXPORT_PRIVATE void HttpStreamShellLoaderGlobalDeinit();
+NET_EXPORT_PRIVATE HttpStreamShellLoader* CreateHttpStreamShellLoader();
 
 // Represents a single HTTP transaction (i.e., a single request/response pair).
 // HTTP redirects are not followed and authentication challenges are not
@@ -36,7 +37,17 @@ class NET_EXPORT_PRIVATE HttpStreamShellLoader
   HttpStreamShellLoader() {}
   virtual ~HttpStreamShellLoader() {}
 
-  virtual int Open(const HttpRequestInfo* info, const BoundNetLog& net_log) = 0;
+  virtual int Open(const HttpRequestInfo* info,
+                   const BoundNetLog& net_log,
+                   const CompletionCallback& callback) {
+    // Legacy implementations that do not take the callback will implement the
+    // 2-argument Open(), and must never return ERR_IO_PENDING, or the caller
+    // will expect the callback to be called. New implementations should
+    // override this 3-argument Open().
+    int result = Open(info, net_log);
+    DCHECK_NE(result, ERR_IO_PENDING);
+    return result;
+  }
 
   virtual int SendRequest(const std::string& request_line,
                           const HttpRequestHeaders& headers,
@@ -58,16 +69,24 @@ class NET_EXPORT_PRIVATE HttpStreamShellLoader
   static std::string GetResponseHeaderLines(
       const net::HttpResponseHeaders& headers);
 
+  // Parse response headers.
+  // TODO(iffy): Move to HttpUtil or something?
+  static int ParseResponseHeaders(const char* buf, int buf_len,
+      const HttpRequestInfo*, HttpResponseInfo* response);
+
  protected:
+  // Old interface for Open. New implementations should not implement this
+  // method, but implement the 3-argument Open() instead.
+  // TODO(iffy): Remove this method and references.
+  virtual int Open(const HttpRequestInfo* info,
+                   const BoundNetLog& net_log) { return OK; };
+
   // Helper functions used by sub classes.
   // Return true if |headers| contain multiple |field_name| fields with
   // different values.
   static bool HeadersContainMultipleCopiesOfField(
       const net::HttpResponseHeaders& headers,
       const std::string& field_name);
-  // Parser response headers.
-  int ParseResponseHeaders(const char* buf, int buf_len,
-      const HttpRequestInfo*, HttpResponseInfo* response);
 };
 
 }  // namespace net

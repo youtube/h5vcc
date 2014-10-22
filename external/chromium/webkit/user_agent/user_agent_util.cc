@@ -155,12 +155,24 @@ std::string BuildUserAgentFromProduct(const std::string& product) {
       "Macintosh; ";
 #elif defined(USE_X11)
       "X11; ";           // strange, but that's what Firefox uses
+#elif defined(__LB_ANDROID__)
+      "Android; ";
+#elif defined(__LB_LINUX__)
+      "Linux; ";
 #elif defined(__LB_PS3__)
       "PS3; ";
+#elif defined(__LB_PS4__)
+      "PS4; ";
 #elif defined(__LB_WIIU__)
       "WiiU; ";
+#elif defined(__LB_XB1__)
+      "XboxOne; ";
+#elif defined(__LB_XB360__)
+      "Xbox360; ";
 #elif defined(OS_ANDROID)
       "Linux; ";
+#elif defined(__LB_SHELL__)
+#error "Undefined platform"
 #else
       "Unknown; ";
 #endif

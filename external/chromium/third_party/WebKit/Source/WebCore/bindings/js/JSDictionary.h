@@ -42,6 +42,8 @@ class MediaKeyError;
 class Node;
 class ScriptValue;
 class SerializedScriptValue;
+class SpeechRecognitionResult;
+class SpeechRecognitionResultList;
 class Storage;
 class TrackBase;
 
@@ -115,6 +117,10 @@ private:
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<Uint8Array>& result);
 #if ENABLE(ENCRYPTED_MEDIA)
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<MediaKeyError>& result);
+#endif
+#if ENABLE(SCRIPTED_SPEECH)
+    static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<SpeechRecognitionResult>& result);
+    static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<SpeechRecognitionResultList>& result);
 #endif
 
     JSC::ExecState* m_exec;

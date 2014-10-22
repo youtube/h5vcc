@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef _LB_RESOURCE_LOADER_CHECK_H_
-#define _LB_RESOURCE_LOADER_CHECK_H_
+#ifndef SRC_LB_RESOURCE_LOADER_CHECK_H_
+#define SRC_LB_RESOURCE_LOADER_CHECK_H_
 
 #include "external/chromium/net/url_request/url_request.h"
 #include "external/chromium/webkit/glue/resource_loader_bridge.h"
 #include "external/chromium/webkit/glue/webkit_glue.h"
+#include "lb_shell_export.h"
 
 // Steel has its own set of rules on what URL should be allowed and what not.
 // Do this check here, and return true if everything is ok and the URL should
 // be loaded.
-bool DoesHttpResponsePassSecurityCheck(
+bool LB_SHELL_EXPORT DoesHttpResponsePassSecurityCheck(
     const GURL& url,
     const webkit_glue::ResourceResponseInfo& info);
 
 void HandleSSLCertificateError(net::URLRequest* request);
-#endif  // _LB_RESOURCE_LOADER_CHECK_H_
+
+// Require SSL for all connections, regardless of mime-type whitelist.
+bool LB_SHELL_EXPORT EnforceSSL();
+
+#endif  // SRC_LB_RESOURCE_LOADER_CHECK_H_

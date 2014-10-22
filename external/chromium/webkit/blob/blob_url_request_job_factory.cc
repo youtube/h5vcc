@@ -23,7 +23,9 @@ BlobProtocolHandler::BlobProtocolHandler(
       file_system_context_(file_system_context),
       file_loop_proxy_(loop_proxy) {
   DCHECK(blob_storage_controller_);
+#if !defined(__LB_SHELL__)
   DCHECK(file_system_context_);
+#endif
   DCHECK(file_loop_proxy_);
 }
 

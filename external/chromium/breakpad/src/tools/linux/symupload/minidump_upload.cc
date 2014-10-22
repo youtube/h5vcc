@@ -49,6 +49,7 @@ struct Options {
   std::string uploadURLStr;
   std::string product;
   std::string version;
+  std::string comments;
   std::string proxy;
   std::string proxy_user_pwd;
   bool success;
@@ -60,6 +61,7 @@ static void Start(Options *options) {
   // Add parameters
   parameters["prod"] = options->product;
   parameters["ver"] = options->version;
+  parameters["comments"] = options->comments;
 
   // Send it
   std::string response, error;
@@ -78,9 +80,9 @@ static void Start(Options *options) {
     printf("Successfully sent the minidump file.\n");
   } else {
     printf("Failed to send minidump: %s\n", error.c_str());
-    printf("Response:\n");
-    printf("%s\n", response.c_str());
   }
+  printf("Response:\n");
+  printf("%s\n", response.c_str());
   options->success = success;
 }
 
@@ -88,14 +90,15 @@ static void Start(Options *options) {
 static void
 Usage(int argc, const char *argv[]) {
   fprintf(stderr, "Submit minidump information.\n");
-  fprintf(stderr, "Usage: %s [options...] -p <product> -v <version> <minidump> "
-          "<upload-URL>\n", argv[0]);
+  fprintf(stderr, "Usage: %s [options...] -p <product> -v <version>"
+          " -c <comments> <minidump> <upload-URL>\n", argv[0]);
   fprintf(stderr, "Options:\n");
   fprintf(stderr, "<minidump> should be a minidump.\n");
   fprintf(stderr, "<upload-URL> is the destination for the upload\n");
 
   fprintf(stderr, "-p:\t <product> Product name\n");
   fprintf(stderr, "-v:\t <version> Product version\n");
+  fprintf(stderr, "-c:\t <comments> Http address of coredump files on x20\n");
   fprintf(stderr, "-x:\t <host[:port]> Use HTTP proxy on given port\n");
   fprintf(stderr, "-u:\t <user[:password]> Set proxy user and password\n");
   fprintf(stderr, "-h:\t Usage\n");
@@ -108,8 +111,11 @@ SetupOptions(int argc, const char *argv[], Options *options) {
   extern int optind;
   char ch;
 
-  while ((ch = getopt(argc, (char * const *)argv, "p:u:v:x:h?")) != -1) {
+  while ((ch = getopt(argc, (char * const *)argv, "c:p:u:v:x:h?")) != -1) {
     switch (ch) {
+      case 'c':
+        options->comments = optarg;
+        break;
       case 'p':
         options->product = optarg;
         break;

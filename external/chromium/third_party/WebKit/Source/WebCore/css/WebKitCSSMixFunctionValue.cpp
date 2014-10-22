@@ -30,8 +30,6 @@
 #include "config.h"
 #include "WebKitCSSMixFunctionValue.h"
 
-#include "WebCoreMemoryInstrumentation.h"
-
 #if ENABLE(CSS_SHADERS)
 
 namespace WebCore {
@@ -54,12 +52,6 @@ String WebKitCSSMixFunctionValue::customCssText() const
 PassRefPtr<WebKitCSSMixFunctionValue> WebKitCSSMixFunctionValue::cloneForCSSOM() const
 {
     return adoptRef(new WebKitCSSMixFunctionValue(*this));
-}
-
-void WebKitCSSMixFunctionValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSValueList::reportDescendantMemoryUsage(memoryObjectInfo);
 }
 
 } // namespace WebCore

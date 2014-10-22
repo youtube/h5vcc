@@ -15,8 +15,8 @@
 #include "cc/tiling_data.h"
 #include "ui/gfx/rect.h"
 
-#if defined(__LB_SHELL__)
-#include "base/shell_allocator.h"
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
+#include "cc/shell_allocator.h"
 #endif
 
 namespace cc {
@@ -64,7 +64,7 @@ public:
         DISALLOW_COPY_AND_ASSIGN(Tile);
     };
     typedef std::pair<int, int> TileMapKey;
-#if defined(__LB_SHELL__)
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
     typedef base::shell_hash_map_node_sim<std::pair<const TileMapKey, Tile*> > LayerTilingDataItemType;
     static const int kMaxLayerTilingDataReuseListCount = 24;
     // In my test run the max count of node object was around 128.

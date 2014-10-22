@@ -998,3 +998,20 @@ snap
 drag
 no-drag
 #endif
+
+// -h5vcc-target-screen
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+screen-small
+screen-large
+screen-all
+#endif
+
+// -h5vcc-gesturable
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+gesture-ignored
+gesture-clickable
+gesture-scroll-vertical
+gesture-scroll-horizontal
+gesture-scroll-both
+#endif
+

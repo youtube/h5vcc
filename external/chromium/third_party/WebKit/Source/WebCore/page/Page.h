@@ -360,8 +360,6 @@ namespace WebCore {
         void sawMediaEngine(const String& engineName);
         void resetSeenMediaEngines();
 
-        void reportMemoryUsage(MemoryObjectInfo*) const;
-
     private:
         void initGroup();
 

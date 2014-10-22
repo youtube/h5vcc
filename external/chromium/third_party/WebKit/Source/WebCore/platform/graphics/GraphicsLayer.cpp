@@ -33,11 +33,9 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
-#include "PlatformMemoryInstrumentation.h"
 #include "RotateTransformOperation.h"
 #include "TextStream.h"
 #include <wtf/HashMap.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -729,16 +727,6 @@ String GraphicsLayer::layerTreeAsText(LayerTreeAsTextBehavior behavior) const
 
     dumpLayer(ts, 0, behavior);
     return ts.release();
-}
-
-void GraphicsLayer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Layers);
-    info.addMember(m_children);
-    info.addMember(m_parent);
-    info.addMember(m_maskLayer);
-    info.addMember(m_replicaLayer);
-    info.addMember(m_replicatedLayer);
 }
 
 } // namespace WebCore

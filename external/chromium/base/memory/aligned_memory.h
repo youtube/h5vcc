@@ -80,6 +80,7 @@ BASE_DECL_ALIGNED_MEMORY(2);
 BASE_DECL_ALIGNED_MEMORY(4);
 BASE_DECL_ALIGNED_MEMORY(8);
 BASE_DECL_ALIGNED_MEMORY(16);
+#if !defined(__LB_XB360__)
 BASE_DECL_ALIGNED_MEMORY(32);
 BASE_DECL_ALIGNED_MEMORY(64);
 BASE_DECL_ALIGNED_MEMORY(128);
@@ -88,6 +89,46 @@ BASE_DECL_ALIGNED_MEMORY(512);
 BASE_DECL_ALIGNED_MEMORY(1024);
 BASE_DECL_ALIGNED_MEMORY(2048);
 BASE_DECL_ALIGNED_MEMORY(4096);
+#else
+// The Xbox360 does not support local stack variables with greater than 16 byte
+// alignment. Manually handle those.
+template <size_t Size, int alignment>
+class AlignedMemory<Size, alignment> {
+ public:
+  AlignedMemory() {
+    COMPILE_ASSERT(alignment && !(alignment & (alignment - 1)),
+                   alignment_must_be_power_of_two);
+    SetupAlignedPointer();
+  }
+  AlignedMemory(const AlignedMemory &other) {
+    SetupAlignedPointer();
+    memcpy(void_data(), other.void_data(), Size);
+  }
+
+  void* void_data() { return static_cast<void*>(aligned_data_); }
+  const void* void_data() const {
+    return static_cast<const void*>(aligned_data_);
+  }
+  template<typename Type>
+  Type* data_as() { return static_cast<Type*>(void_data()); }
+  template<typename Type>
+  const Type* data_as() const {
+    return static_cast<const Type*>(void_data());
+  }
+ private:
+  void* operator new(size_t);
+  void operator delete(void*);
+
+  void SetupAlignedPointer() {
+    uintptr_t ptr = (reinterpret_cast<uintptr_t>(data_) + (alignment - 1))
+        & ~(alignment - 1);
+    aligned_data_ = reinterpret_cast<uint8*>(ptr);
+  }
+
+  uint8 *aligned_data_;
+  uint8 data_[Size + alignment - 1];
+};
+#endif
 
 #undef BASE_DECL_ALIGNED_MEMORY
 

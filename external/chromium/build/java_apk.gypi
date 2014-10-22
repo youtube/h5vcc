@@ -78,6 +78,13 @@
     'additional_res_dirs': [],
     'additional_res_packages': [],
     'is_test_apk%': 0,
+    'conditions' : [
+      ['OS == "lb_shell" and target_arch == "android"', {
+        'chromium_src_dir' : '<(ant_build_out)/../../../external/chromium',
+      },{
+        'chromium_src_dir' : '<(ant_build_out)/../..',
+      }],
+    ],
   },
   'sources': [
       '<@(native_libs_paths)'
@@ -112,6 +119,24 @@
     },
   ],
   'actions': [
+    {
+      # This action updates the timestamp of AndroidManifest.xml
+      # The aapt package step doesn't know to repackage APK resources
+      # if only the version code changes,
+      # while a change to a resource file will cause a repackage.
+      # Note that ninja only runs this action
+      # when <(android_app_version_code) changes.
+      'action_name': 'touch_manifest_for_apk_repackage',
+      'message': 'Touching AndroidManifest.xml',
+      'inputs': [],
+      'outputs': ['<(java_in_dir)/AndroidManifest.xml'],
+      'action': [
+        # -c to 'touch' means don't create any files.
+        # <(android_app_version_code) is not a file, this is just a way to
+        # have ninja consider it a dependency.
+        'touch', '-c', '<(java_in_dir)/AndroidManifest.xml', '<(android_app_version_code)'
+      ],
+    },
     {
       'action_name': 'ant_<(package_name)_apk',
       'message': 'Building <(package_name) apk.',
@@ -153,7 +178,7 @@
         '-DANDROID_SDK_TOOLS=<(android_sdk_tools)',
         '-DANDROID_SDK_VERSION=<(android_sdk_version)',
         '-DANDROID_TOOLCHAIN=<(android_toolchain)',
-        '-DCHROMIUM_SRC=<(ant_build_out)/../..',
+        '-DCHROMIUM_SRC=<(chromium_src_dir)',
         '-DCONFIGURATION_NAME=<(CONFIGURATION_NAME)',
         '-DPRODUCT_DIR=<(ant_build_out)',
 

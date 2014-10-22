@@ -809,6 +809,7 @@ void DatabaseTracker::DeleteIncognitoDBDirectory() {
     file_util::Delete(incognito_db_dir, true);
 }
 
+#if !defined(__LB_SHELL__)
 void DatabaseTracker::ClearSessionOnlyOrigins() {
   shutting_down_ = true;
 
@@ -878,5 +879,6 @@ void DatabaseTracker::SetForceKeepSessionState() {
   }
   force_keep_session_state_ = true;
 }
+#endif
 
 }  // namespace webkit_database

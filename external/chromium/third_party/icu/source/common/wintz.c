@@ -11,7 +11,7 @@
 
 #include "unicode/utypes.h"
 
-#ifdef U_WINDOWS
+#if defined(U_WINDOWS) || defined(__LB_XB1__)
 
 #include "wintz.h"
 
@@ -28,6 +28,10 @@
 #   define NOIME
 #   define NOMCX
 #include <windows.h>
+
+#if defined(__LB_XB1__)
+#define HKEY_LOCAL_MACHINE                  (( HKEY ) (ULONG_PTR)((LONG)0x80000002) )
+#endif
 
 /* The layout of the Tzi value in the registry */
 typedef struct

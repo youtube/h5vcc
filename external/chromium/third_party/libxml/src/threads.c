@@ -146,11 +146,7 @@ struct _xmlRMutex {
 static pthread_key_t globalkey;
 static pthread_t mainthread;
 static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-#if defined(__LB_WIIU__)
-pthread_mutex_t global_init_lock = LB_SHELL_PTHREAD_MUTEX_INITIALIZER;
-#else
 static pthread_mutex_t global_init_lock = PTHREAD_MUTEX_INITIALIZER;
-#endif
 #elif defined HAVE_WIN32_THREADS
 #if defined(HAVE_COMPILER_TLS)
 static __declspec(thread) xmlGlobalState tlstate;
@@ -865,21 +861,21 @@ xmlInitThreads(void)
 {
 #ifdef HAVE_PTHREAD_H
     if (libxml_is_threaded == -1) {
-        if ((pthread_once != NULL) &&
-            (pthread_getspecific != NULL) &&
-            (pthread_setspecific != NULL) &&
-            (pthread_key_create != NULL) &&
-            (pthread_key_delete != NULL) &&
-            (pthread_mutex_init != NULL) &&
-            (pthread_mutex_destroy != NULL) &&
-            (pthread_mutex_lock != NULL) &&
-            (pthread_mutex_unlock != NULL) &&
-            (pthread_cond_init != NULL) &&
-            (pthread_cond_destroy != NULL) &&
-            (pthread_cond_wait != NULL) &&
-            (pthread_equal != NULL) &&
-            (pthread_self != NULL) &&
-            (pthread_cond_signal != NULL)) {
+        if ((&pthread_once != NULL) &&
+            (&pthread_getspecific != NULL) &&
+            (&pthread_setspecific != NULL) &&
+            (&pthread_key_create != NULL) &&
+            (&pthread_key_delete != NULL) &&
+            (&pthread_mutex_init != NULL) &&
+            (&pthread_mutex_destroy != NULL) &&
+            (&pthread_mutex_lock != NULL) &&
+            (&pthread_mutex_unlock != NULL) &&
+            (&pthread_cond_init != NULL) &&
+            (&pthread_cond_destroy != NULL) &&
+            (&pthread_cond_wait != NULL) &&
+            (&pthread_equal != NULL) &&
+            (&pthread_self != NULL) &&
+            (&pthread_cond_signal != NULL)) {
             libxml_is_threaded = 1;
 
 /* fprintf(stderr, "Running multithreaded\n"); */

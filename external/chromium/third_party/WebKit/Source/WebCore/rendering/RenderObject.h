@@ -282,8 +282,6 @@ public:
     virtual bool createsAnonymousWrapper() const { return false; }
     //////////////////////////////////////////
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     //////////////////////////////////////////
     // Helper functions. Dangerous to use!
@@ -296,6 +294,9 @@ protected:
             setInRenderFlowThread(true);
         else if (!parent && inRenderFlowThread())
             setInRenderFlowThread(false);
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+        m_parentH5vccTargetScreenDiffValid = false;
+#endif
     }
     //////////////////////////////////////////
 private:
@@ -455,6 +456,22 @@ public:
 
     bool inRenderFlowThread() const { return m_bitfields.inRenderFlowThread(); }
     void setInRenderFlowThread(bool b = true) { m_bitfields.setInRenderFlowThread(b); }
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    // Does this element render on a different screen than its parent?
+    bool isH5vccTargetScreenParentDifferent() const {
+        if (m_parentH5vccTargetScreenDiffValid) {
+            return m_parentH5vccTargetScreenDiff;
+        } else {
+            return parent() && style()->h5vccTargetScreen() != parent()->style()->h5vccTargetScreen();
+        }
+    };
+    void setH5vccTargetScreenParentDifferent(bool screenDiff) {
+        ASSERT(!m_parent);
+        m_parentH5vccTargetScreenDiffValid = true;
+        m_parentH5vccTargetScreenDiff = screenDiff;
+    }
+#endif
 
     virtual bool requiresForcedStyleRecalcPropagation() const { return false; }
 
@@ -1023,6 +1040,11 @@ private:
 #ifndef NDEBUG
     bool m_hasAXObject             : 1;
     bool m_setNeedsLayoutForbidden : 1;
+#endif
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    bool m_parentH5vccTargetScreenDiffValid : 1;
+    bool m_parentH5vccTargetScreenDiff : 1;
 #endif
 
 #define ADD_BOOLEAN_BITFIELD(name, Name) \

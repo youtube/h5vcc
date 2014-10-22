@@ -37,8 +37,9 @@
 extern "C" {
 #endif
 
-#if !defined(WIN32) && !defined(_WIN32) && !defined(__LB_PS3__) && !defined(__LB_WIIU__) \
-    && !((defined(__CC_ARM) || defined(__ARMCC__)) && !defined(__linux__)) /* RVCT */
+#if !defined(WIN32) && !defined(_WIN32) && \
+      !(defined(__LB_SHELL__) && !(defined(__LB_ANDROID__) || defined(__LB_LINUX__))) && \
+      !((defined(__CC_ARM) || defined(__ARMCC__)) && !defined(__linux__)) /* RVCT */
 /*!
 @typedef JSChar
 @abstract A Unicode character.

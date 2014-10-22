@@ -59,4 +59,23 @@ void SharedQuadState::SetAll(
   this->opacity = opacity;
 }
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+void SharedQuadState::SetAll(
+    const gfx::Transform& content_to_target_transform,
+    const gfx::Rect& visible_content_rect,
+    const gfx::Rect& clipped_rect_in_target,
+    const gfx::Rect& clip_rect,
+    bool is_clipped,
+    float opacity,
+    WebKit::H5VCCTargetScreen h5vcc_target_screen) {
+  SetAll(content_to_target_transform,
+         visible_content_rect,
+         clipped_rect_in_target,
+         clip_rect,
+         is_clipped,
+         opacity);
+  this->h5vcc_target_screen = h5vcc_target_screen;
+}
+#endif
+
 }  // namespace cc

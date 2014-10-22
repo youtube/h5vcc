@@ -146,6 +146,13 @@ DomStorageArea* DomStorageHost::GetOpenArea(int connection_id) {
   return found->second.area_;
 }
 
+void DomStorageHost::Flush() {
+  AreaMap::iterator it;
+  for (it = connections_.begin(); it != connections_.end(); ++it) {
+    it->second.area_->Flush();
+  }
+}
+
 // NamespaceAndArea
 
 DomStorageHost::NamespaceAndArea::NamespaceAndArea() {}

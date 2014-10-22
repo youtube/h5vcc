@@ -1908,6 +1908,7 @@ sub parseGet
     if ($next->value() =~ /$nextGet_1/) {
         return $self->parseSetGetRaises();
     }
+    $self->assertUnexpectedToken($next->value(), __LINE__);
 }
 
 sub parseInheritsGetter

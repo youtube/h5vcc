@@ -308,6 +308,11 @@ public:
     float opacity() const { return m_opacity; }
     virtual void setOpacity(float opacity) { m_opacity = opacity; }
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    H5VCCTargetScreen h5vccTargetScreen() const { return m_h5vccTargetScreen; }
+    virtual void setH5vccTargetScreen(H5VCCTargetScreen h5vccTargetScreen) { m_h5vccTargetScreen = h5vccTargetScreen; }
+#endif
+
 #if ENABLE(CSS_FILTERS)
     const FilterOperations& filters() const { return m_filters; }
     
@@ -437,8 +442,6 @@ public:
 
     void updateDebugIndicators();
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     // Should be called from derived class destructors. Should call willBeDestroyed() on super.
     virtual void willBeDestroyed();
@@ -511,6 +514,10 @@ protected:
     bool m_showDebugBorder : 1;
     bool m_showRepaintCounter : 1;
     
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    H5VCCTargetScreen m_h5vccTargetScreen : 2;
+#endif
+
     GraphicsLayerPaintingPhase m_paintingPhase;
     CompositingCoordinatesOrientation m_contentsOrientation; // affects orientation of layer contents
 

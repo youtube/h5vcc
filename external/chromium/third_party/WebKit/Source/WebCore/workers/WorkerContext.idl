@@ -101,5 +101,9 @@
     attribute Float32ArrayConstructor Float32Array; // Usable with new operator
     attribute Float64ArrayConstructor Float64Array; // Usable with new operator
     attribute DataViewConstructor DataView; // Usable with new operator
+
+    // Work-around for a compilation error.
+    // See comments in WorkerContext.h for an explanation.
+    const int __HACK = 0;
 };
 

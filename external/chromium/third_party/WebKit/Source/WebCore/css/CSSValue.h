@@ -124,8 +124,6 @@ public:
 
     bool hasFailedOrCanceledSubresources() const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
 
     static const size_t ClassTypeBits = 6;

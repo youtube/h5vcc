@@ -126,8 +126,6 @@ namespace WebCore {
         void dispatchVisibilityStateChangeEvent();
 #endif
 
-        void reportMemoryUsage(MemoryObjectInfo*) const;
-
     // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
         bool inScope(TreeScope*) const;
@@ -136,6 +134,10 @@ namespace WebCore {
         
         String layerTreeAsText(LayerTreeFlags = 0) const;
         String trackedRepaintRectsAsText() const;
+
+#if defined(__LB_SHELL__)
+        String layerBackingsInfo() const;
+#endif
 
         static Frame* frameForWidget(const Widget*);
 

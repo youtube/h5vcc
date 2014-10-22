@@ -5,6 +5,9 @@
     '../../../external/chromium/third_party/WebKit/Source/WebKit/chromium/features.gypi',
   ],
   'target_defaults' : {
+    'variables' : {
+      'main_thread_stack_size' : 0,
+    },
     'configurations' : {
       'base'  : {
         'abstract' : 1,
@@ -17,6 +20,20 @@
         'ldflags_host' : [ '<@(linker_flags_host)' ],
         'defines' : [
           '<@(feature_defines)',
+          '__LB_ENABLE_NATIVE_HTTP_STACK__=<(use_native_http_stack)',
+          '__LB_ENABLE_WEB_SPEECH_API__=<(use_web_speech_api)',
+        ],
+        'conditions': [
+          ['skia_gpu == 0', {
+            'defines': [
+              '__LB_DISABLE_SKIA_GPU__=1',
+            ],
+          }],
+          ['posix_emulation_target_type == "shared_library"', {
+            'defines': [
+              '__LB_BASE_SHARED__=1',
+            ],
+          }],
         ],
       },
       'debug_base' : {

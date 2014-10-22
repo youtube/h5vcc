@@ -254,8 +254,6 @@ namespace WebCore {
 
         ApplicationCacheHost* applicationCacheHost() const { return m_applicationCacheHost.get(); }
 
-        virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
     protected:
         DocumentLoader(const ResourceRequest&, const SubstituteData&);
 

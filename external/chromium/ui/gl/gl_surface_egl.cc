@@ -8,8 +8,13 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/message_loop.h"
 #include "build/build_config.h"
+#if defined(__LB_SHELL__)
+#include "../angle/include/EGL/egl.h"
+#include "../angle/include/EGL/eglext.h"
+#else
 #include "third_party/angle/include/EGL/egl.h"
 #include "third_party/angle/include/EGL/eglext.h"
+#endif
 #include "ui/gl/egl_util.h"
 #include "ui/gl/gl_context.h"
 
@@ -109,7 +114,7 @@ bool GLSurfaceEGL::InitializeOneOff() {
 
   initialized = true;
 
-#if defined(USE_X11) || defined(OS_ANDROID)
+#if defined(USE_X11) || defined(OS_ANDROID) || defined(__LB_ANDROID__)
   return true;
 #else
   g_software_native_display = EGL_SOFTWARE_DISPLAY_ANGLE;
@@ -489,7 +494,7 @@ EGLSurface PbufferGLSurfaceEGL::GetHandle() {
 }
 
 void* PbufferGLSurfaceEGL::GetShareHandle() {
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
   NOTREACHED();
   return NULL;
 #else

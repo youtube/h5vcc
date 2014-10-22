@@ -798,7 +798,8 @@ static size_t memoryUsageMB() {
 }
 #else
 static size_t memoryUsageMB() {
-  return CurrentProcessMetrics()->GetPagefileUsage() >> 20;
+  scoped_ptr<base::ProcessMetrics> metrics = CurrentProcessMetrics();
+  return metrics ? metrics->GetPagefileUsage() >> 20 : 0;
 }
 #endif
 
@@ -848,7 +849,9 @@ size_t WebKitPlatformSupportImpl::highUsageDeltaMB() {
 bool WebKitPlatformSupportImpl::processMemorySizesInBytes(
     size_t* private_bytes,
     size_t* shared_bytes) {
-  return CurrentProcessMetrics()->GetMemoryBytes(private_bytes, shared_bytes);
+  scoped_ptr<base::ProcessMetrics> metrics = CurrentProcessMetrics();
+  if (!metrics) return false;
+  return metrics->GetMemoryBytes(private_bytes, shared_bytes);
 }
 
 bool WebKitPlatformSupportImpl::memoryAllocatorWasteInBytes(size_t* size) {

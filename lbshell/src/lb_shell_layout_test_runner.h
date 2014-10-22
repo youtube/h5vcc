@@ -42,7 +42,8 @@ class LBShellLayoutTestRunner
   : public base::RefCounted<LBShellLayoutTestRunner>
   , public base::SimpleThread {
  public:
-  explicit LBShellLayoutTestRunner(const std::string& work_dir,
+  explicit LBShellLayoutTestRunner(LBShell* shell,
+                                   const std::string& work_dir,
                                    const std::vector<std::string>& tests,
                                    MessageLoop* webkit_message_loop);
 
@@ -64,35 +65,34 @@ class LBShellLayoutTestRunner
 
   // Helper functions used within Run()
 
-  // Waits for the current navigation to complete.  Returns whether the load
-  // was successful or not.
-  bool WaitForLoadComplete();
+  // Waits for the navigation to the given url to complete.  Returns whether
+  // the load was successful or not.
+  bool WaitForLoadComplete(const GURL& url);
 
   // Waits for the renderer to catch up with the current document, and
   // then takes a screenshot
   void TakeScreenshot(const std::string& filename);
-
-  // Waits for a signal from the WebKit renderer indicating that 1 composition
-  // has completed.
-  void WaitForCompositeCompletion();
 
   // Writes out a file to indicate to the outside world that this test is
   // complete
   void WriteTestCompleteSignalFile(const std::string& test_str);
 
   // Tasks to run on the test runner thread
-  void TaskProcessLoadComplete(bool success);
+  void TaskProcessLoadComplete(bool success, const GURL& url);
 
   std::string GetURLStrFromTest(const std::string& test_input_str);
   std::string GetFilePathFromTest(const std::string& test_input_str);
 
-  scoped_ptr<LBShell> shell_;  // Reference to the shell we will be driving
+  LBShell* shell_;  // Reference to the shell we will be driving
   std::string work_dir_;  // The directory that we will do our work within
   std::vector<std::string> tests_;  // A list of URLs for tests we should run
 
   // Used as a flag to communicate between WaitForLoadComplete() and
   // TaskProcessLoadComplete()
   bool load_successful_;
+
+  // If we're currently waiting for a URL to load, this indicates which one.
+  GURL wait_for_url_;
 
   MessageLoop* message_loop_;
   base::WaitableEvent message_loop_setup_event_;  // Has the ML been setup yet?

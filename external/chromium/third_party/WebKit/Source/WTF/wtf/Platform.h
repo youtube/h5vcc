@@ -404,7 +404,7 @@
 #endif
 
 /* OS(WINDOWS) - Any version of Windows */
-#if defined(WIN32) || defined(_WIN32)
+#if (defined(WIN32) || defined(_WIN32)) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #define WTF_OS_WINDOWS 1
 #endif
 
@@ -425,6 +425,11 @@
     || defined(unix)        \
     || defined(__unix)      \
     || defined(__unix__)
+#define WTF_OS_UNIX 1
+#endif
+
+/* Pretend that Xbox One and 360 are more like UNIX than WINDOWS */
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
 #define WTF_OS_UNIX 1
 #endif
 
@@ -642,15 +647,13 @@ of it in features.gyp.
 #if defined(__LB_SHELL__)
 
 #define WTF_USE_PTHREADS 1
-#define USE_SYSTEM_MALLOC 1
-#define ENABLE_JAVA_BRIDGE 0
 #define ENABLE_CONTEXT_MENUS 0
 #define ENABLE_DRAG_SUPPORT 0
 #define ENABLE_FTPDIR 0
 #define ENABLE_GEOLOCATION 0
 #define ENABLE_ICONDATABASE 0
 #define ENABLE_JAVA_BRIDGE 0
-#define ENABLE_NETSCAPE_PLUGIN_API 1
+#define ENABLE_NETSCAPE_PLUGIN_API 1  // Needed for JS binding in lb_shell
 #define ENABLE_ORIENTATION_EVENTS 0
 #define ENABLE_REPAINT_THROTTLING 0
 
@@ -663,6 +666,9 @@ of it in features.gyp.
 // disables WTF's malloc overrides (since we provide our own):
 #define USE_SYSTEM_MALLOC 1
 
+// Always link statically.
+#define WTF_USE_EXPORT_MACROS 0
+
 #define WTF_USE_CF 0
 #define HAVE_PTHREAD_RWLOCK 1
 #define HAVE_VASPRINTF 0
@@ -671,6 +677,7 @@ of it in features.gyp.
 #define WTF_USE_SKIA 1
 #define WTF_USE_CHROMIUM_NET 1
 #define ENABLE_SQL_DATABASE 0
+#define HAVE_ACCESSIBILITY 0
 
 // javascriptcore
 #define ENABLE_JIT 0
@@ -750,8 +757,7 @@ of it in features.gyp.
 
 #if !OS(WINDOWS) && !OS(SOLARIS) \
     && !OS(RVCT) \
-    && !defined(__LB_PS3__) \
-    && !defined(__LB_WIIU__) \
+    && !(defined(__LB_SHELL__) && !defined(__LB_LINUX__)) \
     && !OS(ANDROID)
 #define HAVE_TM_GMTOFF 1
 #define HAVE_TM_ZONE 1
@@ -817,7 +823,7 @@ of it in features.gyp.
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_TIME_H 1
 
-#elif defined(__LB_PS3__) || defined(__LB_WIIU__)
+#elif defined(__LB_SHELL__) && !defined(__LB_LINUX__)
 #define HAVE_ERRNO_H 1
 #define HAVE_LANGINFO_H 0
 #define HAVE_MMAP 0

@@ -13,7 +13,12 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "gpu/gpu_export.h"
+#if !defined(__LB_SHELL__)
 #include "third_party/angle/include/GLSLANG/ShaderLang.h"
+#else
+// Use the Shell specific version of Angle
+#include "../angle/include/GLSLANG/ShaderLang.h"
+#endif
 
 namespace gpu {
 namespace gles2 {

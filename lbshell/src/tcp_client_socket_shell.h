@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef NET_SOCKET_TCP_CLIENT_SOCKET_SHELL_H_
-#define NET_SOCKET_TCP_CLIENT_SOCKET_SHELL_H_
+#ifndef SRC_TCP_CLIENT_SOCKET_SHELL_H_
+#define SRC_TCP_CLIENT_SOCKET_SHELL_H_
 
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_ptr.h"
@@ -184,4 +184,4 @@ class TCPClientSocketShell : public StreamSocket, base::NonThreadSafe {
 
 }  // namespace net
 
-#endif  // NET_SOCKET_TCP_CLIENT_SOCKET_SHELL_H_
+#endif  // SRC_TCP_CLIENT_SOCKET_SHELL_H_

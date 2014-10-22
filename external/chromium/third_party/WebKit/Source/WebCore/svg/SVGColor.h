@@ -75,8 +75,6 @@ public:
     
     PassRefPtr<SVGColor> cloneForCSSOM() const;
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     friend class CSSComputedStyleDeclaration;
 

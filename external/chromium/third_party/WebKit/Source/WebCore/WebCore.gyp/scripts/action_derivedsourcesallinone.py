@@ -48,9 +48,6 @@ import re
 import subprocess
 import sys
 
-if sys.platform == 'cygwin' :
-  import adaptive_nt_path
-
 
 # A regexp for finding Conditional attributes in interface definitions.
 conditionalPattern = re.compile('interface[\s]*\[[^\]]*Conditional=([\_0-9a-zA-Z&|]*)')
@@ -140,7 +137,7 @@ def extractMetaData(filePaths):
     return metaDataList
 
 
-def generateContent(filesMetaData, partition, totalPartitions):
+def generateContent(filesMetaData, partition, totalPartitions, js_engine):
     # Sort files by conditionals.
     filesMetaData.sort()
 
@@ -165,7 +162,10 @@ def generateContent(filesMetaData, partition, totalPartitions):
             output.append('\n#if %s\n' % formatConditional(conditional))
 
         # __LB_PS3__ changed from V8
-        output.append('#include "bindings/JS%s.cpp"\n' % name)
+        if js_engine == 'jsc':
+            output.append('#include "bindings/JS%s.cpp"\n' % name)
+        else:
+            output.append('#include "bindings/V8%s.cpp"\n' % name)
 
         prevConditional = conditional
 
@@ -199,9 +199,10 @@ def resolveCygpath(cygdriveNames):
 
 
 def main(args):
-    assert(len(args) > 3)
+    assert(len(args) > 4)
     inOutBreakIndex = args.index('--')
     inputFileName = args[1]
+    js_engine = args[2];
     outputFileNames = args[inOutBreakIndex+1:]
 
     inputFile = open(inputFileName, 'r')
@@ -221,7 +222,7 @@ def main(args):
     filesMetaData = extractMetaData(idlFileNames)
     for fileName in outputFileNames:
         partition = outputFileNames.index(fileName)
-        fileContents = generateContent(filesMetaData, partition, len(outputFileNames))
+        fileContents = generateContent(filesMetaData, partition, len(outputFileNames), js_engine)
         writeContent(fileContents, fileName)
 
     return 0

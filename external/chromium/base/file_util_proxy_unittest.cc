@@ -177,7 +177,10 @@ TEST_F(FileUtilProxyTest, Close) {
       file,
       Bind(&FileUtilProxyTest::DidFinish, weak_factory_.GetWeakPtr()));
   MessageLoop::current()->Run();
-  EXPECT_EQ(PLATFORM_FILE_OK, error_);
+  ASSERT_EQ(PLATFORM_FILE_OK, error_);
+
+  // file_ has been closed by FileUtilProxy::Close
+  file_ = kInvalidPlatformFileValue;
 
   // Now it should pass on all platforms.
   EXPECT_TRUE(file_util::Move(test_path(), test_dir_path().AppendASCII("new")));
@@ -330,10 +333,12 @@ TEST_F(FileUtilProxyTest, WriteAndFlush) {
   }
 }
 
-#if !defined(__LB_PS3__) && !defined(__LB_WIIU__)
+#if !defined(__LB_PS3__) && !defined(__LB_WIIU__) && !defined(__LB_XB360__)
 // FileUtilProxy::Touch creates a platform file and passes its descriptor to
 // base::TouchPlatformFile().
 // This requires OS support for futimes.
+// The Xbox360 only supports modified times, and randomly rounds up or down to
+// the nearest second, resulting in a flaky test.
 
 TEST_F(FileUtilProxyTest, Touch) {
   Time last_accessed_time = Time::Now() - TimeDelta::FromDays(12345);

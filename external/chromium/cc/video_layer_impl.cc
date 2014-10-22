@@ -11,6 +11,9 @@
 #include "cc/quad_sink.h"
 #include "cc/renderer.h"
 #include "cc/resource_provider.h"
+#if defined(__LB_SHELL__)
+#include "cc/solid_color_draw_quad.h"
+#endif
 #include "cc/stream_video_draw_quad.h"
 #include "cc/texture_draw_quad.h"
 #include "cc/yuv_video_draw_quad.h"
@@ -85,6 +88,10 @@ static GLenum convertVFCFormatToGLenum(const media::VideoFrame& frame)
     case media::VideoFrame::I420:
         NOTREACHED();
         break;
+#if defined(__LB_SHELL__)
+    case media::VideoFrame::PUNCH_OUT:
+        return GL_INVALID_VALUE;
+#endif
     }
     return GL_INVALID_VALUE;
 }
@@ -109,6 +116,10 @@ size_t VideoLayerImpl::numPlanes() const
         break;
     case media::VideoFrame::NATIVE_TEXTURE:
         return 0;
+#if defined(__LB_SHELL__)
+    case media::VideoFrame::PUNCH_OUT:
+        return 0;
+#endif
     }
     NOTREACHED();
     return 0;
@@ -148,6 +159,11 @@ void VideoLayerImpl::willDrawInternal(ResourceProvider* resourceProvider)
 
     if (!m_frame)
         return;
+
+#if defined(__LB_SHELL__)
+    if (m_frame->format() == media::VideoFrame::PUNCH_OUT)
+        return;
+#endif
 
     m_format = convertVFCFormatToGLenum(*m_frame);
 
@@ -220,6 +236,19 @@ void VideoLayerImpl::appendQuads(QuadSink& quadSink, AppendQuadsData& appendQuad
         static_cast<float>(visibleRect.width()) / codedSize.width();
     const float texHeightScale =
         static_cast<float>(visibleRect.height()) / codedSize.height();
+
+#if defined(__LB_SHELL__)
+    if (m_frame->format() == media::VideoFrame::PUNCH_OUT) {
+        // Render a transparent quad punching out any prior content that was
+        // rendered underneath the video frame
+        scoped_ptr<SolidColorDrawQuad> quad = SolidColorDrawQuad::Create();
+        quad->SetAll(
+            sharedQuadState, quadRect, quadRect, quadRect, false,
+            SK_ColorTRANSPARENT);
+        quadSink.append(quad.PassAs<DrawQuad>(), appendQuadsData);
+        return;
+    }
+#endif
 
     switch (m_format) {
     case GL_LUMINANCE: {

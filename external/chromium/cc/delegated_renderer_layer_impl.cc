@@ -43,7 +43,7 @@ void DelegatedRendererLayerImpl::setRenderPasses(ScopedPtrVector<RenderPass>& re
 
     clearRenderPasses();
 
-    for (size_t i = 0; i < renderPassesInDrawOrder.size(); ++i) {
+    for (int i = 0; i < renderPassesInDrawOrder.size(); ++i) {
         m_renderPassesIndexById.insert(std::pair<RenderPass::Id, int>(renderPassesInDrawOrder[i]->id, i));
         m_renderPassesInDrawOrder.append(renderPassesInDrawOrder.take(i));
     }

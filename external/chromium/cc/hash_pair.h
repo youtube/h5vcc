@@ -9,7 +9,9 @@
 
 #include "base/hash_tables.h"
 
-#if defined(COMPILER_MSVC) || defined(COMPILER_SNC) || defined(COMPILER_GHS)
+#if defined(COMPILER_MSVC) || \
+    (defined(__LB_SHELL__) && \
+        !(defined(__LB_ANDROID__) || defined(__LB_LINUX__)))
 
 #define DEFINE_PAIR_HASH_FUNCTION_START(type1, type2) \
     template<> \

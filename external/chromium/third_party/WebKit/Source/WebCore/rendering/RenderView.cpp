@@ -41,7 +41,6 @@
 #include "RenderWidgetProtector.h"
 #include "StyleInheritedData.h"
 #include "TransformState.h"
-#include "WebCoreMemoryInstrumentation.h"
 
 #if USE(ACCELERATED_COMPOSITING)
 #include "RenderLayerCompositor.h"
@@ -50,6 +49,11 @@
 #if ENABLE(CSS_SHADERS) && USE(3D_GRAPHICS)
 #include "CustomFilterGlobalContext.h"
 #endif
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+#include "ObjectPositionReporter.h"
+#endif
+
 
 namespace WebCore {
 
@@ -212,6 +216,15 @@ void RenderView::layout()
 #endif
     m_layoutState = 0;
     setNeedsLayout(false);
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    if (!m_positionReporter)
+        m_positionReporter = adoptPtr(ObjectPositionReporter::create());
+
+    // Might not be supported by the platform.
+    if (m_positionReporter)
+        m_positionReporter->WalkRenderView(this);
+#endif
 }
 
 void RenderView::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
@@ -1010,26 +1023,6 @@ RenderBlock::IntervalArena* RenderView::intervalArena()
     if (!m_intervalArena)
         m_intervalArena = IntervalArena::create();
     return m_intervalArena.get();
-}
-
-void RenderView::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    RenderBlock::reportMemoryUsage(memoryObjectInfo);
-    info.addWeakPointer(m_frameView);
-    info.addWeakPointer(m_selectionStart);
-    info.addWeakPointer(m_selectionEnd);
-    info.addMember(m_widgets);
-    info.addMember(m_layoutState);
-#if USE(ACCELERATED_COMPOSITING)
-    info.addMember(m_compositor);
-#endif
-#if ENABLE(CSS_SHADERS) && USE(3D_GRAPHICS)
-    info.addMember(m_customFilterGlobalContext);
-#endif
-    info.addMember(m_flowThreadController);
-    info.addMember(m_intervalArena);
-    info.addWeakPointer(m_renderQuoteHead);
 }
 
 } // namespace WebCore

@@ -20,6 +20,9 @@ HeadsUpDisplayLayer::HeadsUpDisplayLayer()
     , m_hasFontAtlas(false)
 {
     setBounds(gfx::Size(256, 128));
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    setH5vccTargetScreen(WebKit::ScreenAll);
+#endif
 }
 
 HeadsUpDisplayLayer::~HeadsUpDisplayLayer()
@@ -41,7 +44,16 @@ void HeadsUpDisplayLayer::update(ResourceUpdateQueue&, const OcclusionTracker*, 
         bounds = gfx::Size(width, height);
     } else {
         bounds = gfx::Size(256, 128);
+#if defined(__LB_SHELL__)
+        // Bring HUD in a bit so you can still see it despite TV overscan
+        const int overscan_x = 64;
+        const int overscan_y = 32;
+        matrix.Translate(
+            layerTreeHost()->layoutViewportSize().width() - 256 - overscan_x,
+            overscan_y);
+#else
         matrix.Translate(layerTreeHost()->layoutViewportSize().width() - 256, 0);
+#endif
     }
 
     setBounds(bounds);

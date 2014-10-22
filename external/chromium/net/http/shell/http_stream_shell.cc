@@ -28,9 +28,8 @@ int HttpStreamShell::InitializeStream(const HttpRequestInfo* request_info,
   // Loader object is received in constructor, not other steps left for
   // this function.
   DCHECK(loader_);
-  loader_->Open(request_info, net_log);
   request_info_ = request_info;
-  return OK;
+  return loader_->Open(request_info, net_log, callback);
 }
 
 int HttpStreamShell::SendRequest(const HttpRequestHeaders& request_headers,

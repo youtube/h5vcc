@@ -31,7 +31,7 @@ namespace WebCore {
     class FrameTree {
         WTF_MAKE_NONCOPYABLE(FrameTree);
     public:
-        const static unsigned invalidCount = static_cast<unsigned>(WTF::notFound);
+        const static unsigned invalidCount = (unsigned)(WTF::notFound);
 
         FrameTree(Frame* thisFrame, Frame* parentFrame) 
             : m_thisFrame(thisFrame)

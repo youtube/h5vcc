@@ -38,10 +38,6 @@
 #include "RuleFeature.h"
 #include "RuleSet.h"
 #include "ShadowRoot.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 
 namespace WebCore {
 
@@ -233,14 +229,6 @@ void StyleScopeResolver::matchHostRules(const Element* element, Vector<RuleSet*>
         if (!shadowRoot->hasShadowInsertionPoint())
             break;
     }
-}
-
-void StyleScopeResolver::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_authorStyles);
-    info.addMember(m_stack);
-    info.addMember(m_atHostRules);
 }
 
 }

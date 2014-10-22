@@ -69,6 +69,13 @@
       ],
       'conditions': [
         ['OS=="lb_shell"', {
+          'conditions': [
+            ['skia_gpu == 1', {
+              'dependencies': [
+                'webkit_gpu',
+              ],
+            }],
+          ],
         }, { # OS != lb_shell
           'dependencies': [
             '<(DEPTH)/ui/gl/gl.gyp:gl',
@@ -108,7 +115,6 @@
         '<(DEPTH)/third_party/zlib/zlib.gyp:zlib',
         'glue',
         'user_agent',
-        'webkit_support_gfx',
       ],
       'export_dependent_settings': [
         '<(DEPTH)/base/base.gyp:base',
@@ -149,11 +155,11 @@
           'sources/': [
             ['exclude', '<(DEPTH)/webkit/tools/test_shell'],
             ['include', '<(DEPTH)/webkit/tools/test_shell/simple_dom_storage_system'],
-            ['include', '<(DEPTH)/webkit/tools/test_shell/simple_socket_stream_bridge'],
           ],
         }, {  # OS != "lb_shell"
           'dependencies': [
             '<(DEPTH)/ui/ui.gyp:ui',
+            'webkit_support_gfx',
           ],
         }],
         ['inside_chromium_build==0', {

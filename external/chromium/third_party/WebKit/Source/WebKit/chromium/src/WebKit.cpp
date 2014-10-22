@@ -47,7 +47,9 @@
 #include "WebSocket.h"
 #include "platform/WebKitPlatformSupport.h"
 #if USE(V8)
+#ifndef __LB_SHELL__
 #include "WorkerContextExecutionProxy.h"
+#endif
 #include "v8.h"
 #else
 #include "JSDOMWindow.h"
@@ -63,6 +65,10 @@
 
 #if OS(DARWIN)
 #include "WebSystemInterface.h"
+#endif
+
+#if defined(__LB_SHELL__)
+#include "Modules/h5vcc/remote/RemoteMediaInfo.h"
 #endif
 
 namespace WebKit {
@@ -165,6 +171,10 @@ void initializeWithoutV8(WebKitPlatformSupport* webKitPlatformSupport)
 
 void shutdown()
 {
+#if defined(__LB_SHELL__) && ENABLE(LB_SHELL_REMOTE_CONTROL)
+    // Clear off static callbacks.
+    WebCore::RemoteMediaInfo::setSeekCallback(NULL, NULL);
+#endif
     // WebKit might have been initialized without V8, so be careful not to invoke
     // V8 specific functions, if V8 was not properly initialized.
 #if ENABLE(MUTATION_OBSERVERS)

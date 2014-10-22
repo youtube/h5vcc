@@ -13,8 +13,8 @@
 #include "cc/layer_animation_observer.h"
 #include "cc/scoped_ptr_vector.h"
 
-#if defined(__LB_SHELL__)
-#include "base/shell_allocator.h"
+#if defined(__LB_USE_SHELL_REUSABLE_ALLOCATOR__)
+#include "cc/shell_allocator.h"
 #endif
 
 namespace gfx {

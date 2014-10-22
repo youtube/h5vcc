@@ -91,8 +91,6 @@ public:
     bool animationDataEquivalent(const StyleRareNonInheritedData&) const;
     bool transitionDataEquivalent(const StyleRareNonInheritedData&) const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
     float opacity; // Whether or not we're transparent.
 
     float m_aspectRatioDenominator;
@@ -193,6 +191,10 @@ public:
 
 #if ENABLE(CSS_COMPOSITING)
     unsigned m_effectiveBlendMode: 5; // EBlendMode
+#endif
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    unsigned m_h5vccGesturable: 3; // Elements that can be gestured.
 #endif
 
 private:

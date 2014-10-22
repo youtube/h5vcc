@@ -19,15 +19,8 @@
 
 #include "config.h"
 
-#ifdef SKIP_STATIC_CONSTRUCTORS_ON_GCC
-#define WEBCORE_QUALIFIEDNAME_HIDE_GLOBALS 1
-#else
-#define QNAME_DEFAULT_CONSTRUCTOR
-#endif
-
 #include "QualifiedName.h"
 #include "HTMLNames.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
@@ -141,27 +134,20 @@ const QualifiedName& nullQName()
     return nullName;
 }
 
+const QualifiedName& anyQName()
+{
+#ifdef SKIP_STATIC_CONSTRUCTORS_ON_GCC
+  return *reinterpret_cast<QualifiedName*>(&anyName);
+#else
+  return anyName;
+#endif
+}
+
 const AtomicString& QualifiedName::localNameUpper() const
 {
     if (!m_impl->m_localNameUpper)
         m_impl->m_localNameUpper = m_impl->m_localName.upper();
     return m_impl->m_localNameUpper;
-}
-
-void QualifiedName::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_impl);
-}
-
-
-void QualifiedName::QualifiedNameImpl::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_prefix);
-    info.addMember(m_localName);
-    info.addMember(m_namespace);
-    info.addMember(m_localNameUpper);
 }
 
 unsigned QualifiedName::QualifiedNameImpl::computeHash() const

@@ -198,6 +198,9 @@ public:
     virtual void didExecuteCommand(const WebString& commandName) { }
     virtual void didEndEditing() { }
     virtual void didChangeFormState(const WebNode&) { }
+#if defined(__LB_SHELL__)
+    virtual void didMoveCursor() { }
+#endif
 
     // This method is called in response to WebView's handleInputEvent()
     // when the default action for the current keyboard event is not

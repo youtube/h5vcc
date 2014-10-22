@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _LB_HTTP_USER_AGENT_SETTINGS_H_
-#define _LB_HTTP_USER_AGENT_SETTINGS_H_
+#ifndef SRC_LB_HTTP_USER_AGENT_SETTINGS_H_
+#define SRC_LB_HTTP_USER_AGENT_SETTINGS_H_
 
 #include <string>
 
@@ -57,5 +57,5 @@ class LBHttpUserAgentSettings : public net::HttpUserAgentSettings {
   DISALLOW_COPY_AND_ASSIGN(LBHttpUserAgentSettings);
 };
 
-#endif // _LB_HTTP_USER_AGENT_SETTINGS_H_
+#endif  // SRC_LB_HTTP_USER_AGENT_SETTINGS_H_
 

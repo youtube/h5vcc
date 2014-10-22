@@ -6,6 +6,9 @@
 #define WEBKIT_PLATFORM_SUPPORT_IMPL_H_
 
 #include "base/compiler_specific.h"
+#if defined(__LB_SHELL__)
+#include "base/debug/trace_event.h"
+#endif  // defined(__LB_SHELL__)
 #include "base/platform_file.h"
 #include "base/threading/thread_local_storage.h"
 #include "base/timer.h"
@@ -48,7 +51,7 @@ class WEBKIT_GLUE_EXPORT WebKitPlatformSupportImpl :
 
   // WebKitPlatformSupport methods (partial implementation):
   virtual WebKit::WebThemeEngine* themeEngine();
-  virtual base::PlatformFile databaseOpenFile(
+  virtual WebKit::Platform::FileHandle databaseOpenFile(
       const WebKit::WebString& vfs_file_name, int desired_flags);
   virtual int databaseDeleteFile(const WebKit::WebString& vfs_file_name,
                                  bool sync_dir);
@@ -174,8 +177,12 @@ class WEBKIT_GLUE_EXPORT WebKitPlatformSupportImpl :
 
  private:
   void DoTimeout() {
-    if (shared_timer_func_ && !shared_timer_suspended_)
+    if (shared_timer_func_ && !shared_timer_suspended_) {
+#if defined(__LB_SHELL__)
+      TRACE_EVENT0("WebKit", "shared_timer_func_()");
+#endif  // defined(__LB_SHELL__)
       shared_timer_func_();
+    }
   }
   static void DestroyCurrentThread(void*);
 

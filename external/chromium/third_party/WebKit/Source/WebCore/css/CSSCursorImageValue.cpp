@@ -29,10 +29,9 @@
 #include "StyleImage.h"
 #include "StylePendingImage.h"
 #include "TreeScope.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/MathExtras.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
 #include <wtf/UnusedParam.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(SVG)
@@ -216,15 +215,5 @@ void CSSCursorImageValue::removeReferencedElement(SVGElement* element)
     m_referencedElements.remove(element);
 }
 #endif
-
-void CSSCursorImageValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    m_imageValue->reportMemoryUsage(memoryObjectInfo);
-    // No need to report m_image as it is counted as part of RenderArena.
-#if ENABLE(SVG)
-    info.addMember(m_referencedElements);
-#endif
-}
 
 } // namespace WebCore

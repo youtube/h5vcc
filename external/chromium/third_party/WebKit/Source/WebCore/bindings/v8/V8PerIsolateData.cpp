@@ -29,17 +29,6 @@
 #include "ScriptGCEvent.h"
 #include "ScriptProfiler.h"
 #include "V8Binding.h"
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationVector.h>
-
-namespace WTF {
-
-// WrapperTypeInfo are statically allocated, don't count them.
-template<> struct SequenceMemoryInstrumentationTraits<WebCore::WrapperTypeInfo*> {
-    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
-};
-
-}
 
 namespace WebCore {
 
@@ -98,17 +87,6 @@ v8::Handle<v8::FunctionTemplate> V8PerIsolateData::toStringTemplate()
     if (m_toStringTemplate.isEmpty())
         m_toStringTemplate.set(v8::FunctionTemplate::New(constructorOfToString));
     return v8::Local<v8::FunctionTemplate>::New(m_toStringTemplate.get());
-}
-
-void V8PerIsolateData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Binding);
-    info.addMember(m_rawTemplates);
-    info.addMember(m_templates);
-    info.addMember(m_stringCache);
-    info.addMember(m_domDataList);
-
-    info.addPrivateBuffer(ScriptProfiler::profilerSnapshotsSize(), WebCoreMemoryTypes::InspectorProfilerAgent);
 }
 
 #if ENABLE(INSPECTOR)

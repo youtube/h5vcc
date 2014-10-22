@@ -18,18 +18,16 @@
 #define SRC_OOM_PNG_H_
 
 #include "external/chromium/third_party/libpng/png.h"
+#include "oom_fprintf.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if LB_ENABLE_MEMORY_DEBUGGING
-void oom_fprintf(int fd, const char *fmt, ...);
-#if LB_MEMORY_DUMP_GRAPH
+#if !defined(__LB_SHELL__FOR_RELEASE__)
 png_structp oom_png_create(const char *file_name, int width, int height,
                            int bit_depth, int color_type);
 void oom_png_destroy(png_structp png);
-#endif
 #endif
 
 #ifdef __cplusplus

@@ -29,6 +29,8 @@ namespace cc {
 
 static inline SkPaint createPaint()
 {
+    SkPaint paint;
+#if !defined(__LB_SHELL__)
     // The SkCanvas is in RGBA but the shader is expecting BGRA, so we need to
     // swizzle our colors when drawing to the SkCanvas.
     SkColorMatrix swizzleMatrix;
@@ -39,10 +41,10 @@ static inline SkPaint createPaint()
     swizzleMatrix.fMat[2 + 5 * 0] = 1;
     swizzleMatrix.fMat[3 + 5 * 3] = 1;
 
-    SkPaint paint;
     skia::RefPtr<SkColorMatrixFilter> filter =
         skia::AdoptRef(new SkColorMatrixFilter(swizzleMatrix));
     paint.setColorFilter(filter.get());
+#endif
 
     return paint;
 }
@@ -76,8 +78,14 @@ void HeadsUpDisplayLayerImpl::willDraw(ResourceProvider* resourceProvider)
     if (m_hudTexture->size() != bounds())
         m_hudTexture->Free();
 
-    if (!m_hudTexture->id())
+    if (!m_hudTexture->id()) {
+#if defined(__LB_SHELL__)
+        m_hudTexture->Allocate(bounds(), resourceProvider->bestTextureFormat(), ResourceProvider::TextureUsageAny);
+#else
         m_hudTexture->Allocate(bounds(), GL_RGBA, ResourceProvider::TextureUsageAny);
+#endif
+    }
+
 }
 
 void HeadsUpDisplayLayerImpl::appendQuads(QuadSink& quadSink, AppendQuadsData& appendQuadsData)

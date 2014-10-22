@@ -1,0 +1,112 @@
+body, html {
+  background: #2e2e2e;
+  color: #fff;
+  font-family: arial,sans-serif;
+  font-size: 100%;
+  height: 100%;
+  width: 100%;
+  margin: auto;
+  overflow: hidden;
+  padding: 0;
+  -webkit-user-select: none;
+}
+h1 {
+  font-size: 3.5em;
+  font-weight: normal;
+  margin-top: 0.5em;
+}
+h2 {
+  font-size: 2em;
+  font-weight: normal;
+  line-height: 1.5em;
+}
+a {
+  background: #000;
+  color: #eee;
+  display: inline-block;
+  font-size: 2em;
+  margin-right: 1em;
+  min-width: 4em;
+  padding: .5em;
+  text-align: center;
+  text-decoration: none;
+}
+a:focus, a:hover {
+  color: #000;
+  background: #eee;
+  outline-style: double;
+  outline-color: #eee;
+  outline-width: thick;
+}
+.gesturable {
+  -h5vcc-gesturable: gesture-clickable;
+}
+.youtube-logo {
+  position: absolute;
+  top: 2em;
+  right: 2em;
+  text-align: right;
+}
+.youtube-logo img {
+  width: 50%;
+}
+.mr-meh {
+  float: left;
+  width: 20%;
+  display: inline-block;
+  text-align: center;
+}
+.mr-meh img {
+  width: 50%;
+  padding: 2em;
+}
+.error {
+  margin: 13em 2em 0 2em;
+}
+.error-message {
+  display: inline-block;
+  width: 75%;
+  float: left;
+}
+.engaged {
+  position: absolute;
+  top: 2em;
+  right: 2em;
+  text-align: right;
+  visibility: hidden;
+}
+
+.error-container {
+  display: -webkit-flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  -webkit-justify-content: center;
+  height: 100%;
+}
+
+.error-container .error {
+  margin: 0 2em 0 2em;
+  min-height: 30%;
+  overflow: auto;
+}
+
+/* snap mode for Xbox One */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.75em;
+  }
+  h2 {
+    font-size: 1em;
+  }
+  a {
+    font-size: 1em;
+    margin-right: 0.25em;
+    min-width: 3em;
+  }
+  .mr-meh {
+    width: 100%;
+  }
+  .error-message {
+    width: 100%;
+  }
+}

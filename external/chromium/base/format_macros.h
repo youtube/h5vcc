@@ -23,7 +23,7 @@
 
 #include "build/build_config.h"
 
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 
 #if (defined(_INTTYPES_H) || defined(_INTTYPES_H_)) && !defined(PRId64)
 #error "inttypes.h has already been included before this header file, but "
@@ -46,16 +46,7 @@
 #define PRIuS "zu"
 #endif
 
-#if defined(__LB_WIIU__)
-#define PRIu8     "u"
-#define PRId32    "I32d"
-#define PRIu32    "I32u"
-#define PRId64    "lld"
-#define PRIu64    "llu"
-#define PRIx64    "llx"
-#endif
-
-#else  // OS_WIN
+#else  // OS_WIN || __LB_XB1__ || __LB_XB360__
 
 #if !defined(PRId64)
 #define PRId64 "I64d"

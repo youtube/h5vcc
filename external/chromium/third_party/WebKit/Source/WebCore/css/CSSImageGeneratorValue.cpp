@@ -31,19 +31,8 @@
 #include "CSSGradientValue.h"
 #include "Image.h"
 #include "RenderObject.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationHashCountedSet.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/text/WTFString.h>
 
-
-namespace WTF {
-
-template<> struct SequenceMemoryInstrumentationTraits<const WebCore::RenderObject*> {
-    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
-};
-
-}
 
 namespace WebCore {
 
@@ -118,14 +107,6 @@ Image* CSSImageGeneratorValue::getImage(RenderObject* renderer, const IntSize& s
 void CSSImageGeneratorValue::putImage(const IntSize& size, PassRefPtr<Image> image)
 {
     m_images.add(size, image);
-}
-
-void CSSImageGeneratorValue::reportBaseClassMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_sizes);
-    info.addMember(m_clients);
-    info.addMember(m_images); // FIXME: instrument Image
 }
 
 PassRefPtr<Image> CSSImageGeneratorValue::image(RenderObject* renderer, const IntSize& size)

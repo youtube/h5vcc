@@ -12,7 +12,12 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/singleton.h"
 #include "gpu/command_buffer/service/shader_translator.h"
+#if !defined(__LB_SHELL__)
 #include "third_party/angle/include/GLSLANG/ShaderLang.h"
+#else
+// Use the Shell specific version of Angle
+#include "../angle/include/GLSLANG/ShaderLang.h"
+#endif
 
 namespace gpu {
 namespace gles2 {

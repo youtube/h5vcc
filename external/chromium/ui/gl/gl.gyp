@@ -161,7 +161,7 @@
         },
       ],
       'conditions': [
-        ['OS != "mac"', {
+        ['OS != "mac" and (OS != "lb_shell" or target_arch == "android")', {
           'sources': [
             'egl_util.cc',
             'egl_util.h',
@@ -254,6 +254,55 @@
           'defines': [
             'GL_GLEXT_PROTOTYPES',
             'EGL_EGLEXT_PROTOTYPES',
+          ],
+        }],
+        ['OS=="lb_shell" and use_gpu_command_buffer==1 and target_arch != "android"', {
+          'sources': [
+            'gl_context_shell.cc',
+            'gl_surface_shell.cc',
+            'gl_implementation_shell.cc',
+            'gl_gl_api_proxy_implementation_shell.cc',
+            'gl_gl_api_proxy_implementation_shell.h',
+            '<(lbshell_root)/src/platform/<(target_arch)/chromium/ui/gl/gl_context_impl_shell.cc',
+            '<(lbshell_root)/src/platform/<(target_arch)/chromium/ui/gl/gl_gl_api_implementation_shell.cc',
+            '<(lbshell_root)/src/platform/<(target_arch)/chromium/ui/gl/gl_surface_impl_shell.cc',
+          ],
+        }],
+        ['OS=="lb_shell" and target_arch=="android"', {
+          'defines': [
+            'GL_GLEXT_PROTOTYPES',
+            'EGL_EGLEXT_PROTOTYPES',
+          ]
+        }],
+        ['OS=="lb_shell" and target_arch in ["xb1", "xb360"]', {
+          'include_dirs': [
+            '<(DEPTH)/../angle/include',
+          ],
+          'dependencies': [
+            '<(DEPTH)/../angle/src/build_angle.gyp:libEGL',
+            '<(DEPTH)/../angle/src/build_angle.gyp:libGLESv2',
+          ],
+        }],
+        ['OS=="lb_shell" and target_arch=="xb1"', {
+          'msvs_settings': {
+            'VCCLCompilerTool': {
+              'ComponentExtensions': 'true'
+            },
+          },
+        }],
+        ['OS=="lb_shell"', {
+          'sources!': [
+            'gl_context_osmesa.cc',
+            'gl_context_osmesa.h',
+            'gl_osmesa_api_implementation.cc',
+            'gl_osmesa_api_implementation.h',
+            'gl_surface_osmesa.cc',
+            'gl_surface_osmesa.h',
+            '<(gl_binding_output_dir)/gl_bindings_autogen_osmesa.cc',
+            '<(gl_binding_output_dir)/gl_bindings_autogen_osmesa.h',
+          ],
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
           ],
         }],
       ],

@@ -117,7 +117,7 @@
 #include "rand_lcl.h"
 
 #if defined(__LB_SHELL__)
-#include "lb_platform.h"
+#include "lb_rand.h"
 #endif
 
 #if !(defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2) || defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_NETWARE) || defined(__LB_SHELL__))

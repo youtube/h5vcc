@@ -77,8 +77,6 @@ public:
 
     const SelectRuleFeatureSet& selectRuleFeatureSet() const;
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     void invalidateDistribution(Element* host);
 

@@ -57,8 +57,6 @@ namespace WebCore {
         void sourceProviderCacheSizeChanged(int delta);
 #endif
 
-        virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
     private:
         virtual PurgePriority purgePriority() const { return PurgeLast; }
 

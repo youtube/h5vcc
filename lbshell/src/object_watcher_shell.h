@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef OBJECT_WATCHER_SHELL_H_
-#define OBJECT_WATCHER_SHELL_H_
+#ifndef SRC_OBJECT_WATCHER_SHELL_H_
+#define SRC_OBJECT_WATCHER_SHELL_H_
 
 #include "base/base_export.h"
 #include "base/message_loop.h"
@@ -26,8 +26,8 @@ namespace base {
 namespace steel {
 
 // A class that provides a means to asynchronously wait for a file descriptor to
-// become signaled.  It uses an internal thread on a singleton object that blocks
-// on poll() calls to an internal list of fds, each represented by an
+// become signaled.  It uses an internal thread on a singleton object that
+// blocks on poll() calls to an internal list of fds, each represented by an
 // instance of the ObjectWatcher class.
 // It provides a notification callback, OnObjectSignaled, that runs back on
 // the origin thread (i.e., the thread that called StartWatching).
@@ -69,13 +69,14 @@ class BASE_EXPORT ObjectWatcher : public MessageLoop::DestructionObserver {
   // call me once at end of program to stop watcher thread and cleanup object
   static void TeardownObjectWatcherSystem();
 
-  // When the object is signaled with mode, the given delegate is notified on the thread
-  // where StartWatching is called.  The ObjectWatcher is not responsible for
-  // deleting the delegate.
+  // When the object is signaled with mode, the given delegate is notified on
+  // the thread where StartWatching is called.  The ObjectWatcher is not
+  // responsible for deleting the delegate.
   //
   // Returns true if the watch was started.  Otherwise, false is returned.
   //
-  bool StartWatching(int object, MessagePumpShell::Mode mode, Delegate * delegate);
+  bool StartWatching(
+      int object, MessagePumpShell::Mode mode, Delegate* delegate);
 
   // Stops watching.  Does nothing if the watch has already completed.  If the
   // watch is still active, then it is canceled, and the associated delegate is
@@ -89,7 +90,7 @@ class BASE_EXPORT ObjectWatcher : public MessageLoop::DestructionObserver {
   // watcher is stopped.
   int GetWatchedObject();
 
-private:
+ private:
     // MessageLoop::DestructionObserver implementation:
   virtual void WillDestroyCurrentMessageLoop();
 
@@ -98,7 +99,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ObjectWatcher);
 };
 
-} // namespace steel
-} // namespace base
+}  // namespace steel
+}  // namespace base
 
-#endif // OBJECT_WATCHER_SHELL_H_
+#endif  // SRC_OBJECT_WATCHER_SHELL_H_

@@ -28,7 +28,6 @@
 
 #include "ImageBuffer.h"
 #include "RenderObject.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -94,14 +93,6 @@ PassRefPtr<Image> CSSCanvasValue::image(RenderObject* renderer, const IntSize& /
     if (!elt || !elt->buffer())
         return 0;
     return elt->copiedImage();
-}
-
-void CSSCanvasValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSImageGeneratorValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_name);
-    info.addMember(m_element);
 }
 
 } // namespace WebCore

@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// The primary shell object.  Responsible primarily for creating the view object.
+// The primary shell object.  Responsible primarily for creating the view
+// object.
 
 #include "lb_shell.h"
 
@@ -26,6 +27,7 @@
 #include <vector>
 
 #include "external/chromium/base/command_line.h"
+#include "external/chromium/base/debug/trace_event.h"
 #include "external/chromium/base/file_util.h"
 #include "external/chromium/base/format_macros.h"
 #include "external/chromium/base/logging.h"
@@ -45,6 +47,7 @@
 #include "external/chromium/webkit/glue/webpreferences.h"
 #include "grit/lb_shell_resources.h"
 #include "lb_debug_console.h"
+#include "lb_globals.h"
 #include "lb_memory_manager.h"
 #include "lb_resource_loader_bridge.h"
 #include "lb_shell_platform_delegate.h"
@@ -55,17 +58,36 @@ using WebKit::WebFrame;
 using WebKit::WebView;
 using WebKit::WebURLRequest;
 
-extern std::string *global_game_content_path;
-
 // initialize static member variables
 webkit_glue::WebPreferences* LBShell::web_prefs_ = NULL;
 std::map<std::string, std::string> LBShell::strings_;
 std::string LBShell::preferred_language_;
 std::string LBShell::preferred_locale_;
 
+namespace {
+
+std::string GenerateLogName() {
+  // TODO: Get the name from "steel_build_id.h"
+  const char* kAppName = "lb_shell";
+
+  time_t t = time(NULL);
+  struct tm *timeinfo = localtime(&t);
+
+  std::string path;
+  path = ::StringPrintf(
+      "%s\\%s-%02d%02d-%02d%02d%02d.log",
+      GetGlobalsPtr()->logging_output_path,
+      kAppName, timeinfo->tm_mon + 1, timeinfo->tm_mday,
+      timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+
+  return path;
+}
+
+}  // namespace
+
 // static
 void LBShell::InitializeLBShell() {
-  web_prefs_ = LB_NEW webkit_glue::WebPreferences();
+  web_prefs_ = new webkit_glue::WebPreferences();
   ResetWebPreferences();
 
 #if __LB_ENABLE_NATIVE_HTTP_STACK__
@@ -76,7 +98,7 @@ void LBShell::InitializeLBShell() {
   // InitSharedInstance but it's exactly what we want in this case
   base::PlatformFileError err;
   base::PlatformFile file = base::CreatePlatformFile(
-      FilePath(*global_game_content_path).Append("lb_shell.pak"),
+      FilePath(GetGlobalsPtr()->game_content_path).Append("lb_shell.pak"),
       base::PLATFORM_FILE_OPEN | base::PLATFORM_FILE_READ,
       NULL, &err);
   if (base::PLATFORM_FILE_OK == err) {
@@ -97,20 +119,32 @@ void LBShell::ShutdownLBShell() {
 
 // static
 void LBShell::InitLogging() {
+  bool log_to_file = false;
+
 #if defined(__LB_SHELL__FORCE_LOGGING__)
-  logging::LoggingDestination destination = logging::LOG_ONLY_TO_SYSTEM_DEBUG_LOG;
+#if defined(__LB_XB1__)
+  log_to_file = true;
+#endif
+  logging::LoggingDestination destination = log_to_file ?
+      logging::LOG_TO_BOTH_FILE_AND_SYSTEM_DEBUG_LOG :
+      logging::LOG_ONLY_TO_SYSTEM_DEBUG_LOG;
   logging::LogLockingState locking = logging::LOCK_LOG_FILE;
 #else
   logging::LoggingDestination destination = logging::LOG_NONE;
   logging::LogLockingState locking = logging::DONT_LOCK_LOG_FILE;
 #endif
 
+  std::string log_filename;
+  if (log_to_file) {
+    log_filename = GenerateLogName();
+  }
+
   logging::InitLogging(
-    NULL,
-    destination,
-    locking,
-    logging::DELETE_OLD_LOG_FILE,
-    logging::DISABLE_DCHECK_FOR_NON_OFFICIAL_RELEASE_BUILDS);
+      log_to_file ? log_filename.c_str() : NULL,
+      destination,
+      locking,
+      logging::DELETE_OLD_LOG_FILE,
+      logging::DISABLE_DCHECK_FOR_NON_OFFICIAL_RELEASE_BUILDS);
 
   webkit_glue::EnableWebCoreLogChannels(
       CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
@@ -118,10 +152,10 @@ void LBShell::InitLogging() {
 
 #if defined(__LB_SHELL__FORCE_LOGGING__)
   logging::SetLogItems(
-    false, // process_id is meaningless in a single-process
-    true,  // thread_id might be handy
-    true,  // timestamp useful
-    true); // tick count useful
+      false,  // process_id is meaningless in a single-process
+      true,   // thread_id might be handy
+      true,   // timestamp useful
+      true);  // tick count useful
 
   // please DO warn about notImplementeds
   webkit_glue::EnableWebCoreLogChannels(std::string("NotYetImplemented, ") +
@@ -142,26 +176,47 @@ void LBShell::CleanupLogging() {
   // teardown.
 }
 
-LBShell::LBShell(const std::string& startup_url)
+LBShell::LBShell(const std::string& startup_url,
+                 MessageLoop* webkit_message_loop)
     : num_retries_(0)
     , total_retry_delay_ms_(0)
     , should_display_network_error_(false) {
-  delegate_.reset(LB_NEW LBWebViewDelegate(this));
-  navigation_controller_.reset(LB_NEW LBNavigationController(this));
+  delegate_.reset(new LBWebViewDelegate(this));
+  navigation_controller_.reset(new LBNavigationController(this));
 
   startup_url_ = startup_url;
 
+  webkit_message_loop_ = webkit_message_loop;
+
   web_view_host_.reset(LBWebViewHost::Create(this, delegate_.get(),
                                              *web_prefs_));
-  web_view_host_->Start();
 }
 
 LBShell::~LBShell() {
+  // Make sure the WebHistoryItems in the navigation controller are destroyed
+  // from the correct (WebKit) thread.  After this, it is safe to destroy the
+  // navigation controller itself.
+  webkit_message_loop_->PostTask(FROM_HERE,
+      base::Bind(&LBNavigationController::Clear,
+                 base::Unretained(navigation_controller_.get())));
+  SyncWithWebKit();
+
   // web_view_host_ needs to be destroyed after debug console
   if (web_view_host_.get()) {
     web_view_host_->Destroy();
     web_view_host_.reset();
   }
+}
+
+void LBShell::RunLoop() {
+  web_view_host_->RunLoop();
+}
+
+void LBShell::SyncWithWebKit() {
+  base::WaitableEvent wait_event(true, false);
+  webkit_message_loop_->PostTask(FROM_HERE,
+      base::Bind(&base::WaitableEvent::Signal, base::Unretained(&wait_event)));
+  wait_event.Wait();
 }
 
 // does a DFS over the tree starting at |node| and ending at the first element
@@ -186,8 +241,7 @@ static xmlNode *XMLDFS(xmlNode *node, const char *name) {
 // static
 void LBShell::LoadStrings(const std::string& lang) {
   // construct the XLB filename
-  extern std::string *global_game_content_path;
-  std::string filename = *global_game_content_path;
+  std::string filename(GetGlobalsPtr()->game_content_path);
 
   filename.append("/i18n/");
   filename.append(lang);
@@ -200,11 +254,18 @@ void LBShell::LoadStrings(const std::string& lang) {
 #if !defined(__LB_SHELL__FOR_RELEASE__)
     fprintf(stderr, "Unable to open XLB %s\n", filename.c_str());
 #endif
+    // Fall back to a generic version of the same language.
+    size_t dash = lang.find('-');
+    if (dash != std::string::npos) {
+      // Chop off the country part of the language string and try again.
+      std::string generic_lang(lang.c_str(), dash);
+      LoadStrings(generic_lang);
+    }
     return;
   }
 
   // parse the XML document
-  xmlDoc *doc = xmlParseDoc((xmlChar *)content.c_str());
+  xmlDoc *doc = xmlParseDoc(reinterpret_cast<const xmlChar *>(content.c_str()));
   if (!doc) {
 #if !defined(__LB_SHELL__FOR_RELEASE__)
     fprintf(stderr, "Unable to parse XLB %s\n", filename.c_str());
@@ -218,8 +279,10 @@ void LBShell::LoadStrings(const std::string& lang) {
   while (msg) {
     if (!strcmp((const char *)msg->name, "msg")) {
       // add the data from this element to the strings list
-      char *name = (char *)xmlGetProp(msg, (const xmlChar *)"name");
-      char *value = (char *)xmlNodeListGetString(doc, msg->children, 1);
+      char *name =
+          reinterpret_cast<char *>(xmlGetProp(msg, (const xmlChar *)"name"));
+      char *value =
+          reinterpret_cast<char *>(xmlNodeListGetString(doc, msg->children, 1));
       strings_[name] = value;
       xmlFree(name);
       xmlFree(value);
@@ -234,11 +297,14 @@ void LBShell::LoadStrings(const std::string& lang) {
 void LBShell::InitStrings() {
   // First load the US English strings.
   LoadStrings("en-US");
+
   // Now patch over them with the system language.
   LoadStrings(LBShellPlatformDelegate::GetSystemLanguage());
+
   // Now patch over them with the "preferred" language, which may be overriden.
   LoadStrings(PreferredLanguage());
-  // Now any strings missing in the user's language are provided in US English.
+
+  // Any strings missing in the user's language(s) are provided in US English.
 }
 
 // static
@@ -278,6 +344,9 @@ bool LBShell::Retry() {
 }
 
 bool LBShell::Navigate(const GURL& url) {
+  TRACE_EVENT1("lb_shell", "LBShell::Navigate", "url",
+               url.possibly_invalid_spec());
+
   // Get the right target frame for the entry.
   WebFrame* frame = webView()->mainFrame();
   // Load the new page.
@@ -288,6 +357,8 @@ bool LBShell::Navigate(const GURL& url) {
 }
 
 bool LBShell::Navigate(const WebKit::WebHistoryItem& item) {
+  TRACE_EVENT0("lb_shell", "NavigateToItem");
+
   // Get the right target frame for the entry.
   WebFrame* frame = webView()->mainFrame();
   // Give webkit the state to navigate to.
@@ -345,7 +416,7 @@ void LBShell::HandleNetworkFailure(WebKit::WebFrame* frame) {
 
   if (should_display_network_error_) {
     DLOG(ERROR) << base::StringPrintf("Failed to load the main frame for "
-                                      "the last %"PRId64" ms.  Displaying "
+                                      "the last %" PRId64" ms.  Displaying "
                                       "error message to the user.",
                                       total_retry_delay_ms_);
     should_display_network_error_ = false;
@@ -373,7 +444,7 @@ void LBShell::HandleNetworkFailure(WebKit::WebFrame* frame) {
     }
 
     DLOG(WARNING) << base::StringPrintf("Failed to load the main frame, "
-                                        "delaying %"PRId64" ms and trying "
+                                        "delaying %" PRId64" ms and trying "
                                         "again.", delay_ms);
 
     total_retry_delay_ms_ += delay_ms;
@@ -383,8 +454,9 @@ void LBShell::HandleNetworkFailure(WebKit::WebFrame* frame) {
       should_display_network_error_ = true;
     }
 
-    web_view_host_->main_message_loop()->PostDelayedTask(FROM_HERE,
-        base::Bind(RetryTask, this), base::TimeDelta::FromMilliseconds(delay_ms));
+    webkit_message_loop()->PostDelayedTask(FROM_HERE,
+        base::Bind(RetryTask, this),
+        base::TimeDelta::FromMilliseconds(delay_ms));
   }
 }
 
@@ -496,4 +568,4 @@ base::StringPiece GetDataResource(int resource_id) {
   return ResourceBundle::GetSharedInstance().GetRawDataResource(resource_id);
 }
 
-} // namespace webkit_glue
+}  // namespace webkit_glue

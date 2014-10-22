@@ -33,7 +33,6 @@
 #include "MemoryCache.h"
 #include "StyleCachedImage.h"
 #include "StylePendingImage.h"
-#include "WebCoreMemoryInstrumentation.h"
 
 namespace WebCore {
 
@@ -104,13 +103,6 @@ PassRefPtr<CSSValue> CSSImageValue::cloneForCSSOM() const
     RefPtr<CSSPrimitiveValue> uriValue = CSSPrimitiveValue::create(m_url, CSSPrimitiveValue::CSS_URI);
     uriValue->setCSSOMSafe();
     return uriValue.release();
-}
-
-void CSSImageValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_url);
-    // No need to report m_image as it is counted as part of RenderArena.
 }
 
 bool CSSImageValue::hasAlpha(const RenderObject* renderer) const

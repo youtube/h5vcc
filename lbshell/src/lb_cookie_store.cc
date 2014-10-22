@@ -26,6 +26,8 @@
 
 static const int kOriginalCookieSchemaVersion = 1;
 static const int kLatestCookieSchemaVersion = 1;
+static const base::TimeDelta kMaxCookieLifetime =
+    base::TimeDelta::FromDays(365 * 2);
 
 base::Lock LBCookieStore::init_lock_;
 
@@ -39,6 +41,12 @@ void LBCookieStore::Init() {
   if (initialized_)
     return;
 
+  Reinitialize();
+  initialized_ = true;
+}
+
+// static
+void LBCookieStore::Reinitialize() {
   LBSavegameSyncer::WaitForLoad();
 
   sql::Connection *conn = LBSavegameSyncer::connection();
@@ -89,16 +97,14 @@ void LBCookieStore::Init() {
   // On schema change, update kLatestCookieSchemaVersion and write upgrade
   // logic for old tables.  For example:
   //
-  //else if (version == 1) {
-  //  sql::Statement update_table(conn->GetUniqueStatement(
-  //      "ALTER TABLE CookieTable ADD COLUMN xyz INTEGER default 10"));
-  //  bool ok = update_table.Run();
-  //  DCHECK(ok);
-  //  LBSavegameSyncer::UpdateSchemaVersion("CookieTable",
-  //                                        kLatestCookieSchemaVersion);
-  //}
-
-  initialized_ = true;
+  // else if (version == 1) {
+  //   sql::Statement update_table(conn->GetUniqueStatement(
+  //       "ALTER TABLE CookieTable ADD COLUMN xyz INTEGER default 10"));
+  //   bool ok = update_table.Run();
+  //   DCHECK(ok);
+  //   LBSavegameSyncer::UpdateSchemaVersion("CookieTable",
+  //                                         kLatestCookieSchemaVersion);
+  // }
 }
 
 LBCookieStore::LBCookieStore() {
@@ -111,6 +117,8 @@ LBCookieStore::~LBCookieStore() {
 std::vector<net::CanonicalCookie *> LBCookieStore::GetAllCookies() {
   DCHECK(initialized_);
 
+  base::Time maximum_expiry = base::Time::Now() + kMaxCookieLifetime;
+
   std::vector<net::CanonicalCookie*> actual_cookies;
   sql::Connection *conn = LBSavegameSyncer::connection();
   sql::Statement get_all(conn->GetCachedStatement(SQL_FROM_HERE,
@@ -118,6 +126,10 @@ std::vector<net::CanonicalCookie *> LBCookieStore::GetAllCookies() {
       "creation, expiration, last_access, secure, http_only "
       "FROM CookieTable"));
   while (get_all.Step()) {
+    base::Time expiry = base::Time::FromInternalValue(get_all.ColumnInt64(8));
+    if (expiry > maximum_expiry)
+      expiry = maximum_expiry;
+
     net::CanonicalCookie *cookie =
         net::CanonicalCookie::Create(
             GURL(get_all.ColumnString(0)),
@@ -128,7 +140,7 @@ std::vector<net::CanonicalCookie *> LBCookieStore::GetAllCookies() {
             get_all.ColumnString(5),
             get_all.ColumnString(6),
             base::Time::FromInternalValue(get_all.ColumnInt64(7)),
-            base::Time::FromInternalValue(get_all.ColumnInt64(8)),
+            expiry,
             get_all.ColumnBool(10),
             get_all.ColumnBool(11));
     cookie->SetLastAccessDate(
@@ -156,6 +168,11 @@ void LBCookieStore::QuickAddCookie(const net::CanonicalCookie &cc) {
   // We expect that all cookies we are fed are meant to persist.
   DCHECK(cc.IsPersistent());
 
+  base::Time maximum_expiry = base::Time::Now() + kMaxCookieLifetime;
+  base::Time expiry = cc.ExpiryDate();
+  if (expiry > maximum_expiry)
+    expiry = maximum_expiry;
+
   sql::Connection *conn = LBSavegameSyncer::connection();
   sql::Statement insert_cookie(conn->GetCachedStatement(SQL_FROM_HERE,
       "INSERT INTO CookieTable ("
@@ -171,7 +188,7 @@ void LBCookieStore::QuickAddCookie(const net::CanonicalCookie &cc) {
   insert_cookie.BindString(5, cc.MACKey());
   insert_cookie.BindString(6, cc.MACAlgorithm());
   insert_cookie.BindInt64(7, cc.CreationDate().ToInternalValue());
-  insert_cookie.BindInt64(8, cc.ExpiryDate().ToInternalValue());
+  insert_cookie.BindInt64(8, expiry.ToInternalValue());
   insert_cookie.BindInt64(9, cc.LastAccessDate().ToInternalValue());
   insert_cookie.BindBool(10, cc.IsSecure());
   insert_cookie.BindBool(11, cc.IsHttpOnly());
@@ -222,7 +239,13 @@ void LBCookieStore::UpdateCookieAccessTime(const net::CanonicalCookie &cc) {
   sql::Statement touch_cookie(conn->GetCachedStatement(SQL_FROM_HERE,
       "UPDATE CookieTable SET last_access = ? WHERE "
       "name = ? AND domain = ? AND path = ?"));
-  touch_cookie.BindInt64(0, cc.ExpiryDate().ToInternalValue());
+
+  base::Time maximum_expiry = base::Time::Now() + kMaxCookieLifetime;
+  base::Time expiry = cc.ExpiryDate();
+  if (expiry > maximum_expiry)
+    expiry = maximum_expiry;
+
+  touch_cookie.BindInt64(0, expiry.ToInternalValue());
   touch_cookie.BindString(1, cc.Name());
   touch_cookie.BindString(2, cc.Domain());
   touch_cookie.BindString(3, cc.Path());

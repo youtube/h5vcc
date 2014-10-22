@@ -72,8 +72,8 @@ NPUTF8 *_NPN_UTF8FromIdentifier(NPIdentifier identifier)
     const char* string = static_cast<IdentifierRep*>(identifier)->string();
     if (!string)
         return 0;
-    
     return strdup(string);
+
 }
 
 int32_t _NPN_IntFromIdentifier(NPIdentifier identifier)

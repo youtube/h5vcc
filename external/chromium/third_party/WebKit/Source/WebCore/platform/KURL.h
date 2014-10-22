@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef KURL_h
@@ -29,6 +29,12 @@
 #include "KURLWTFURLImpl.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+// We need WEBKIT_EXPORT to expose some WebCore functionality to the lbshell
+// platform layer. This forces us to include public/WebCommon.h, which we
+// shouldn't since that's a chromium specific header. Here we include it
+// via including wtf/OSAllocator which includes public/WebCommon.h via a
+// relative path.
+#include <wtf/OSAllocator.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(CF)
@@ -122,7 +128,7 @@ public:
     bool canSetPathname() const { return isHierarchical(); }
 
 #if USE(GOOGLEURL)
-    const String& string() const { return m_url.string(); }
+    WEBKIT_EXPORT const String& string() const { return m_url.string(); }
 #elif USE(WTFURL)
     // FIXME: Split this in URLString and InvalidURLString, get rid of the implicit conversions.
     const String& string() const;
@@ -148,7 +154,7 @@ public:
 
     // Returns true if the current URL's protocol is the same as the null-
     // terminated ASCII argument. The argument must be lower-case.
-    bool protocolIs(const char*) const;
+    WEBKIT_EXPORT bool protocolIs(const char*) const;
     bool protocolIsData() const { return protocolIs("data"); }
     bool protocolIsInHTTPFamily() const;
     bool isLocalFile() const;
@@ -226,8 +232,6 @@ public:
     void print() const;
 #endif
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     void invalidate();
     bool isHierarchical() const;
@@ -281,7 +285,7 @@ const KURL& blankURL();
 // These are also different from the KURL functions in that they don't require the string to be a valid and parsable URL.
 // This is especially important because valid javascript URLs are not necessarily considered valid by KURL.
 
-bool protocolIs(const String& url, const char* protocol);
+WEBKIT_EXPORT bool protocolIs(const String& url, const char* protocol);
 bool protocolIsJavaScript(const String& url);
 
 bool isDefaultPortForProtocol(unsigned short port, const String& protocol);

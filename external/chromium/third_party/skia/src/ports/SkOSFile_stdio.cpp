@@ -14,7 +14,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
+#define HAVE_WIN32
+#endif
+
+#ifdef HAVE_WIN32
 #include <direct.h>
 #include <io.h>
 #else
@@ -109,7 +113,7 @@ void sk_fclose(SkFILE* f)
 
 bool sk_exists(const char *path)
 {
-#ifdef _WIN32
+#ifdef HAVE_WIN32
     return (0 == _access(path, 0));
 #else
     return (0 == access(path, 0));
@@ -138,7 +142,7 @@ bool sk_mkdir(const char* path)
     }
 
     int retval;
-#ifdef _WIN32
+#ifdef HAVE_WIN32
     retval = _mkdir(path);
 #else
     retval = mkdir(path, 0777);

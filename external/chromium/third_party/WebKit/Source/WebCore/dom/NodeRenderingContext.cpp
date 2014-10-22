@@ -246,6 +246,15 @@ void NodeRenderingContext::createRendererForElementIfNeeded()
     // for the first time. Otherwise code using inRenderFlowThread() in the styleWillChange and styleDidChange will fail.
     newRenderer->setInRenderFlowThread(parentRenderer->inRenderFlowThread());
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    // Unfortunately, newRenderer's parent is not yet set, so manually set
+    // this property so it can be used to see if a render layer is required
+    // before we've set the parent up.
+    newRenderer->setH5vccTargetScreenParentDifferent(
+        m_style->h5vccTargetScreen()
+        != parentRenderer->style()->h5vccTargetScreen());
+#endif
+
     element->setRenderer(newRenderer);
     newRenderer->setAnimatableStyle(m_style.release()); // setAnimatableStyle() can depend on renderer() already being set.
 

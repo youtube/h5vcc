@@ -27,19 +27,20 @@
 #if defined(OS_MACOSX)
 #include "base/message_pump_mac.h"
 #endif
-#if defined(OS_POSIX) && !defined(OS_IOS) && !defined(__LB_SHELL__)
+#if defined(OS_POSIX) && !defined(OS_IOS) && \
+    (!defined(__LB_SHELL__) || defined(__LB_ANDROID__))
 #include "base/message_pump_libevent.h"
 #endif
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include "base/message_pump_android.h"
+#endif
+#if defined(__LB_SHELL__) && !defined(__LB_ANDROID__)
+#include "base/message_pump_shell.h"
 #endif
 
 #if defined(TOOLKIT_GTK)
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
-#endif
-#if defined(__LB_SHELL__)
-#include "base/message_pump_shell.h"
 #endif
 
 using base::PendingTask;
@@ -99,7 +100,7 @@ MessageLoop::MessagePumpFactory* message_pump_for_ui_factory_ = NULL;
 // with MessageLoop pointers on other processes.
 uint64 GetTaskTraceID(const PendingTask& task, MessageLoop* loop) {
   return (static_cast<uint64>(task.sequence_num) << 32) |
-         static_cast<uint64>(reinterpret_cast<intptr_t>(loop));
+         ((static_cast<uint64>(reinterpret_cast<intptr_t>(loop)) << 32) >> 32);
 }
 
 }  // namespace
@@ -173,7 +174,7 @@ MessageLoop::MessageLoop(Type type)
 // ipc_channel_nacl.cc uses a worker thread to do socket reads currently, and
 // doesn't require extra support for watching file descriptors.
 #define MESSAGE_PUMP_IO new base::MessagePumpDefault();
-#elif defined(__LB_SHELL__)
+#elif defined(__LB_SHELL__) && !defined(__LB_ANDROID__)
 #define MESSAGE_PUMP_UI new base::MessagePumpShell()
 #define MESSAGE_PUMP_IO new base::MessagePumpShell()
 #elif defined(OS_POSIX)  // POSIX but not MACOSX.
@@ -425,7 +426,7 @@ void MessageLoop::RunInternal() {
 
   StartHistogrammer();
 
-#if !defined(OS_MACOSX) && !defined(OS_ANDROID)
+#if !defined(OS_MACOSX) && !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
   if (run_loop_->dispatcher_ && type() == TYPE_UI) {
     static_cast<base::MessagePumpForUI*>(pump_.get())->
         RunWithDispatcher(this, run_loop_->dispatcher_);
@@ -744,7 +745,7 @@ void MessageLoopForUI::DidProcessMessage(const MSG& message) {
 }
 #endif  // defined(OS_WIN)
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 void MessageLoopForUI::Start() {
   // No Histogram support for UI message loop as it is managed by Java side
   static_cast<base::MessagePumpForUI*>(pump_.get())->Start(this);
@@ -757,7 +758,7 @@ void MessageLoopForUI::Attach() {
 }
 #endif
 
-#if !defined(OS_MACOSX) && !defined(OS_NACL) && !defined(OS_ANDROID)
+#if !defined(OS_MACOSX) && !defined(OS_NACL) && !defined(OS_ANDROID) && !defined(__LB_ANDROID__)
 void MessageLoopForUI::AddObserver(Observer* observer) {
   pump_ui()->AddObserver(observer);
 }
@@ -785,7 +786,7 @@ bool MessageLoopForIO::WaitForIOCompletion(DWORD timeout, IOHandler* filter) {
   return pump_io()->WaitForIOCompletion(timeout, filter);
 }
 
-#elif defined(__LB_SHELL__)
+#elif defined(__LB_SHELL__) && !defined(__LB_ANDROID__)
 
 bool MessageLoopForIO::WatchSocket(int sock,
                                    bool persistent,

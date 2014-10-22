@@ -89,8 +89,6 @@ public:
 
     IdTargetObserverRegistry& idTargetObserverRegistry() const { return *m_idTargetObserverRegistry.get(); }
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
-
 protected:
     explicit TreeScope(ContainerNode*);
     virtual ~TreeScope();

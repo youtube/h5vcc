@@ -127,9 +127,9 @@ static void populateContextMenuItems(ExecState* exec, JSArray* array, ContextMen
 }
 #endif
 
+#if ENABLE(CONTEXT_MENUS)
 JSValue JSInspectorFrontendHost::showContextMenu(ExecState* exec)
 {
-#if ENABLE(CONTEXT_MENUS)
     if (exec->argumentCount() < 2)
         return jsUndefined();
     Event* event = toEvent(exec->argument(0));
@@ -144,11 +144,9 @@ JSValue JSInspectorFrontendHost::showContextMenu(ExecState* exec)
     Vector<ContextMenuItem> items = menu.items();
 #endif
     impl()->showContextMenu(event, items);
-#else
-    UNUSED_PARAM(exec);
-#endif
     return jsUndefined();
 }
+#endif
 
 JSValue JSInspectorFrontendHost::recordActionTaken(ExecState*)
 {

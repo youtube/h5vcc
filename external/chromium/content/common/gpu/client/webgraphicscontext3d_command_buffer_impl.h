@@ -629,7 +629,6 @@ class WebGraphicsContext3DCommandBufferImpl
       WGC3Denum type,
       const void* pixels);
 
- protected:
   virtual GrGLInterface* onCreateGrGLInterface();
 
  private:

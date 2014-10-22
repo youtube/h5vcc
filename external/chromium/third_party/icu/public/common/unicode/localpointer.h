@@ -46,7 +46,7 @@ U_NAMESPACE_BEGIN
 // heap allocate the object.
 #if defined(__ghs__)
 // Linker requires an implementation.
-#define IGNORE_DECLARATION { ASSERT(0); }
+#define IGNORE_DECLARATION { ASSERT(0); return NULL; }
 #else
 #define IGNORE_DECLARATION
 #endif

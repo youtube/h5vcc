@@ -113,7 +113,7 @@
             }],
           ],
         }],
-        ['OS == "android" and _toolset == "target"', {
+        ['(OS == "android" or (OS == "lb_shell" and target_arch == "android")) and _toolset == "target"', {
           'conditions': [
             ['target_arch == "ia32"', {
               'sources/': [
@@ -141,14 +141,26 @@
           'sources!': [
             'debug/stack_trace_posix.cc',
           ],
-          'includes': [
-            '../build/android/cpufeatures.gypi',
+          'conditions' : [
+            ['target_arch != "android"', {
+              'includes': [
+                '../build/android/cpufeatures.gypi',
+              ],
+            }],
           ],
         }],
-        ['OS == "android" and _toolset == "target" and android_build_type == 0', {
+        ['(OS == "android" or (OS == "lb_shell" and target_arch == "android")) and _toolset == "target" and android_build_type == 0', {
           'dependencies': [
             'base_java',
           ],
+        }],
+        ['OS == "lb_shell" and target_arch == "android"', {
+          'link_settings': {
+            'libraries': [
+              # for android_getCpuCount
+              '-lportable',
+            ],
+          },
         }],
         ['os_bsd==1', {
           'include_dirs': [
@@ -210,8 +222,20 @@
           ],
         }],
         ['OS=="lb_shell"', {
-          'dependencies!': [
-            '../third_party/libevent/libevent.gyp:libevent',
+          'conditions': [
+            ['target_arch != "android"', {
+              'dependencies!': [
+                '../third_party/libevent/libevent.gyp:libevent'
+              ],
+            }],
+            # toolset can be host or target.
+            # (host in the case of e.g. protobuf compiler.)
+            # We only want posix_emulation for target builds.
+            ['_toolset == "target"', {
+              'dependencies': [
+                '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
+              ],
+            }],
           ],
           'sources': [
             'debug/debugger_shell.cc',
@@ -295,6 +319,11 @@
           'dependencies': [
             # i18n/rtl.cc uses gtk
             '../build/linux/system.gyp:gtk',
+          ],
+        }],
+        ['OS=="lb_shell"', {
+          'dependencies': [
+            '<(lbshell_root)/build/projects/posix_emulation.gyp:posix_emulation',
           ],
         }],
       ],
@@ -753,12 +782,22 @@
           ],
         }],
         ['OS == "lb_shell"', {
-          'dependencies!': [
-            '../third_party/libevent/libevent.gyp:libevent'
-          ],
           'sources!': [
-            'message_pump_libevent_unittest.cc',
+            'environment_unittest.cc',
+            'metrics/stats_table_unittest.cc',
             'process_util_unittest.cc',
+            'shared_memory_unittest.cc',
+            'synchronization/waitable_event_watcher_unittest.cc',
+          ],
+          'conditions': [
+            ['target_arch != "android"', {
+              'dependencies!': [
+                '../third_party/libevent/libevent.gyp:libevent'
+              ],
+              'sources!': [
+                'message_pump_libevent_unittest.cc',
+              ],
+            }],
           ],
         }],
       ],  # conditions
@@ -996,7 +1035,7 @@
         },
       ],
     }],
-    ['os_posix==1 and OS!="mac" and OS!="ios" and OS!="lb_shell"', {
+    ['os_posix==1 and OS!="mac" and OS!="ios" and (OS!="lb_shell" or target_arch=="android")', {
       'targets': [
         {
           'target_name': 'symbolize',
@@ -1064,7 +1103,7 @@
         },
       ],
     }],
-    ['OS == "android"', {
+    ['OS == "android" or (OS == "lb_shell" and target_arch == "android")', {
       'targets': [
         {
           'target_name': 'base_jni_headers',
@@ -1128,7 +1167,7 @@
     # in the gyp make generator.  What is the correct way to extract
     # this path from gyp and into 'raw' for input to antfiles?
     # Hard-coding in the gypfile seems a poor choice.
-    ['OS == "android" and gtest_target_type == "shared_library"', {
+    ['(OS == "android" and gtest_target_type == "shared_library") or (OS == "lb_shell" and target_arch == "android")', {
       'targets': [
         {
           'target_name': 'base_unittests_apk',

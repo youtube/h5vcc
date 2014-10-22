@@ -29,9 +29,9 @@
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/platform/WebURLRequest.h"
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/platform/WebURLResponse.h"
 #include "external/chromium/webkit/tools/test_shell/simple_dom_storage_system.h"
-#include "lb_device_plugin.h"
 #include "lb_graphics.h"
 #include "lb_memory_manager.h"
+#include "lb_on_screen_display.h"
 #include "lb_shell.h"
 #include "lb_web_graphics_context_proxy.h"
 #include "lb_web_media_player_delegate.h"
@@ -41,13 +41,8 @@
 #include "external/chromium/webkit/media/webmediaplayer_delegate.h"
 #include "external/chromium/webkit/media/webmediaplayer_impl.h"
 
-LBOutputSurface::LBOutputSurface(LBGraphics* graphics) {
-  graphics_ = graphics;
-  context_ = graphics->GetCompositorContext();
-}
-
 LBWebViewDelegate::LBWebViewDelegate(LBShell* shell)
-    : shell_(shell) {
+    : shell_(shell), showing_spinner_(false) {
 }
 
 LBWebViewDelegate::~LBWebViewDelegate() {
@@ -67,9 +62,13 @@ void LBWebViewDelegate::SetNavCompletedClosure(base::Closure closure) {
 // signal deciding when to hide the splash screen
 void LBWebViewDelegate::didFirstVisuallyNonEmptyLayout(WebKit::WebFrame *) {
 #if defined(__LB_SHELL__ENABLE_CONSOLE__) && defined(_DEBUG)
-  shell_->webViewHost()->output("Non-empty layout.");
+  DLOG(INFO) << "Non-empty layout.";
 #endif
-  LBGraphics::GetPtr()->HideSpinner();
+
+  if (showing_spinner_) {
+    LBGraphics::GetPtr()->HideSpinner();
+    showing_spinner_ = false;
+  }
 
   if (!nav_completed_closure_.is_null())
     base::ResetAndReturn(&nav_completed_closure_).Run();
@@ -82,23 +81,11 @@ void LBWebViewDelegate::show(WebKit::WebNavigationPolicy policy) {
 }
 
 WebKit::WebCompositorOutputSurface* LBWebViewDelegate::createOutputSurface() {
-
-  LBGraphics* graphics = LBGraphics::GetPtr();
-  DCHECK(graphics);
-
-  // TODO: Does this belong here?
-  graphics->SetWebKitCompositeEnable(true);
-
-  return new LBOutputSurface(graphics);
+  return new LBOutputSurface();
 }
 
 WebKit::WebPlugin* LBWebViewDelegate::createPlugin(
     WebKit::WebFrame* frame, const WebKit::WebPluginParams& params) {
-  // Check mime type for "x-youtube/x-device" which indicates we should
-  // construct our LBDevicePlugin object.
-  if (strcmp(params.mimeType.utf8().data(), "x-youtube/x-device") == 0) {
-    return LB_NEW LBDevicePlugin(frame);
-  }
   return NULL;
 }
 
@@ -113,7 +100,7 @@ WebKit::WebMediaPlayer* LBWebViewDelegate::createMediaPlayer(
   scoped_ptr<media::FilterCollection> collection(
       new media::FilterCollection());
 
-    return LB_NEW webkit_media::WebMediaPlayerImpl(
+    return new webkit_media::WebMediaPlayerImpl(
         frame,
         client,
         webkit_media::LBWebMediaPlayerDelegate::WeakInstance(),
@@ -155,7 +142,10 @@ void LBWebViewDelegate::didStartProvisionalLoad(WebKit::WebFrame* frame) {
     item.initialize();
     item.setURLString(web_url.spec().utf16());
 
-    LBGraphics::GetPtr()->ShowSpinner();
+    if (!showing_spinner_) {
+      LBGraphics::GetPtr()->ShowSpinner();
+      showing_spinner_ = true;
+    }
 
     shell_->navigation_controller()->Pending(item);
   } else {
@@ -257,6 +247,18 @@ void LBWebViewDelegate::focusedNodeChanged(const WebKit::WebNode& node) {
   }
 }
 
+// Called by window.close() in JavaScript.
+void LBWebViewDelegate::closeWidgetSoon() {
+#if defined(__LB_ANDROID__) || defined(__LB_LINUX__) || defined(__LB_XB1__) || defined(__LB_XB360__)
+  // This is only legal on some platforms.
+  LBWebViewHost::Get()->RequestQuit();
+#endif
+}
+
+void LBWebViewDelegate::didMoveCursor() {
+  shell_->webViewHost()->CursorChangedEvent();
+}
+
 #if !defined(__LB_SHELL__FOR_RELEASE__)
 void LBWebViewDelegate::didAddMessageToConsole(
     const WebKit::WebConsoleMessage& message,
@@ -276,12 +278,13 @@ void LBWebViewDelegate::didAddMessageToConsole(
       message.level == WebKit::WebConsoleMessage::LevelWarning) {
     DLOG(INFO) << js_log;
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    shell_->webViewHost()->output(js_log);
+    LB::OnScreenDisplay::GetPtr()->GetConsole()->Output(js_log);
 #endif
   } else {
     DLOG(ERROR) << js_log;
 #if defined(__LB_SHELL__ENABLE_CONSOLE__)
-    shell_->webViewHost()->output_popup(js_log);
+    LB::OnScreenDisplay::GetPtr()->GetConsole()->Output(js_log);
+    LB::OnScreenDisplay::GetPtr()->ShowConsole();
 #endif
   }
 }

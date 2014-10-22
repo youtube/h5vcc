@@ -267,6 +267,16 @@ bool GIFImageDecoder::frameComplete(unsigned frameIndex, unsigned frameDuration,
     if ((buffer.status() == ImageFrame::FrameEmpty) && !initFrameBuffer(frameIndex))
         return false; // initFrameBuffer() has already called setFailed().
 
+#if defined(__LB_SHELL__)
+    if (frameIndex != 0) {
+      // Frames other than the 0th were intially copied from frame 0, but
+      // they have different contents now.
+      // They need to have different generation IDs, as this is used
+      // as part of a hash key in the Skia texture cache.
+      buffer.getSkBitmap().notifyPixelsChanged();
+    }
+#endif
+
     buffer.setStatus(ImageFrame::FrameComplete);
     buffer.setDuration(frameDuration);
     buffer.setDisposalMethod(disposalMethod);

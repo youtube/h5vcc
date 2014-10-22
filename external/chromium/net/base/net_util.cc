@@ -84,9 +84,15 @@ namespace net {
 
 namespace {
 
+#if defined(__LB_SHELL__)
+// FileScheme is changed to local for security (url_util.cc:kFileScheme)
+static const FilePath::CharType kFileURLPrefix[] =
+    FILE_PATH_LITERAL("local:///");
+#else
 // what we prepend to get a file URL
 static const FilePath::CharType kFileURLPrefix[] =
     FILE_PATH_LITERAL("file:///");
+#endif
 
 // The general list of blocked ports. Will be blocked unless a specific
 // protocol overrides it. (Ex: ftp can use ports 20 and 21)
@@ -361,7 +367,7 @@ bool IsIDNComponentSafe(const char16* str,
   DCHECK(U_SUCCESS(status));
   icu::RegexMatcher dangerous_patterns(icu::UnicodeString(
       // Lone katakana no, so, or n
-      "[^\\p{Katakana}][\\u30ce\\u30f3\u30bd][^\\p{Katakana}]"
+      "[^\\p{Katakana}][\\u30ce\\u30f3\\u30bd][^\\p{Katakana}]"
       // Repeating Japanese accent characters
       "|[\\u3099\\u309a\\u309b\\u309c][\\u3099\\u309a\\u309b\\u309c]"),
       0, status);
@@ -1288,7 +1294,9 @@ int SetNonBlocking(int fd) {
 #if defined(OS_WIN)
   unsigned long no_block = 1;
   return ioctlsocket(fd, FIONBIO, &no_block);
-#elif defined(__LB_PS3__) || defined(__LB_WIIU__)
+#elif defined(__LB_XB1__) || defined(__LB_XB360__)
+  return -1;
+#elif defined(__LB_SHELL__) && !(defined(__LB_ANDROID__) || defined(__LB_LINUX__))
   int val = 1;
   return setsockopt(fd, SOL_SOCKET, SO_NBIO, &val, sizeof(int));
 #elif defined(OS_POSIX)
@@ -1786,7 +1794,7 @@ COMPILE_ASSERT(arraysize(kFinalStatusNames) == IPV6_SUPPORT_MAX + 1,
 // TODO(jar): The following is a simple estimate of IPv6 support.  We may need
 // to do a test resolution, and a test connection, to REALLY verify support.
 IPv6SupportResult TestIPv6SupportInternal() {
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
   // TODO: We should fully implement IPv6 probe once 'getifaddrs' API available;
   // Another approach is implementing the similar feature by
   // java.net.NetworkInterface through JNI.

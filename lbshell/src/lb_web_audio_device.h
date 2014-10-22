@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _SRC_LB_WEB_AUDIO_DEVICE_H_
-#define _SRC_LB_WEB_AUDIO_DEVICE_H_
+#ifndef SRC_LB_WEB_AUDIO_DEVICE_H_
+#define SRC_LB_WEB_AUDIO_DEVICE_H_
 
 #include "third_party/WebKit/Source/Platform/chromium/public/WebAudioDevice.h"
 
 class LBWebAudioDevice : public WebKit::WebAudioDevice {
  public:
-  // static creation and attribute query methods for platform-specific
-  // implementations.
+  // LBWebAudioDeviceImpl will be used in Android, Linux, PS4 and WiiU.
+  // XB1, XB360 and PS3 have platform-specific implementations.
   static WebKit::WebAudioDevice* Create(
       size_t buffer,
       unsigned numberOfChannels,
@@ -31,5 +31,4 @@ class LBWebAudioDevice : public WebKit::WebAudioDevice {
   static size_t GetAudioHardwareBufferSize();
 };
 
-
-#endif  // _SRC_LB_WEB_AUDIO_DEVICE_H_
+#endif  // SRC_LB_WEB_AUDIO_DEVICE_H_

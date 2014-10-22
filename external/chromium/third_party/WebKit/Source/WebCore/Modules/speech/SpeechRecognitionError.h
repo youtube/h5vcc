@@ -26,6 +26,8 @@
 #ifndef SpeechRecognitionError_h
 #define SpeechRecognitionError_h
 
+#include "config.h"
+
 #if ENABLE(SCRIPTED_SPEECH)
 
 #include "Event.h"
@@ -41,7 +43,7 @@ struct SpeechRecognitionErrorInit : public EventInit {
     String message;
 };
 
-class SpeechRecognitionError : public Event {
+class WEBKIT_EXPORT SpeechRecognitionError : public Event {
 public:
     enum ErrorCode {
         // FIXME: This is an unspecified error and Chromium should stop using it.

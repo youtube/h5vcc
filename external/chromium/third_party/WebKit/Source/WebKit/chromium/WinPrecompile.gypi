@@ -31,7 +31,8 @@
 
 {
   'conditions': [
-      ['OS=="win" and chromium_win_pch==1', {
+      ['(OS=="win" or (OS=="lb_shell" and target_arch in ["xb360", "xb1"])) and \
+        chromium_win_pch==1', {
           'variables': {
               'conditions': [
                   # We need to calculate the path to the gyp directory differently depending on whether we are
@@ -43,11 +44,9 @@
                   }],
               ]
           },
-          'target_defaults': {
-              'msvs_precompiled_header': '<(win_pch_dir)/WinPrecompile.h',
-              'msvs_precompiled_source': '<(win_pch_dir)/WinPrecompile.cpp',
-              'sources': ['<(win_pch_dir)/WinPrecompile.cpp'],
-          }
+          'msvs_precompiled_header': '<(win_pch_dir)/WinPrecompile.h',
+          'msvs_precompiled_source': '<(win_pch_dir)/WinPrecompile.cpp',
+          'sources': ['<(win_pch_dir)/WinPrecompile.cpp'],
       }],
   ],
 }

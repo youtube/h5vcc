@@ -15,41 +15,97 @@
  */
 // Provides the entry point to the Leanback Shell.
 
+#if defined(__LB_XB360__) && !defined(__LB_SHELL__FOR_RELEASE__)
+#include <windows.h>  // For GetCommandLine
+#endif
+
 #include "external/chromium/base/at_exit.h"
+#include "external/chromium/base/base_switches.h"
 #include "external/chromium/base/basictypes.h"
 #include "external/chromium/base/command_line.h"
+#include "external/chromium/base/debug/stack_trace.h"
 #include "external/chromium/base/i18n/icu_util.h"
 #include "external/chromium/base/memory/scoped_ptr.h"
 #include "external/chromium/base/message_loop.h"
 #include "external/chromium/base/metrics/histogram.h"
 #include "external/chromium/base/metrics/statistics_recorder.h"
 #include "external/chromium/base/string_split.h"
+#include "external/chromium/base/threading/platform_thread.h"
+#include "external/chromium/base/threading/thread.h"
 #include "external/chromium/media/base/shell_buffer_factory.h"
-#include "external/chromium/media/base/shell_filter_graph_log.h"
 #include "external/chromium/net/base/net_util.h"
+#include "external/chromium/net/dial/dial_service.h"
 #include "external/chromium/net/http/http_cache.h"
 #include "external/chromium/skia/ext/SkMemory_new_handler.h"
 #include "external/chromium/third_party/icu/public/common/unicode/locid.h"
+#ifdef __LB_SHELL_USE_JSC__
 // required before InitializeThreading.h
 #include "external/chromium/third_party/WebKit/Source/JavaScriptCore/runtime/JSExportMacros.h"
 #include "external/chromium/third_party/WebKit/Source/JavaScriptCore/runtime/InitializeThreading.h"
-#include "lb_app_counters.h"
+#endif
+#include "lb_console_values.h"
 #include "lb_cookie_store.h"
+#include "lb_globals.h"
 #include "lb_memory_manager.h"
 #include "lb_resource_loader_bridge.h"
 #include "lb_savegame_syncer.h"
+#include "lb_shell/lb_shell_constants.h"
 #include "lb_shell.h"
+#include "lb_shell_console_values_hooks.h"
 #include "lb_shell_layout_test_runner.h"
 #include "lb_shell_platform_delegate.h"
 #include "lb_shell_switches.h"
-#include "lb_shell_webkit_init.h"
-#include "lb_stack.h"
+#include "lb_storage_cleanup.h"
+
 #include "lb_web_media_player_delegate.h"
-#if defined(__LB_WIIU__)
-#include "lb_shell/lb_error_viewer.h"
-#endif
 #include "steel_build_id.h"
 #include "steel_version.h"
+
+#if defined(__LB_ANDROID__)
+# include "lb_shell/lb_shell_webkit_init_android.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitAndroid
+# include "lb_shell/lb_crash_dump_manager_android.h"
+#elif defined(__LB_LINUX__)
+# include "lb_shell/lb_shell_webkit_init_linux.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitLinux
+#elif defined(__LB_PS3__)
+# include "lb_shell/lb_shell_webkit_init_ps3.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitPS3
+#elif defined(__LB_PS4__)
+# include "lb_shell/lb_shell_webkit_init_ps4.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitPS4
+#elif defined(__LB_WIIU__)
+# include "lb_shell/lb_shell_webkit_init_wiiu.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitWiiU
+#elif defined(__LB_XB1__)
+# include "lb_shell/lb_shell_webkit_init_xb1.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitXB1
+#elif defined(__LB_XB360__)
+# include "lb_shell/lb_shell_webkit_init_xb360.h"
+# define WEBKIT_INIT_CLASS LBShellWebKitInitXB360
+#else
+# error Platform not handled!
+#endif
+
+#if defined(__LB_WIIU__)
+# include "lb_shell/lb_error_viewer.h"
+#endif
+
+// Ensure we don't accidentally release with these features:
+#if defined(__LB_SHELL__FOR_RELEASE__)
+# if defined(__LB_SHELL__FORCE_LOGGING__)
+#  error Logging should not be enabled in a release build!
+# endif
+# if defined(__LB_SHELL__ENABLE_CONSOLE__)
+#  error The debugging console should not be enabled in a release build!
+# endif
+# if defined(__LB_SHELL__ENABLE_SCREENSHOT__)
+#  error Screenshot functionality should not be enabled in a release build!
+# endif
+# if ENABLE_INSPECTOR
+#  error Web inspector should not be enabled in a release build!
+# endif
+#endif
 
 static const char* LB_URL = "https://www.youtube.com/tv";
 
@@ -85,61 +141,119 @@ static std::string GetUrlToLoad() {
 #endif
 }
 
-static void RunWebKit(int argc, char **argv) {
-  // Begins a new scope for WebKit.
-  // Initialize WebKit.
-  LBShellWebKitInit lb_shell_webkit_init;
+namespace {
+class WebKitInstance {
+ public:
+  WebKitInstance();
+  virtual ~WebKitInstance();
 
+  MessageLoop* message_loop() { return webkit_thread_.message_loop(); }
+
+ private:
+  void InitializeOnWebKitThread();
+  void ShutdownOnWebKitThread();
+
+  base::Thread webkit_thread_;
+
+  scoped_ptr<LBShellWebKitInit> webkit_init_;
+  scoped_ptr<webkit_glue::WebThemeEngineImpl> engine_;
+};
+
+WebKitInstance::WebKitInstance()
+    : webkit_thread_("Webkit") {
+
+  webkit_thread_.StartWithOptions(base::Thread::Options(
+      MessageLoop::TYPE_DEFAULT,
+      kWebKitThreadStackSize,
+      kWebKitThreadPriority,
+      kWebKitThreadAffinity));
+
+  message_loop()->PostTask(FROM_HERE,
+      base::Bind(&WebKitInstance::InitializeOnWebKitThread,
+                 base::Unretained(this)));
+}
+
+void WebKitInstance::InitializeOnWebKitThread() {
+  // Initialize WebKit.
+  webkit_init_.reset(new WEBKIT_INIT_CLASS);
+
+#ifdef __LB_SHELL_USE_JSC__
   // Initialize the JavaScriptCore threading model.
   // Must be called from main thread and AFTER WebKit init.
   JSC::initializeThreading();
+#endif
 
-  webkit_glue::WebThemeEngineImpl engine;
-  lb_shell_webkit_init.SetThemeEngine(&engine);
+  engine_.reset(new webkit_glue::WebThemeEngineImpl());
+  webkit_init_->SetThemeEngine(engine_.get());
 
   LBShellPlatformDelegate::PlatformUpdateDuringStartup();
-  if (!LBShellPlatformDelegate::ExitGameRequested()) {
-#if defined(__LB_LAYOUT_TESTS__)
-    // Extract the tests to run from the command line.
-    std::string work_dir(argv[1]);
-    std::vector<std::string> tests;
-    for (int i = 2; i < argc; ++i) {
-      tests.push_back(std::string(argv[i]));
-    }
-
-    scoped_refptr<LBShellLayoutTestRunner> test_runner(
-        LB_NEW LBShellLayoutTestRunner(
-            work_dir,
-            tests,
-            MessageLoop::current()));
-
-    MessageLoop::current()->Run();
-
-    test_runner->Join();
-#else
-    LBShell *shell = LB_NEW LBShell(GetUrlToLoad());
-    shell->Show(WebKit::WebNavigationPolicyNewWindow);
-
-#if defined(__LB_WIIU__) && !defined(__LB_SHELL__FOR_RELEASE__)
-    CommandLine *cl = CommandLine::ForCurrentProcess();
-    std::string test_id = cl->GetSwitchValueASCII(LB::switches::kErrorTest);
-    if (!test_id.empty()) {
-      // Launch the error test.
-      LBErrViewer::TestError(test_id);
-    }
-#endif
-
-    // Run the main loop.
-    MessageLoop::current()->Run();
-    // The main loop has ended.
-    delete shell;
-#endif
-  }
-  // Tear down WebKit when leaving scope.
 }
 
+WebKitInstance::~WebKitInstance() {
+  // Any in-progress requests may post tasks to the WebKit thread. Wait for
+  // these requests to complete and post their tasks to WebKit before
+  // posting the task to shut down WebKit.
+  LBResourceLoaderBridge::WaitForAllRequests();
+
+  message_loop()->PostTask(FROM_HERE,
+      base::Bind(&WebKitInstance::ShutdownOnWebKitThread,
+                 base::Unretained(this)));
+
+  webkit_thread_.Stop();
+}
+
+void WebKitInstance::ShutdownOnWebKitThread() {
+  engine_.reset(NULL);
+  webkit_init_.reset(NULL);
+}
+
+}  // namespace
+
+#if defined(__LB_LAYOUT_TESTS__)
+static void RunLayoutTests(const CommandLine& command_line,
+                           WebKitInstance* webkit_instance) {
+  LBShell shell("about:blank", webkit_instance->message_loop());
+  shell.Show(WebKit::WebNavigationPolicyNewWindow);
+
+  // Extract the tests to run from the command line.
+  CommandLine::StringVector args = command_line.GetArgs();
+  std::string work_dir(args[0]);
+  std::vector<std::string> tests(args.begin()+1, args.end());
+
+  scoped_refptr<LBShellLayoutTestRunner> test_runner(
+      new LBShellLayoutTestRunner(
+          &shell,
+          work_dir,
+          tests,
+          webkit_instance->message_loop()));
+
+  shell.RunLoop();
+}
+
+#else
+
+static void RunLBShell(WebKitInstance* webkit_instance) {
+  LBShell shell(GetUrlToLoad(), webkit_instance->message_loop());
+  shell.Show(WebKit::WebNavigationPolicyNewWindow);
+
+#if defined(__LB_WIIU__) && !defined(__LB_SHELL__FOR_RELEASE__)
+  CommandLine *cl = CommandLine::ForCurrentProcess();
+  std::string test_id = cl->GetSwitchValueASCII(LB::switches::kErrorTest);
+  if (!test_id.empty()) {
+    // Launch the error test.
+    LBErrViewer::TestError(test_id);
+  }
+#endif
+
+  // Start the main LB Shell app and then immediately wait for it to
+  // quit/finish.
+  shell.RunLoop();
+}
+
+#endif  // defined(__LB_LAYOUT_TESTS__)
+
 int main(int argc, char **argv) {
-  LB::SetStackSize();
+  base::PlatformThread::SetName("LBShell Main");
 
 #if defined(__LB_SHELL__FOR_RELEASE__) && !defined(__LB_LINUX__)
   // We shall have no more arguments.
@@ -157,17 +271,106 @@ int main(int argc, char **argv) {
   CommandLine* cl = CommandLine::ForCurrentProcess();
 
 #if defined(__LB_LINUX__)
+  if (cl->HasSwitch(LB::switches::kHelp)) {
+    printf("Steel %s build %s\n", STEEL_VERSION, STEEL_BUILD_ID);
+    printf("Options:\n");
+    printf("\n");
+    printf("  --disable-save    Load the savegame at startup, but never\n");
+    printf("      write to it for any reason.\n");
+    printf("\n");
+    printf("  --filter-graph-log    Enable media filter graph logging.\n");
+    printf("\n");
+    printf("  --help    Print a list of options and exit.\n");
+    printf("\n");
+    printf("  --lang=LANG    Override the system language.  LANG is a\n");
+    printf("      two-letter language code with an option country code,\n");
+    printf("      such as \"de\" or \"pt-BR\".\n");
+    printf("\n");
+    printf("  --load-savegame=PATH    Load an alternate savegame database\n");
+    printf("      at startup.  (Default: ~/.steel.db)\n");
+    printf("\n");
+    printf("  --url=URL    Start the application with a non-standard URL.\n");
+    printf("      Also puts perimeter checks into warning mode.\n");
+    printf("\n");
+    printf("  --proxy=HOST:PORT    Start the application with a proxy.\n");
+    printf("      Overrides the system's proxy settings.\n");
+    printf("      Also puts perimeter checks into warning mode.\n");
+    printf("\n");
+    printf("  --user-agent=USER_AGENT    Override the User-Agent string.\n");
+    printf("\n");
+    printf("  --version    Print the version number and exit.\n");
+    printf("\n");
+    printf("  --webcore-log-channels=CHANNELS    Additional channels\n");
+    printf("      for WebKit logging.  Separate channels by commas.\n");
+    printf("\n");
+    return 1;
+  }
+
   if (cl->HasSwitch(LB::switches::kVersion)) {
     printf("Steel %s build %s\n", STEEL_VERSION, STEEL_BUILD_ID);
     return 1;
   }
 #endif
 
+#if defined(__LB_ANDROID__)
+  if (cl->HasSwitch(switches::kWaitForDebugger)) {
+    DLOG(INFO) << "Waiting for debugger.";
+    base::debug::WaitForDebugger(24 * 60 * 60, false);
+  }
+#endif
+
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+  // Setup console values system very early, so that it is setup before most
+  // CVals get created.
+  LB::ConsoleValueManager console_value_manager;
+#endif
+
+  // AtExitManagers can be nested, and our graphics library (spawned in
+  // LBShellPlatformDelegate::Init() may create a base::Thread/message
+  // loop, so this manager permits those actions, and will be torn down
+  // after the inner at_exit_manager.
+#if !defined(__LB_ANDROID__)
+  // TODO: On Android, AtExitManager is created earlier during the
+  // initialization process to support JNI binding registration. Check if
+  // the code paths can be unified between different platforms.
+  base::AtExitManager platform_at_exit_manager;
+#endif
   LBShellPlatformDelegate::Init();
+
+#if LB_ENABLE_MEMORY_DEBUGGING
+  if (LB::Memory::IsContinuousLogEnabled()) {
+    // Initialize the writer (we should already be recording to memory) now that
+    // the filesystem and threading system are initialized.
+    LB::Memory::InitLogWriter();
+  }
+#endif
+
+#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+  // And now attach LBShell specific hooks to the console value system.  This
+  // is done later than the creation of the ConsoleValueManager because some
+  // of the LBShell hooks require some systems to be initialized first.
+  LB::ShellConsoleValueHooks shell_console_value_hooks;
+#endif
+
   {  // scope for at_exit_manager
-    // We need an AtExitManager before we access any base::LazyInstance or
-    // base::Singleton objects, or create any base::Threads.
-    base::AtExitManager at_exit_manager;
+    // Initialize an AtExitManager to deal with all lazy instance objects
+    // like base::Singleton objects, or base::Threads that should be shut
+    // down before we call LBShellPlatformDelegate::Teardown().
+    // We explicitly indicate that we wish to shadow the outer AtExitManager.
+    base::ShadowingAtExitManager at_exit_manager;
+
+  // Applications compiled with __LB_SHELL_NO_CHROME__ don't link
+  // against chromium/base
+#if !defined(__LB_SHELL_NO_CHROME__) && \
+    !defined(__LB_SHELL__FOR_RELEASE__) && defined(__LB_XB1__)
+    if (!base::debug::BeingDebugged())
+      // Enabled MiniDump generation in case of a crash
+      base::debug::EnableInProcessStackDumping();
+#endif
+
+#if defined(__LB_SHELL__FOR_RELEASE__) && defined(__LB_ANDROID__)
+    InitCrashDump();
+#endif
 
 #if !defined(__LB_SHELL__FOR_RELEASE__)
     if (cl->HasSwitch(LB::switches::kDisableSave)) {
@@ -177,13 +380,14 @@ int main(int argc, char **argv) {
       LBSavegameSyncer::LoadFromFile(cl->GetSwitchValuePath(
           LB::switches::kLoadSavegame));
     }
-    if (cl->HasSwitch(LB::switches::kFilterGraphLog)) {
-      media::ShellFilterGraphLog::SetGraphLoggingEnabled(true);
-    }
     if (cl->HasSwitch(LB::switches::kLang)) {
       LBShell::SetPreferredLanguage(cl->GetSwitchValueASCII(
           LB::switches::kLang));
     }
+
+    // Spawn a thread that deletes old files to save disk space
+    LB::StorageCleanupThread cleanup_thread;
+    cleanup_thread.Start();
 #endif
 
     // Start the savegame init ASAP, since the async load could take a while.
@@ -197,9 +401,13 @@ int main(int argc, char **argv) {
     LBShellPlatformDelegate::PlatformUpdateDuringStartup();
 
     if (!LBShellPlatformDelegate::ExitGameRequested()) {
-      // scope to hold the main_message_loop.
+#if !defined(__LB_XB1__)
+      // Scope to hold the main_message_loop. For the Xbox One, we create
+      // a different SingleThreadTaskRunner later by attaching it to the system
+      // event dispatcher.
       MessageLoopForUI main_message_loop;
       main_message_loop.set_thread_name("main");
+#endif
 
       // good time to turn on logging
       LBShell::InitLogging();
@@ -209,7 +417,7 @@ int main(int argc, char **argv) {
       webkit_media::LBWebMediaPlayerDelegate::Initialize();
 
       LBResourceLoaderBridge::Init(
-          LB_NEW LBCookieStore(),
+          new LBCookieStore(),
           LBShell::PreferredLanguage(),
           false);
 
@@ -222,8 +430,6 @@ int main(int argc, char **argv) {
           DLOG(FATAL) << "icu_util::Intialize() failed.";
         }
 
-        LBAppCounters app_counters;
-
         LBShell::InitializeLBShell();
 
         // set the default locale
@@ -231,11 +437,24 @@ int main(int argc, char **argv) {
         UErrorCode error_code;  // ignored
         icu_46::Locale::setDefault(default_locale, error_code);
 
-        RunWebKit(argc, argv);
-        // Localstorage data was flushed when WebKit was torn down.
+        if (!LBShellPlatformDelegate::ExitGameRequested()) {
+          WebKitInstance webkit_instance;
 
+#if defined(__LB_LAYOUT_TESTS__)
+          RunLayoutTests(*cl, &webkit_instance);
+#else
+          RunLBShell(&webkit_instance);
+#endif
+        }
+
+        // Localstorage data was flushed when WebKit was torn down.
         LBShell::ShutdownLBShell();
       }
+
+#if ENABLE(DIAL_SERVER)
+      // Terminate the Dial Service.
+      net::DialService::GetInstance()->Terminate();
+#endif
 
       // LBResourceLoaderBridge::Shutdown() writes the last cookies.
       LBResourceLoaderBridge::Shutdown();
@@ -252,9 +471,10 @@ int main(int argc, char **argv) {
 
     // The syncer uses a base::Thread, which needs the exit manager.
     // Make sure the syncer is completely done.
-    LBSavegameSyncer::WaitForFlush();
+    LBSavegameSyncer::WaitForShutdown();
   }  // tear down at_exit_manager
 
   LBShellPlatformDelegate::Teardown();
+
   return 0;
 }

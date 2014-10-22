@@ -53,7 +53,6 @@
 #include "Image.h"
 #include "NativeImageSkia.h"
 #include "PlatformContextSkia.h"
-#include "PlatformMemoryInstrumentation.h"
 #include "ScrollableArea.h"
 #include "SkImageFilter.h"
 #include "SkMatrix44.h"
@@ -71,7 +70,6 @@
 #include <public/WebTransformationMatrix.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashSet.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringHash.h>
@@ -438,6 +436,13 @@ void GraphicsLayerChromium::setOpacity(float opacity)
     GraphicsLayer::setOpacity(clampedOpacity);
     platformLayer()->setOpacity(opacity);
 }
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+void GraphicsLayerChromium::setH5vccTargetScreen(H5VCCTargetScreen h5vccTargetScreen) {
+    GraphicsLayer::setH5vccTargetScreen(h5vccTargetScreen);
+    platformLayer()->setH5vccTargetScreen(static_cast<WebKit::H5VCCTargetScreen>(h5vccTargetScreen));
+}
+#endif
 
 void GraphicsLayerChromium::setReplicatedByLayer(GraphicsLayer* layer)
 {
@@ -865,21 +870,6 @@ void GraphicsLayerChromium::didScroll()
 {
     if (m_scrollableArea)
         m_scrollableArea->scrollToOffsetWithoutAnimation(IntPoint(m_layer->layer()->scrollPosition()));
-}
-
-void GraphicsLayerChromium::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Layers);
-    GraphicsLayer::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_nameBase);
-    info.addMember(m_layer);
-    info.addMember(m_transformLayer);
-    info.addMember(m_imageLayer);
-    info.addMember(m_contentsLayer);
-    info.addMember(m_linkHighlight);
-    info.addMember(m_opaqueRectTrackingContentLayerDelegate);
-    info.addMember(m_animationIdMap);
-    info.addMember(m_scrollableArea);
 }
 
 } // namespace WebCore

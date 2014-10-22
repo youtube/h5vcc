@@ -31,6 +31,12 @@ namespace net {
 
 namespace {
 
+#if defined(__LB_PS4__)
+#define MAYBE_DnsTaskUnspec DISABLED_DnsTaskUnspec
+#else
+#define MAYBE_DnsTaskUnspec DnsTaskUnspec
+#endif
+
 const size_t kMaxJobs = 10u;
 const size_t kMaxRetryAttempts = 4u;
 
@@ -1312,7 +1318,7 @@ TEST_F(HostResolverImplDnsTest, DnsTask) {
   EXPECT_TRUE(requests_[5]->HasOneAddress("192.168.1.102", 80));
 }
 
-TEST_F(HostResolverImplDnsTest, DnsTaskUnspec) {
+TEST_F(HostResolverImplDnsTest, MAYBE_DnsTaskUnspec) {
   ChangeDnsConfig(CreateValidDnsConfig());
 
   proc_->AddRuleForAllFamilies("4nx", "192.168.1.101");

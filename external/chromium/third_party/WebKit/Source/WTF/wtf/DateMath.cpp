@@ -139,6 +139,8 @@ static inline void getLocalTime(const time_t* localTime, struct tm* localTM)
     *localTM = *localtime(localTime);
 #elif COMPILER(MSVC)
     localtime_s(localTM, localTime);
+#elif defined(__STDC_LIB_EXT1__) && !defined(__LB_PS4__)
+    localtime_s(localTime, localTM);
 #else
     localtime_r(localTime, localTM);
 #endif

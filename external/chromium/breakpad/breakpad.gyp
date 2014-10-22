@@ -315,9 +315,9 @@
         },
       ],
     }],
-    [ 'OS=="linux" or OS=="android"', {
+    [ 'OS=="linux" or OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
       'conditions': [
-        ['OS=="android"', {
+        ['OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
           'defines': [
             '__ANDROID__',
           ],
@@ -350,7 +350,7 @@
               'target_name': 'dump_syms',
               'type': 'executable',
               'conditions': [
-                ['OS=="android"', {
+                ['OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
                   'toolsets': [ 'host' ],
                 }],
               ],
@@ -472,7 +472,7 @@
               # linux_syscall_support.h:sys_clone()'s inline assembly.
               'cflags': ['-marm'],
             }],
-            ['OS=="android"', {
+            ['OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
               'include_dirs': [
                 'src/common/android/include',
               ],
@@ -574,7 +574,7 @@
                 '-Wno-unused-value',
               ],
             }],
-            ['OS=="android"', {
+            ['OS=="android" or (OS=="lb_shell" and target_arch=="android")', {
               'libraries': [
                 '-llog',
               ],

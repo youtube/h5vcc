@@ -5,6 +5,9 @@
 #ifndef CC_LAYER_H_
 #define CC_LAYER_H_
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+#include <public/H5VCCTargetScreen.h>
+#endif
 #include <public/WebFilterOperations.h>
 #include <string>
 #include <vector>
@@ -103,6 +106,11 @@ public:
 
     void setOpacity(float);
     bool opacityIsAnimating() const;
+
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    WebKit::H5VCCTargetScreen h5vccTargetScreen() const;
+    void setH5vccTargetScreen(WebKit::H5VCCTargetScreen);
+#endif
 
     void setFilters(const WebKit::WebFilterOperations&);
     const WebKit::WebFilterOperations& filters() const { return m_filters; }
@@ -368,6 +376,9 @@ private:
     SkColor m_backgroundColor;
     std::string m_debugName;
     float m_opacity;
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+    WebKit::H5VCCTargetScreen m_h5vccTargetScreen;
+#endif
     skia::RefPtr<SkImageFilter> m_filter;
     WebKit::WebFilterOperations m_filters;
     WebKit::WebFilterOperations m_backgroundFilters;

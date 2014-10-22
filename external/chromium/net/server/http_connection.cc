@@ -53,6 +53,9 @@ void HttpConnection::Send(HttpStatusCode status_code,
     case HTTP_INTERNAL_SERVER_ERROR:
       status_message = "Internal Error";
       break;
+    case HTTP_NOT_IMPLEMENTED:
+      status_message = "Not Implemented";
+      break;
     default:
       status_message = "";
       break;

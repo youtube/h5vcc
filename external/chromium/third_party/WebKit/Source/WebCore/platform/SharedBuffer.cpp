@@ -27,9 +27,7 @@
 #include "config.h"
 #include "SharedBuffer.h"
 
-#include "PlatformMemoryInstrumentation.h"
 #include "PurgeableBuffer.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/unicode/UTF8.h>
 #include <wtf/unicode/Unicode.h>
@@ -40,15 +38,6 @@ namespace WebCore {
 
 static const unsigned segmentSize = 0x1000;
 static const unsigned segmentPositionMask = 0x0FFF;
-
-#if defined(__LB_SHELL__)
-// Preallocated blocks. Each block is 4k so we use 500k fixed memory.
-static const unsigned preAllocatedSegmentCount = 128;
-static char s_segment_buffer[preAllocatedSegmentCount][segmentSize];
-// Free block list
-static int s_free_segments_count = -1;
-static int s_free_segments[preAllocatedSegmentCount];
-#endif
 
 static inline unsigned segmentIndex(unsigned position)
 {
@@ -62,41 +51,11 @@ static inline unsigned offsetInSegment(unsigned position)
 
 static inline char* allocateSegment()
 {
-#if defined(__LB_SHELL__)
-    // Initialize data if not initialized yet
-    if (s_free_segments_count < 0) {
-        s_free_segments_count = preAllocatedSegmentCount;
-        for (int i = 0; i < preAllocatedSegmentCount; ++i) {
-            s_free_segments[i] = i;
-        }
-    }
-    // If there is still space in preallocated buffer, use one
-    // to avoid malloc calls
-    if (s_free_segments_count > 0) {
-        s_free_segments_count--;
-        int index = s_free_segments[s_free_segments_count];
-        ASSERT(index >= 0);
-        ASSERT(index < preAllocatedSegmentCount);
-        return s_segment_buffer[index];
-    }
-#endif
-
     return static_cast<char*>(fastMalloc(segmentSize));
 }
 
 static inline void freeSegment(char* p)
 {
-#if defined(__LB_SHELL__)
-    if (p >= s_segment_buffer[0]
-        && p <= s_segment_buffer[preAllocatedSegmentCount - 1]) {
-        // It was from preallocated buffer, so return to free list
-        int index = (p - s_segment_buffer[0]) / segmentSize;
-        s_free_segments[s_free_segments_count] = index;
-        s_free_segments_count++;
-        return;
-    }
-#endif
-
     fastFree(p);
 }
 
@@ -311,26 +270,6 @@ const Vector<char>& SharedBuffer::buffer() const
 #endif
     }
     return m_buffer;
-}
-
-#if defined(__LB_SHELL__)
-char* SharedBuffer::releaseBuffer()
-{
-    char* ret = const_cast<Vector<char>*>(&buffer())->releaseBuffer();
-
-    clear();
-    return ret;
-}
-#endif
-
-void SharedBuffer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-    info.addMember(m_buffer);
-    info.addMember(m_segments);
-    for (unsigned i = 0; i < m_segments.size(); ++i)
-        info.addRawBuffer(m_segments[i], segmentSize);
-    info.addMember(m_purgeableBuffer.get());
 }
 
 unsigned SharedBuffer::getSomeData(const char*& someData, unsigned position) const

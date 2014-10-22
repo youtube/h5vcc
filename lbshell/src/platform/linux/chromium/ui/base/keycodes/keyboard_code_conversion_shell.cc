@@ -15,4 +15,4 @@
  */
 
 // Files with _x suffix are excluded by filename_rules.gypi.
-#include "external/chromium/ui/base/keycodes/keyboard_code_conversion_x.cc"
+#include "ui/base/keycodes/keyboard_code_conversion_x.cc"

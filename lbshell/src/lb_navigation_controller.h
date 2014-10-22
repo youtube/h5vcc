@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _LB_NAVIGATION_CONTROLLER_H_
-#define _LB_NAVIGATION_CONTROLLER_H_
+#ifndef SRC_LB_NAVIGATION_CONTROLLER_H_
+#define SRC_LB_NAVIGATION_CONTROLLER_H_
 
 #include <string>
 #include <vector>
@@ -23,11 +23,13 @@
 #include "external/chromium/googleurl/src/gurl.h"
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/WebHistoryItem.h"
 
+#include "lb_console_values.h"
+
 class LBShell;
 
 class LBNavigationController {
  public:
-  LBNavigationController(LBShell * shell);
+  explicit LBNavigationController(LBShell * shell);
   ~LBNavigationController();
 
   // Returns the index from which we would go back/forward or reload.
@@ -58,6 +60,11 @@ class LBNavigationController {
   // Update the address of the current entry.
   void UpdateCurrentEntry(const WebKit::WebHistoryItem& entry);
 
+  // Wipe out the history.
+  // Called from the WebKit thread to make sure that WebHistoryItems are
+  // destroyed on the correct thread.
+  void Clear();
+
  private:
   void DiscardPendingEntry();
   void NavigateToPendingEntry();
@@ -76,7 +83,9 @@ class LBNavigationController {
 
   LBShell* shell_;
 
+  LB::CVal<std::string> current_url_;
+
   DISALLOW_COPY_AND_ASSIGN(LBNavigationController);
 };
 
-#endif // _LB_NAVIGATION_CONTROLLER_H_
+#endif  // SRC_LB_NAVIGATION_CONTROLLER_H_

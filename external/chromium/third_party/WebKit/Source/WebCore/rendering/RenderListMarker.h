@@ -45,8 +45,6 @@ public:
 
     bool isInside() const;
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 private:
     virtual const char* renderName() const { return "RenderListMarker"; }
 

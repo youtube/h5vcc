@@ -55,6 +55,7 @@ bool HttpStreamShellLoader::HeadersContainMultipleCopiesOfField(
 }
 
 // Parser response headers.
+/* static */
 int HttpStreamShellLoader::ParseResponseHeaders(const char* buf,
     int buf_len, const HttpRequestInfo* request, HttpResponseInfo* response) {
   // Do the parse

@@ -34,8 +34,6 @@
 
 #include "InspectorBaseAgent.h"
 
-#include "WebCoreMemoryInstrumentation.h"
-
 namespace WebCore {
 
 InspectorBaseAgentInterface::InspectorBaseAgentInterface(const String& name, InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState)
@@ -47,14 +45,6 @@ InspectorBaseAgentInterface::InspectorBaseAgentInterface(const String& name, Ins
 
 InspectorBaseAgentInterface::~InspectorBaseAgentInterface()
 {
-}
-
-void InspectorBaseAgentInterface::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Inspector);
-    info.addMember(m_name);
-    info.addWeakPointer(m_instrumentingAgents);
-    info.addWeakPointer(m_state);
 }
 
 void InspectorAgentRegistry::append(PassOwnPtr<InspectorBaseAgentInterface> agent)

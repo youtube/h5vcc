@@ -110,12 +110,6 @@ public:
     static inline PassRefPtr<ArrayBuffer> create(const void* source, unsigned byteLength);
     static inline PassRefPtr<ArrayBuffer> create(ArrayBufferContents&);
 
-#if defined(__LB_SHELL__)
-    // Only used by XMLHttpRequest to transfer ownership of contiguous memory block from one
-    // buffer to another without incurring a copy.
-    static inline PassRefPtr<ArrayBuffer> takeOwnership(void* source, unsigned byteLength);
-#endif
-
     // Only for use by Uint8ClampedArray::createUninitialized.
     static inline PassRefPtr<ArrayBuffer> createUninitialized(unsigned numElements, unsigned elementByteSize);
 
@@ -202,16 +196,6 @@ PassRefPtr<ArrayBuffer> ArrayBuffer::create(unsigned numElements, unsigned eleme
         return 0;
     return adoptRef(new ArrayBuffer(contents));
 }
-
-#if defined(__LB_SHELL__)
-PassRefPtr<ArrayBuffer> ArrayBuffer::takeOwnership(void* source, unsigned byteLength)
-{
-    if (source == NULL && byteLength == 0)
-        return 0;
-    ArrayBufferContents contents(source, byteLength);
-    return adoptRef(new ArrayBuffer(contents));
-}
-#endif
 
 ArrayBuffer::ArrayBuffer(ArrayBufferContents& contents)
     : m_firstView(0)

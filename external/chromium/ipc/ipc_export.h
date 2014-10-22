@@ -9,7 +9,7 @@
 // exported to consumers.
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(IPC_IMPLEMENTATION)
 #define IPC_EXPORT __declspec(dllexport)

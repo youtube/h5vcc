@@ -27,7 +27,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 // Android's bionic libc only supports the LFS transitional API.
 #define off_t off64_t
 #define lseek lseek64
@@ -39,6 +39,11 @@
 // PS3 off_t and lseek are 32 bits, but stats are all 64.
 #define off_t off64_t
 #define lseek lseek64
+#endif
+
+#if defined(__LB_XB1__) || defined(__LB_XB360__)
+#define off_t __int64
+#define lseek _lseeki64
 #endif
 
 namespace net {

@@ -88,7 +88,7 @@ SourceBufferList* MediaSource::activeSourceBuffers()
 
 double MediaSource::duration() const
 {
-    return m_readyState == closedKeyword() ? std::numeric_limits<float>::quiet_NaN() : m_player->duration();
+    return m_readyState == closedKeyword() ? std::numeric_limits<float>::quiet_NaN() : m_player->sourceGetDuration();
 }
 
 void MediaSource::setDuration(double duration, ExceptionCode& ec)

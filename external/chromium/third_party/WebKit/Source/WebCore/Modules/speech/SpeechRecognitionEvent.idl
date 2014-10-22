@@ -33,5 +33,13 @@
 
     [InitializedByEventConstructor] readonly attribute unsigned long resultIndex;
     [InitializedByEventConstructor] readonly attribute SpeechRecognitionResultList results;
-    // FIXME: Add the emma attribute.
+
+    // The type of this attribute is not specified, and could be anything. LBShell
+    // will support a DOMString, and extend to multiple types only if necessary
+#if defined(ENABLE_LB_SHELL) && ENABLE_LB_SHELL
+    readonly attribute DOMString interpretation;
+#else
+    readonly attribute Document interpretation;
+#endif
+    readonly attribute Document emma;
 };

@@ -36,7 +36,6 @@
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "ResourceBuffer.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
@@ -97,15 +96,6 @@ void SubresourceLoader::cancelIfNotFinishing()
         return;
 
     ResourceLoader::cancel();
-}
-
-void SubresourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    ResourceLoader::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_resource);
-    info.addMember(m_documentLoader);
-    info.addMember(m_requestCountTracker);
 }
 
 bool SubresourceLoader::init(const ResourceRequest& request)

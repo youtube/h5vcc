@@ -5,7 +5,10 @@
 #ifndef OPENTYPE_SANITISER_H_
 #define OPENTYPE_SANITISER_H_
 
-#if defined(_WIN32)
+#if defined(__LB_XB360__)
+// Xbox 360 is _WIN32 but also big endian. These macros and typedefs are
+// already defined properly.
+#elif defined(_WIN32)
 #include <stdlib.h>
 typedef signed char int8_t;
 typedef unsigned char uint8_t;

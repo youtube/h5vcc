@@ -182,7 +182,7 @@ class FindResultCollector {
 // Simple function to dump some text into a new file.
 void CreateTextFile(const FilePath& filename,
                     const std::wstring& contents) {
-#if defined(__LB_PS3__)
+#if defined(__LB_PS3__) || defined(__LB_XB360__)
   FILE *file = fopen(filename.value().c_str(), "w");
   ASSERT_TRUE(file != NULL);
   fputws(contents.c_str(), file);
@@ -209,7 +209,7 @@ void CreateTextFile(const FilePath& filename,
 // Simple function to take out some text from a file.
 std::wstring ReadTextFile(const FilePath& filename) {
   wchar_t contents[64];
-#if defined(__LB_PS3__)
+#if defined(__LB_PS3__) || defined(__LB_XB360__)
   FILE *file = fopen(filename.value().c_str(), "r");
   EXPECT_TRUE(file != NULL);
   fgetws(contents, arraysize(contents), file);
@@ -1796,7 +1796,17 @@ TEST_F(FileUtilTest, CreateTemporaryFileTest) {
     EXPECT_TRUE(file_util::Delete(temp_files[i], false));
 }
 
-TEST_F(FileUtilTest, CreateAndOpenTemporaryFileTest) {
+#if defined (__LB_PS4__)
+// This doesn't work on PS4- seems like due to fdopen().
+// In any case we are not permitted to use temporary storage
+// at runtime.
+#define MAYBE_CreateAndOpenTemporaryFileTest \
+    DISABLED_CreateAndOpenTemporaryFileTest
+#else
+#define MAYBE_CreateAndOpenTemporaryFileTest CreateAndOpenTemporaryFileTest
+#endif
+
+TEST_F(FileUtilTest, MAYBE_CreateAndOpenTemporaryFileTest) {
   FilePath names[3];
   FILE* fps[3];
   int i;
@@ -1875,8 +1885,9 @@ TEST_F(FileUtilTest, CreateDirectoryTest) {
   EXPECT_FALSE(file_util::PathExists(test_root));
   EXPECT_FALSE(file_util::PathExists(test_path));
 
-#if !defined(__LB_PS3__)
-  // kCurrentDirectory is ".", and PS3 does NOT support relative paths.
+#if !defined(__LB_PS3__) && !defined(__LB_PS4__) && !defined(__LB_XB360__)
+  // kCurrentDirectory is ".", and these platforms do NOT support relative
+  // paths.
 
   // Verify assumptions made by the Windows implementation:
   // 1. The current directory always exists.
@@ -1893,8 +1904,11 @@ TEST_F(FileUtilTest, CreateDirectoryTest) {
 
   // Given these assumptions hold, it should be safe to
   // test that "creating" these directories succeeds.
+#if !defined(__LB_PS4__) && !defined(__LB_XB360__)
   EXPECT_TRUE(file_util::CreateDirectory(
       FilePath(FilePath::kCurrentDirectory)));
+#endif
+
   EXPECT_TRUE(file_util::CreateDirectory(top_level));
 
 #if defined(OS_WIN)
@@ -1933,6 +1947,9 @@ TEST_F(FileUtilTest, FileEnumeratorTest) {
   EXPECT_EQ(f0.Next().value(), FILE_PATH_LITERAL(""));
   EXPECT_EQ(f0.Next().value(), FILE_PATH_LITERAL(""));
 
+#if !defined(__LB_XB360__)
+  // The Xbox360 does not return ".." as a file in a directory.
+
   // Test an empty directory, non-recursively, including "..".
   file_util::FileEnumerator f0_dotdot(temp_dir_.path(), false,
       FILES_AND_DIRECTORIES | file_util::FileEnumerator::INCLUDE_DOT_DOT);
@@ -1940,6 +1957,7 @@ TEST_F(FileUtilTest, FileEnumeratorTest) {
             f0_dotdot.Next().value());
   EXPECT_EQ(FILE_PATH_LITERAL(""),
             f0_dotdot.Next().value());
+#endif
 
   // create the directories
   FilePath dir1 = temp_dir_.path().Append(FILE_PATH_LITERAL("dir1"));
@@ -1989,6 +2007,8 @@ TEST_F(FileUtilTest, FileEnumeratorTest) {
   EXPECT_TRUE(c2_non_recursive.HasFile(dir2));
   EXPECT_EQ(c2_non_recursive.size(), 2);
 
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__)
+  // As all file access is absolute, this is not an issue
   // Only enumerate directories, non-recursively, including "..".
   file_util::FileEnumerator f2_dotdot(temp_dir_.path(), false,
       file_util::FileEnumerator::DIRECTORIES |
@@ -1999,6 +2019,7 @@ TEST_F(FileUtilTest, FileEnumeratorTest) {
   EXPECT_TRUE(c2_dotdot.HasFile(
       temp_dir_.path().Append(FILE_PATH_LITERAL(".."))));
   EXPECT_EQ(c2_dotdot.size(), 3);
+#endif
 
   // Enumerate files and directories.
   file_util::FileEnumerator f3(temp_dir_.path(), true, FILES_AND_DIRECTORIES);
@@ -2146,8 +2167,16 @@ TEST_F(FileUtilTest, TouchFile) {
   ASSERT_TRUE(file_util::TouchFile(foobar, access_time, modification_time));
   base::PlatformFileInfo file_info;
   ASSERT_TRUE(file_util::GetFileInfo(foobar, &file_info));
+
+#if defined(__LB_XB360__)
+  // MS-DOS does not recognize access time, so this field will always be
+  // ignored and the modification time field will be used to set the new time.
+  EXPECT_EQ(file_info.last_accessed.ToInternalValue(),
+            modification_time.ToInternalValue());
+#else
   EXPECT_EQ(file_info.last_accessed.ToInternalValue(),
             access_time.ToInternalValue());
+#endif
   EXPECT_EQ(file_info.last_modified.ToInternalValue(),
             modification_time.ToInternalValue());
 #endif

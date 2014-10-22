@@ -70,7 +70,10 @@ TEST_F(FileStreamTest, BasicOpenClose) {
   EXPECT_NE(base::kInvalidPlatformFileValue, file);
   base::PlatformFileInfo info;
   // The file should be closed.
+#if !defined(__LB_XB360__)
+  // On Xbox 360, in debug, fstat asserts on closed file descriptors
   EXPECT_FALSE(base::GetPlatformFileInfo(file, &info));
+#endif
 }
 
 TEST_F(FileStreamTest, FileHandleNotLeftOpen) {
@@ -90,7 +93,9 @@ TEST_F(FileStreamTest, FileHandleNotLeftOpen) {
   EXPECT_NE(base::kInvalidPlatformFileValue, file);
   base::PlatformFileInfo info;
   // The file should be closed.
+#if !defined(__LB_XB360__)
   EXPECT_FALSE(base::GetPlatformFileInfo(file, &info));
+#endif
 }
 
 // Test the use of FileStream with a file handle provided at construction.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "media/crypto/shell_decryptor_factory.h"
+#include "shell_decryptor_factory.h"
 
 namespace media {
 

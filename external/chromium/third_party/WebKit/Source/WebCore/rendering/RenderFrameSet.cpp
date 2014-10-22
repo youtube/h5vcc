@@ -40,8 +40,6 @@
 #include "RenderLayer.h"
 #include "RenderView.h"
 #include "Settings.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 
 namespace WebCore {
 
@@ -813,24 +811,6 @@ CursorDirective RenderFrameSet::getCursor(const LayoutPoint& point, Cursor& curs
         return SetCursor;
     }
     return RenderBox::getCursor(point, cursor);
-}
-
-void RenderFrameSet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    RenderBox::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_children);
-    info.addMember(m_rows);
-    info.addMember(m_cols);
-}
-
-void RenderFrameSet::GridAxis::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addMember(m_sizes);
-    info.addMember(m_deltas);
-    info.addMember(m_preventResize);
-    info.addMember(m_allowBorder);
 }
 
 } // namespace WebCore

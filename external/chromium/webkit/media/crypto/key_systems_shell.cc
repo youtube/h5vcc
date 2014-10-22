@@ -2,6 +2,7 @@
 
 #include "base/string_util.h"
 #include "media/crypto/shell_decryptor_factory.h"
+#include "net/base/mime_util.h"
 #include "third_party/WebKit/Source/WebKit/chromium/public/platform/WebString.h"
 
 // Convert a WebString to ASCII, falling back on an empty string in the case
@@ -18,10 +19,13 @@ bool IsSupportedKeySystem(const WebKit::WebString& key_system) {
 
 bool IsSupportedKeySystemWithMediaMimeType(
     const std::string& mime_type,
-    const std::vector<std::string>& /* codecs */,
+    const std::vector<std::string>& codecs,
     const std::string& key_system) {
   if (media::ShellDecryptorFactory::Supports(key_system)) {
-    return mime_type == "video/mp4" || mime_type == "audio/mp4";
+    if (mime_type == "video/mp4" || mime_type == "video/webm" ||
+        mime_type == "audio/mp4") {
+      return net::AreSupportedMediaCodecs(codecs);
+    }
   }
   return false;
 }

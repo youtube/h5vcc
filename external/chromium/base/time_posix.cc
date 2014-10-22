@@ -6,7 +6,7 @@
 
 #include <sys/time.h>
 #include <time.h>
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include <time64.h>
 #endif
 #include <unistd.h>
@@ -16,10 +16,14 @@
 #include "base/basictypes.h"
 #include "base/logging.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 #include "base/os_compat_android.h"
 #elif defined(OS_NACL)
 #include "base/os_compat_nacl.h"
+#endif
+
+#if defined(__LB_PS4__)
+#include "lb_memory_debug_ps4.h"
 #endif
 
 namespace {
@@ -27,7 +31,7 @@ namespace {
 // Define a system-specific SysTime that wraps either to a time_t or
 // a time64_t depending on the host system, and associated convertion.
 // See crbug.com/162007
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__LB_ANDROID__)
 typedef time64_t SysTime;
 
 SysTime SysTimeFromTimeStruct(struct tm* timestruct, bool is_local) {
@@ -48,6 +52,10 @@ void SysTimeToTimeStruct(SysTime t, struct tm* timestruct, bool is_local) {
 typedef time_t SysTime;
 
 SysTime SysTimeFromTimeStruct(struct tm* timestruct, bool is_local) {
+#if defined(__LB_PS4__)
+  LB::Memory::BacktraceDisable disabler;
+#endif
+
   if (is_local)
     return mktime(timestruct);
   else
@@ -55,6 +63,10 @@ SysTime SysTimeFromTimeStruct(struct tm* timestruct, bool is_local) {
 }
 
 void SysTimeToTimeStruct(SysTime t, struct tm* timestruct, bool is_local) {
+#if defined(__LB_PS4__)
+  LB::Memory::BacktraceDisable disabler;
+#endif
+
   if (is_local)
     localtime_r(&t, timestruct);
   else
@@ -184,7 +196,8 @@ Time Time::FromExploded(bool is_local, const Exploded& exploded) {
   timestruct.tm_wday   = exploded.day_of_week;  // mktime/timegm ignore this
   timestruct.tm_yday   = 0;     // mktime/timegm ignore this
   timestruct.tm_isdst  = -1;    // attempt to figure it out
-#if !defined(OS_NACL) && !defined(OS_SOLARIS) && !defined(__LB_WIIU__)
+#if !defined(OS_NACL) && !defined(OS_SOLARIS) && !defined(__LB_WIIU__) && \
+    !defined(__LB_PS4__)
   timestruct.tm_gmtoff = 0;     // not a POSIX field, so mktime/timegm ignore
   timestruct.tm_zone   = NULL;  // not a POSIX field, so mktime/timegm ignore
 #endif
@@ -212,13 +225,17 @@ Time Time::FromExploded(bool is_local, const Exploded& exploded) {
     // When representing the most distant time in the future, add in an extra
     // 999ms to avoid the time being less than any other possible value that
     // this function can return.
+
+    // numeric_limits<int32_t>::min() and max() represent times well outside
+    // the range of results we expect from mktime().
+
     if (exploded.year < 1969) {
-      milliseconds = std::numeric_limits<SysTime>::min() *
-                     kMillisecondsPerSecond;
+      milliseconds = std::numeric_limits<int32_t>::min() *
+          kMillisecondsPerSecond;
     } else {
-      milliseconds = (std::numeric_limits<SysTime>::max() *
-                      kMillisecondsPerSecond) +
-                     kMillisecondsPerSecond - 1;
+      milliseconds = std::numeric_limits<int32_t>::max() *
+          kMillisecondsPerSecond;
+      milliseconds += (kMillisecondsPerSecond - 1);
     }
   } else {
     milliseconds = seconds * kMillisecondsPerSecond + exploded.millisecond;

@@ -16,8 +16,8 @@
 // Provides a glue layer between Chromium's CookieMonster and WebKit's
 // WebCookieJar classes.
 
-#ifndef _LBPS3_LB_WEBCOOKIEJAR_IMPL_H_
-#define _LBPS3_LB_WEBCOOKIEJAR_IMPL_H_
+#ifndef SRC_LB_WEBCOOKIEJAR_IMPL_H_
+#define SRC_LB_WEBCOOKIEJAR_IMPL_H_
 
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/platform/WebCookieJar.h"
 #include "external/chromium/third_party/WebKit/Source/WebKit/chromium/public/platform/WebString.h"
@@ -34,4 +34,4 @@ class LBWebCookieJarImpl : public WebKit::WebCookieJar {
       const WebKit::WebURL& url, const WebKit::WebURL& first_party_for_cookies);
 };
 
-#endif // _LBPS3_LB_WEBCOOKIEJAR_IMPL_H_
+#endif  // SRC_LB_WEBCOOKIEJAR_IMPL_H_

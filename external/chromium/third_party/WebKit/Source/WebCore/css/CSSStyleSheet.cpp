@@ -43,8 +43,6 @@
 #include "SecurityOrigin.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -61,12 +59,6 @@ private:
     virtual CSSRule* item(unsigned index) const { return m_styleSheet->item(index); }
     
     virtual CSSStyleSheet* styleSheet() const { return m_styleSheet; }
-
-    virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const OVERRIDE
-    {
-        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-        info.addMember(m_styleSheet);
-    }
     
     CSSStyleSheet* m_styleSheet;
 };
@@ -183,18 +175,6 @@ void CSSStyleSheet::reattachChildRuleCSSOMWrappers()
             continue;
         m_childRuleCSSOMWrappers[i]->reattach(m_contents->ruleAt(i));
     }
-}
-
-void CSSStyleSheet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_contents);
-    info.addMember(m_title);
-    info.addMember(m_mediaQueries);
-    info.addMember(m_ownerNode);
-    info.addMember(m_ownerRule);
-    info.addMember(m_mediaCSSOMWrapper);
-    info.addMember(m_childRuleCSSOMWrappers);
 }
 
 void CSSStyleSheet::setDisabled(bool disabled)

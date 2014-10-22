@@ -15,15 +15,15 @@
  */
 // LBWebGraphicsContext3D is a singleton and should not be owned by WebKit.
 // This provides an ownable proxy to LBWebGraphicsContext3D.
-#ifndef _LB_WEB_GRAPHICS_CONTEXT_PROXY_H_
-#define _LB_WEB_GRAPHICS_CONTEXT_PROXY_H_
+#ifndef SRC_LB_WEB_GRAPHICS_CONTEXT_PROXY_H_
+#define SRC_LB_WEB_GRAPHICS_CONTEXT_PROXY_H_
 
 #include "lb_graphics.h"
 
 class LBWebGraphicsContextProxy : public WebKit::WebGraphicsContext3D {
  public:
   LBWebGraphicsContextProxy() {
-    impl_ = LBGraphics::GetPtr()->GetCompositorContext();
+    impl_ = LBGraphics::GetPtr()->GetSkiaContext();
   }
 
   virtual ~LBWebGraphicsContextProxy() {
@@ -209,7 +209,10 @@ class LBWebGraphicsContextProxy : public WebKit::WebGraphicsContext3D {
   virtual void deleteRenderbuffer(WebGLId renderbuffer) OVERRIDE { impl_->deleteRenderbuffer(renderbuffer); }
   virtual void deleteShader(WebGLId shader) OVERRIDE { impl_->deleteShader(shader); }
   virtual void deleteTexture(WebGLId texture) OVERRIDE { impl_->deleteTexture(texture); }
-  virtual void texSubImageSub(int dstOffX, int dstOffY, int dstWidth, int dstHeight, int srcX, int srcY, int srcWidth, const void* image) OVERRIDE { impl_->texSubImageSub(dstOffX, dstOffY, dstWidth, dstHeight, srcX, srcY, srcWidth, image); }
+  virtual void texSubImageSub(WGC3Denum format, int dstOffX, int dstOffY, int dstWidth, int dstHeight, int srcX, int srcY, int srcWidth, const void* image) OVERRIDE { impl_->texSubImageSub(format, dstOffX, dstOffY, dstWidth, dstHeight, srcX, srcY, srcWidth, image); }
+#if defined(__LB_WIIU__)
+  virtual void setOutputSurfaceLBSHELL(int surface_id) { impl_->setOutputSurfaceLBSHELL(surface_id); }
+#endif
   virtual void setContextLostCallback(WebGraphicsContextLostCallback* callback) OVERRIDE { impl_->setContextLostCallback(callback); }
   virtual void setErrorMessageCallback(WebGraphicsErrorMessageCallback* callback) OVERRIDE { impl_->setErrorMessageCallback(callback); }
   virtual WGC3Denum getGraphicsResetStatusARB() OVERRIDE { return impl_->getGraphicsResetStatusARB(); }
@@ -242,6 +245,9 @@ class LBWebGraphicsContextProxy : public WebKit::WebGraphicsContext3D {
   virtual WGC3Dboolean unmapBufferCHROMIUM(WGC3Denum target) OVERRIDE { return impl_->unmapBufferCHROMIUM(target); }
   virtual void asyncTexImage2DCHROMIUM(WGC3Denum target, WGC3Dint level, WGC3Denum internalformat, WGC3Dsizei width, WGC3Dsizei height, WGC3Dint border, WGC3Denum format, WGC3Denum type, const void* pixels) OVERRIDE { impl_->asyncTexImage2DCHROMIUM(target, level, internalformat, width, height, border, format, type, pixels); }
   virtual void asyncTexSubImage2DCHROMIUM(WGC3Denum target, WGC3Dint level, WGC3Dint xoffset, WGC3Dint yoffset, WGC3Dsizei width, WGC3Dsizei height, WGC3Denum format, WGC3Denum type, const void* pixels) OVERRIDE { impl_->asyncTexSubImage2DCHROMIUM(target, level, xoffset, yoffset, width, height, format, type, pixels); }
+#if !defined(__LB_DISABLE_SKIA_GPU__)
+  virtual GrGLInterface* onCreateGrGLInterface() OVERRIDE { return impl_->onCreateGrGLInterface(); }
+#endif
 };
 
-#endif
+#endif  // SRC_LB_WEB_GRAPHICS_CONTEXT_PROXY_H_

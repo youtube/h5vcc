@@ -17,6 +17,7 @@
 
 #include <errno.h>
 #include <sched.h>
+#include <sys/resource.h>
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
@@ -70,7 +71,7 @@ bool CreateThread(size_t stack_size, bool joinable, int priority,
 
   pthread_attr_setstacksize(&attributes, stack_size);
 
-  ThreadParams* params = LB_NEW ThreadParams;
+  ThreadParams* params = new ThreadParams;
   params->delegate = delegate;
   params->joinable = joinable;
 
@@ -173,11 +174,28 @@ void PlatformThread::Join(PlatformThreadHandle thread_handle) {
 }
 
 // static
-void PlatformThread::SetThreadPriority(PlatformThreadHandle thread_handle, ThreadPriority priority) {
-  // NOTE: this is not easy to set for a thread other than the current one
-  // when all you have is a pthread handle.  besides, the priority enum passed
-  // in only has two values (normal & high).  find another way to control this.
-  NOTIMPLEMENTED();
+void PlatformThread::SetThreadPriority(PlatformThreadHandle thread_handle,
+                                       ThreadPriority priority) {
+  if (priority == kThreadPriority_RealtimeAudio) {
+    const struct sched_param kRealTimePrio = { 8 };
+    if (pthread_setschedparam(thread_handle, SCHED_RR, &kRealTimePrio) == 0) {
+      // Got real time priority, no need to set nice level.
+      return;
+    }
+  }
+
+  DCHECK_EQ(priority, kThreadPriority_Normal);
+
+  // setpriority(2) will set a thread's priority if it is passed a tid as
+  // the 'process identifier', not affecting the rest of the threads in the
+  // process. Setting this priority will only succeed if the user has been
+  // granted permission to adjust nice values on the system.
+  DCHECK_NE(thread_handle, kInvalidThreadId);
+  const int nice_setting = 0;  // normal
+  if (setpriority(PRIO_PROCESS, thread_handle, nice_setting)) {
+    DVPLOG(1) << "Failed to set nice value of thread ("
+              << thread_handle << ") to " << nice_setting;
+  }
 }
 
 }  // namespace base

@@ -314,6 +314,7 @@ void BackingStoreGtk::PaintRectWithoutXrender(
     TransportDIB* bitmap,
     const gfx::Rect& bitmap_rect,
     const std::vector<gfx::Rect>& copy_rects) {
+#if !defined(__LB_SHELL__)
   const int width = bitmap_rect.width();
   const int height = bitmap_rect.height();
   Pixmap pixmap = XCreatePixmap(display_, root_window_, width, height,
@@ -339,6 +340,9 @@ void BackingStoreGtk::PaintRectWithoutXrender(
   }
 
   XFreePixmap(display_, pixmap);
+#else
+  NOTIMPLEMENTED();
+#endif
 }
 
 void BackingStoreGtk::PaintToBackingStore(

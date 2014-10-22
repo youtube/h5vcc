@@ -40,11 +40,7 @@
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitCSSKeyframesRule.h"
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 
 namespace WebCore {
 
@@ -123,38 +119,6 @@ RuleData::RuleData(StyleRule* rule, unsigned selectorIndex, unsigned position, A
     ASSERT(m_position == position);
     ASSERT(m_selectorIndex == selectorIndex);
     SelectorChecker::collectIdentifierHashes(selector(), m_descendantSelectorIdentifierHashes, maximumIdentifierCount);
-}
-
-void RuleData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-}
-
-static void reportAtomRuleMap(MemoryClassInfo* info, const RuleSet::AtomRuleMap& atomicRuleMap)
-{
-    info->addMember(atomicRuleMap);
-    for (RuleSet::AtomRuleMap::const_iterator it = atomicRuleMap.begin(); it != atomicRuleMap.end(); ++it)
-        info->addMember(*it->value);
-}
-
-void RuleSet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    reportAtomRuleMap(&info, m_idRules);
-    reportAtomRuleMap(&info, m_classRules);
-    reportAtomRuleMap(&info, m_tagRules);
-    reportAtomRuleMap(&info, m_shadowPseudoElementRules);
-    info.addMember(m_linkPseudoClassRules);
-    info.addMember(m_focusPseudoClassRules);
-    info.addMember(m_universalRules);
-    info.addMember(m_pageRules);
-    info.addMember(m_regionSelectorsAndRuleSets);
-}
-
-void RuleSet::RuleSetSelectorPair::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(ruleSet);
 }
 
 static void collectFeaturesFromRuleData(RuleFeatureSet& features, const RuleData& ruleData)

@@ -138,7 +138,7 @@ inline double trunc(double num) { return num > 0 ? floor(num) : ceil(num); }
 inline long long abs(long num) { return labs(num); }
 #endif
 
-#if OS(ANDROID) || COMPILER(MSVC)
+#if OS(ANDROID) || COMPILER(MSVC) || defined(__LB_ANDROID__)
 // ANDROID and MSVC's math.h does not currently supply log2 or log2f.
 inline double log2(double num)
 {
@@ -160,7 +160,9 @@ inline long long abs(long long num) { return _abs64(num); }
 #endif
 
 inline bool isinf(double num) { return !_finite(num) && !_isnan(num); }
+#if !defined(__LB_XB1__) && !defined(__LB_XB360__)
 inline bool isnan(double num) { return !!_isnan(num); }
+#endif
 inline bool signbit(double num) { return _copysign(1.0, num) < 0; }
 
 inline double nextafter(double x, double y) { return _nextafter(x, y); }

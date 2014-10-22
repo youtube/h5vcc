@@ -69,6 +69,9 @@ public:
     virtual bool shouldDeleteRange(WebCore::Range*);
     virtual bool shouldChangeSelectedRange(WebCore::Range* fromRange, WebCore::Range* toRange,
         WebCore::EAffinity, bool stillSelecting);
+#if defined(__LB_SHELL__)
+    virtual void didMoveCursor();
+#endif
     virtual bool shouldApplyStyle(WebCore::StylePropertySet*, WebCore::Range*);
     virtual bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range*);
     virtual void didBeginEditing();

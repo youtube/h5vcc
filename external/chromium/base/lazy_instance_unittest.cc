@@ -167,6 +167,11 @@ TEST(LazyInstanceTest, Alignment) {
   static LazyInstance<AlignedData<4096> > align4096 = LAZY_INSTANCE_INITIALIZER;
 
   EXPECT_ALIGNED(align4.Pointer(), 4);
+#if !defined(__LB_XB360__)
   EXPECT_ALIGNED(align32.Pointer(), 32);
   EXPECT_ALIGNED(align4096.Pointer(), 4096);
+#else
+  EXPECT_ALIGNED(align32.Pointer()->data_.void_data(), 32);
+  EXPECT_ALIGNED(align4096.Pointer()->data_.void_data(), 4096);
+#endif
 }

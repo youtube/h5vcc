@@ -12,15 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Wrapper to generate build files from gyp files."""
 
 import os
-import subprocess
 import sys
 
 import gyp_driver_utils
 
-# Always build Visual Studio 2008 projects.
-os.environ['GYP_MSVS_VERSION'] = '2008'
+assert not os.environ.get('GYP_DEFINES')
 
 # set up some other basic paths
 script_dir = os.path.abspath(os.path.dirname(__file__))
@@ -29,26 +28,28 @@ gyp_dir = os.path.join(toplevel_dir, 'external', 'tools', 'gyp')
 
 sys.path.insert(0, os.path.join(gyp_dir, 'pylib'))
 sys.path.insert(0, os.path.join(gyp_dir, 'tools'))
-sys.path.insert(0, os.path.join(toplevel_dir, \
-  'external', 'chromium', 'tools', 'grit'))
-sys.path.insert(0, '') # cwd
+sys.path.insert(0, os.path.join(toplevel_dir,
+                                'external', 'chromium', 'tools', 'grit'))
+sys.path.insert(0, '')  # cwd
 
-import gyp
+import gyp  # pylint: disable=g-import-not-at-top,g-bad-import-order
+
 
 def main(input_args):
   valid_configs = ['Debug', 'Devel', 'QA', 'Gold', 'all']
-  valid_projects = ['lb_shell', 'jsc_tests']
-  valid_platforms = ['ps3', 'linux', 'wiiu']
+  valid_projects = ['lb_shell', 'js_tests']
+  valid_platforms = ['android', 'linux', 'ps3', 'ps4', 'wiiu', 'xb1', 'xb360']
   default_format = 'ninja'
 
   debug_deps = '--debug-deps' in input_args
   if debug_deps:
-    input_args = [ x for x in input_args if x != '--debug-deps' ]
+    input_args = [x for x in input_args if x != '--debug-deps']
 
   # check arguments
   if len(input_args) < 2 or len(input_args) > 4 or '--help' in input_args:
-    print >> sys.stderr, \
-      'Usage: gyp_driver [--debug-deps] <project> <platform> [<config>] [<format>]'
+    print >> sys.stderr, (
+        'Usage: gyp_driver [--debug-deps] '
+        '<project> <platform> [<config>] [<format>]')
     print >> sys.stderr, 'projects: %s' % valid_projects
     print >> sys.stderr, 'platforms: %s' % valid_platforms
     print >> sys.stderr, 'configs: %s' % valid_configs
@@ -61,8 +62,7 @@ def main(input_args):
   gyp_includes = []
   gyp_vars = {}
 
-  if sys.platform == 'win32' or sys.platform == 'cygwin':
-    gyp_driver_utils.check_ninja()
+  gyp_driver_utils.CheckNinja()
 
   # load project settings
   project = input_args[0]
@@ -70,9 +70,9 @@ def main(input_args):
   try:
     imported = __import__(project)
     project_suffix = imported.project_suffix
-    gyp_includes.extend([ os.path.abspath(x) for x in imported.gyp_includes ])
+    gyp_includes.extend([os.path.abspath(x) for x in imported.gyp_includes])
     gyp_vars.update(imported.gyp_vars)
-  except:
+  except ImportError:
     print >> sys.stderr, 'Unable to load settings for project "%s"' % project
     print >> sys.stderr, 'Valid projects are: %s' % valid_projects
     print >> sys.stderr, sys.exc_info()
@@ -87,16 +87,23 @@ def main(input_args):
     env_settings = imported.env_settings
     supported_formats = imported.supported_formats
     flavor = imported.flavor
-    gyp_includes.extend([ os.path.abspath(x) for x in imported.gyp_includes ])
+    try:
+      generator_flags = imported.generator_flags
+    except AttributeError:
+      generator_flags = { 'msvs_version': 2012 }
+    gyp_includes.extend([os.path.abspath(x) for x in imported.gyp_includes])
     gyp_vars.update(imported.gyp_vars)
-  except:
-    print >> sys.stderr, \
-      'Unable to load settings for target platform "%s"' % target_platform
+  except ImportError:
+    print >> sys.stderr, (
+        'Unable to load settings for target platform "%s"' % target_platform)
     print >> sys.stderr, sys.exc_info()
     print >> sys.stderr, 'cwd=%s' % os.getcwd()
     print >> sys.stderr, 'sys.path =', sys.path
     sys.exit(1)
   os.chdir('..')
+
+  # Allow GYP pymod_do_main to use platform specific build scripts.
+  sys.path.insert(1, os.path.join(script_dir, target_platform))
 
   # If a config is specified, just generate that one.
   # If none is specified, generate them all.
@@ -110,8 +117,8 @@ def main(input_args):
         found_config = True
 
     if not found_config:
-      print >> sys.stderr, 'Invalid config %s. Valid configs are %s' % \
-        (config, valid_configs)
+      print >> sys.stderr, ('Invalid config %s. Valid configs are %s' %
+                            (config, valid_configs))
       sys.exit(1)
     if config == 'all':
       configs_to_build = valid_configs
@@ -129,8 +136,8 @@ def main(input_args):
     if build_format not in supported_formats:
       print >> sys.stderr, '%s is not a supported format.' % build_format
       sys.exit(1)
-  elif len(supported_formats) == 1:
-    # if there's only one valid format, use that one.
+  elif len(supported_formats) >= 1:
+    # use the first supported format as the default
     build_format = supported_formats[0]
   else:
     build_format = default_format
@@ -140,12 +147,17 @@ def main(input_args):
   config_specific_args['Devel'] = ['-Dlbshell_gold=0',]
   config_specific_args['QA'] = ['-Dlbshell_gold=0',]
   config_specific_args['Gold'] = [
-    '-Denable_inspector=0',
-    '-Denable_javascript_debugger=0',
-    '-Dlbshell_gold=1',
+      '-Denable_inspector=0',
+      '-Denable_javascript_debugger=0',
+      '-Dlbshell_gold=1',
   ]
 
-  git_hash = gyp_driver_utils.git_hash()
+  # Build DLLs on XB1 in Debug and Devel
+  if target_platform == 'xb1':
+    config_specific_args['Debug'].extend(['-Dcomponent=shared_library'])
+    config_specific_args['Devel'].extend(['-Dcomponent=shared_library'])
+
+  git_hash = gyp_driver_utils.GitHash()
 
   common_args = []
 
@@ -181,8 +193,13 @@ def main(input_args):
   common_args.append('-Dlb_shell_sha1=%s' % git_hash)
 
   # set the depth argument to the chromium root directory
-  common_args.append('--depth=%s' % \
-    os.path.join(toplevel_dir, 'external', 'chromium'))
+  common_args.append('--depth=%s' %
+                     os.path.join(toplevel_dir, 'external', 'chromium'))
+
+  common_args.append('-Dlbshell_root=<(DEPTH)/../../lbshell')
+
+  fastbuild_val = int(os.environ.get('LB_FASTBUILD', 0))
+  common_args.append('-Dlb_fastbuild=%d' % fastbuild_val)
 
   # always include project- and platform-specific build settings
   for x in gyp_includes:
@@ -194,16 +211,24 @@ def main(input_args):
   for k in env_settings:
     os.environ[k] = env_settings[k]
 
-
-  platform_prefix = {'linux' : 'Linux', 'ps3' : 'PS3_PPU', 'wiiu' : 'WIIU'}
+  platform_prefix = {'android': 'Android',
+                     'linux': 'Linux',
+                     'ps3': 'PS3',
+                     'ps4': 'PS4',
+                     'wiiu': 'WIIU',
+                     'xb1': 'XB1',
+                     'xb360': 'XB360'}
   for config in configs_to_build:
     platform_config = '%s_%s' % (platform_prefix[target_platform], config)
 
     # we build up the arguments to gyp
-    args = common_args
+    args = common_args[:]
 
     # set the build configuration
     args.append('-Gconfig=%s' % platform_config)
+
+    for key, value in generator_flags.iteritems():
+      args.append('-G{}={}'.format(key, value))
 
     for arg in config_specific_args[config]:
       args.append(arg)
@@ -232,6 +257,5 @@ def main(input_args):
 
 
 if __name__ == '__main__':
-  args = sys.argv[1:]
-  main(args)
-
+  remaining_args = sys.argv[1:]
+  main(remaining_args)

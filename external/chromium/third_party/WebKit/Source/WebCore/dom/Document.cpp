@@ -161,7 +161,6 @@
 #include "TreeWalker.h"
 #include "UserActionElementSet.h"
 #include "UserContentURLPattern.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitNamedFlow.h"
 #include "XMLDocumentParser.h"
 #include "XMLHttpRequest.h"
@@ -175,9 +174,6 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/MainThread.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
@@ -5905,54 +5901,6 @@ void Document::updateHoverActiveState(const HitTestRequest& request, HitTestResu
             nodesToAddToChain[i]->setActive(true);
         nodesToAddToChain[i]->setHovered(true);
     }
-}
-
-void Document::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    ContainerNode::reportMemoryUsage(memoryObjectInfo);
-    TreeScope::reportMemoryUsage(memoryObjectInfo);
-    ScriptExecutionContext::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_styleResolver);
-    info.addMember(m_url);
-    info.addMember(m_baseURL);
-    info.addMember(m_baseURLOverride);
-    info.addMember(m_baseElementURL);
-    info.addMember(m_cookieURL);
-    info.addMember(m_firstPartyForCookies);
-    info.addMember(m_documentURI);
-    info.addMember(m_baseTarget);
-    info.addMember(m_docType);
-    info.addMember(m_implementation);
-    info.addMember(m_elemSheet);
-    info.addMember(m_frame);
-    info.addMember(m_cachedResourceLoader);
-    info.addMember(m_styleSheetCollection);
-    info.addMember(m_styleSheetList);
-    info.addMember(m_formController);
-    info.addMember(m_nodeIterators);
-    info.addMember(m_ranges);
-    info.addMember(m_title.string());
-    info.addMember(m_rawTitle.string());
-    info.addMember(m_xmlEncoding);
-    info.addMember(m_xmlVersion);
-    info.addMember(m_contentLanguage);
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
-    info.addMember(m_annotatedRegions);
-#endif
-    info.addMember(m_cssCanvasElements);
-    info.addMember(m_iconURLs);
-    info.addMember(m_documentSuspensionCallbackElements);
-    info.addMember(m_mediaVolumeCallbackElements);
-    info.addMember(m_privateBrowsingStateChangedElements);
-    info.addMember(m_elementsByAccessKey);
-    info.addMember(m_eventQueue);
-    info.addMember(m_mediaCanStartListeners);
-    info.addMember(m_pendingTasks);
-#if ENABLE(LINK_PRERENDER)
-    info.addMember(m_prerenderer);
-#endif
-    info.addMember(m_listsInvalidatedAtDocument);
 }
 
 bool Document::haveStylesheetsLoaded() const

@@ -152,6 +152,7 @@
 #include "TraceEvent.h"
 #include "UserGestureIndicator.h"
 #if USE(V8)
+#include "V8Binding.h"
 #include "V8DOMFileSystem.h"
 #include "V8DirectoryEntry.h"
 #include "V8FileEntry.h"
@@ -778,12 +779,14 @@ WebAnimationController* WebFrameImpl::animationController()
     return &m_animationController;
 }
 
+#if ENABLE(PERFORMANCE_TIMELINE)
 WebPerformance WebFrameImpl::performance() const
 {
     if (!frame())
         return WebPerformance();
     return WebPerformance(frame()->document()->domWindow()->performance());
 }
+#endif
 
 NPObject* WebFrameImpl::windowObject() const
 {
@@ -942,6 +945,7 @@ v8::Local<v8::Context> WebFrameImpl::mainWorldScriptContext() const
     return ScriptController::mainWorldContext(frame());
 }
 
+#if ENABLE(FILE_SYSTEM)
 v8::Handle<v8::Value> WebFrameImpl::createFileSystem(WebFileSystem::Type type, const WebString& name, const WebString& path)
 {
     ASSERT(frame());
@@ -965,6 +969,7 @@ v8::Handle<v8::Value> WebFrameImpl::createFileEntry(WebFileSystem::Type type, co
         return toV8(DirectoryEntry::create(fileSystem, filePath));
     return toV8(FileEntry::create(fileSystem, filePath));
 }
+#endif
 #endif // USE(V8)
 
 void WebFrameImpl::reload(bool ignoreCache)
@@ -2181,6 +2186,12 @@ WebString WebFrameImpl::layerTreeAsText(bool showDebugInfo) const
     LayerTreeFlags flags = showDebugInfo ? LayerTreeFlagsIncludeDebugInfo : 0;
     return WebString(frame()->layerTreeAsText(flags));
 }
+
+#if defined(__LB_SHELL__)
+WebString WebFrameImpl::layerBackingsInfo() const {
+    return WebString(frame()->layerBackingsInfo());
+}
+#endif
 
 // WebFrameImpl public ---------------------------------------------------------
 

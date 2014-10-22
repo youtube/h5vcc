@@ -6,7 +6,7 @@
 #define UI_GL_GL_EXPORT_H_
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(GL_IMPLEMENTATION)
 #define GL_EXPORT __declspec(dllexport)

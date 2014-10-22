@@ -32,7 +32,7 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
-#if !USE(QXMLSTREAM)
+#if !USE(QXMLSTREAM) && !defined(__LB_SHELL__)
 #include <libxml/parser.h>
 #endif
 

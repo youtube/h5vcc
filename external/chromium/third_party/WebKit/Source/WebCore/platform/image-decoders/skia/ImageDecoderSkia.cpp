@@ -27,8 +27,6 @@
 #include "config.h"
 #include "ImageDecoder.h"
 
-#include "PlatformMemoryInstrumentation.h"
-
 namespace WebCore {
 
 ImageFrame::ImageFrame()
@@ -136,12 +134,6 @@ void ImageFrame::setStatus(FrameStatus status)
         m_bitmap.bitmap().setIsOpaque(!m_hasAlpha);
         m_bitmap.setDataComplete();  // Tell the bitmap it's done.
     }
-}
-
-void ImageFrame::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-    info.addMember(m_bitmap);
 }
 
 } // namespace WebCore

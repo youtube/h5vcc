@@ -32,9 +32,12 @@
 
 #include "base/file_path.h"
 #include "base/path_service.h"
+#include "Document.h"
 #include "DocumentType.h"
+#include "Element.h"
 #include "FrameView.h"
 #include "gtest/gtest.h"
+#include "HTMLNames.h"
 #include "MathMLNames.h"
 #include "MediaFeatureNames.h"
 #include "NamedNodeMap.h"

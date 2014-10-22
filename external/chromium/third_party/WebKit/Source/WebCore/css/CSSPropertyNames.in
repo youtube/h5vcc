@@ -421,3 +421,7 @@ user-zoom
 #if defined(ENABLE_ACCELERATED_OVERFLOW_SCROLLING) && ENABLE_ACCELERATED_OVERFLOW_SCROLLING
 -webkit-overflow-scrolling
 #endif
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+-h5vcc-target-screen
+-h5vcc-gesturable
+#endif

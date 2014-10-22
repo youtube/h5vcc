@@ -39,7 +39,9 @@
 #include "net/url_request/url_request_error_job.h"
 #include "net/url_request/url_request_file_dir_job.h"
 
-extern std::string *global_game_content_path;
+#if defined(__LB_SHELL__)
+#include "lb_globals.h"
+#endif
 
 #if defined(OS_WIN)
 #include "base/win/shortcut.h"
@@ -79,8 +81,14 @@ URLRequestJob* URLRequestFileJob::Factory(URLRequest* request,
 
 #if defined(__LB_SHELL__)
   // Jail the file path to a specific folder.
-  std::string jail_path(*global_game_content_path + "/local");
+  const std::string game_content_path(GetGlobalsPtr()->game_content_path);
+  std::string jail_path = game_content_path + "/local";
   file_path = FilePath(jail_path + file_path.value());
+
+#if defined(__LB_XB360__)
+  file_path = file_path.NormalizePathSeparators();
+#endif
+
   // Check for a jail-break attempt.
   if (file_path.ReferencesParent()) {
     // The request could lead to a path outside of our jail.

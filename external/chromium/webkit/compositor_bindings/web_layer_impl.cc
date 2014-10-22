@@ -145,6 +145,16 @@ float WebLayerImpl::opacity() const
     return m_layer->opacity();
 }
 
+#if defined(ENABLE_LB_SHELL_CSS_EXTENSIONS) && ENABLE_LB_SHELL_CSS_EXTENSIONS
+void WebLayerImpl::setH5vccTargetScreen(H5VCCTargetScreen h5vccTargetScreen) {
+    m_layer->setH5vccTargetScreen(h5vccTargetScreen);
+}
+
+H5VCCTargetScreen WebLayerImpl::h5vccTargetScreen() const {
+    return m_layer->h5vccTargetScreen();
+}
+#endif
+
 void WebLayerImpl::setOpaque(bool opaque)
 {
     m_layer->setContentsOpaque(opaque);

@@ -57,7 +57,12 @@
 #define JRIEnv  void
 #endif
 
-#ifdef _WIN32
+#if defined (__LB_SHELL__)
+// Get the definition of WEBKIT_EXPORT
+#include <public/WebCommon.h>
+#endif
+
+#if defined(_WIN32) && !defined(__LB_XB1__) && !defined(__LB_XB360__)
 #include <windows.h>
 #ifndef XP_WIN
 #define XP_WIN 1

@@ -26,6 +26,8 @@
 #ifndef SpeechRecognition_h
 #define SpeechRecognition_h
 
+#include "config.h"
+
 #if ENABLE(SCRIPTED_SPEECH)
 
 #include "ActiveDOMObject.h"
@@ -44,7 +46,7 @@ class SpeechRecognitionError;
 class SpeechRecognitionResult;
 class SpeechRecognitionResultList;
 
-class SpeechRecognition : public RefCounted<SpeechRecognition>, public ActiveDOMObject, public EventTarget {
+class WEBKIT_EXPORT SpeechRecognition : public RefCounted<SpeechRecognition>, public ActiveDOMObject, public EventTarget {
 public:
     static PassRefPtr<SpeechRecognition> create(ScriptExecutionContext*);
     ~SpeechRecognition();
@@ -74,6 +76,9 @@ public:
     void didEndSound();
     void didEndAudio();
     void didReceiveResults(const Vector<RefPtr<SpeechRecognitionResult> >& newFinalResults, const Vector<RefPtr<SpeechRecognitionResult> >& currentInterimResults);
+#if defined(__LB_SHELL__)
+    void didReceiveResults(const Vector<RefPtr<SpeechRecognitionResult> >& newFinalResults, const Vector<RefPtr<SpeechRecognitionResult> >& currentInterimResults, const String& interpretation);
+#endif
     // FIXME: Remove this once we start using didReceiveResults.
     void didReceiveResult(PassRefPtr<SpeechRecognitionResult>, unsigned long resultIndex, PassRefPtr<SpeechRecognitionResultList> resultHistory);
     void didReceiveNoMatch(PassRefPtr<SpeechRecognitionResult>);

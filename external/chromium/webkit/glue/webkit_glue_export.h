@@ -6,7 +6,7 @@
 #define WEBKIT_GLUE_WEBKIT_GLUE_EXPORT_H_
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(_MSC_VER)
 
 #if defined(WEBKIT_GLUE_IMPLEMENTATION)
 #define WEBKIT_GLUE_EXPORT __declspec(dllexport)

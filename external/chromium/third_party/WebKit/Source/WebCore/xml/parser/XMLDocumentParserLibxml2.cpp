@@ -706,7 +706,7 @@ static inline void handleNamespaceAttributes(Vector<Attribute, 8>& prefixedAttri
         if (namespaces[i].prefix)
             namespaceQName = "xmlns:" + toString(namespaces[i].prefix);
 
-        QualifiedName parsedName = anyName;
+        QualifiedName parsedName = anyQName();
         if (!Element::parseAttributeName(parsedName, XMLNSNames::xmlnsNamespaceURI, namespaceQName, ec))
             return;
         
@@ -733,7 +733,7 @@ static inline void handleElementAttributes(Vector<Attribute, 8>& prefixedAttribu
         AtomicString attrURI = attrPrefix.isEmpty() ? AtomicString() : toAtomicString(attributes[i].uri);
         AtomicString attrQName = attrPrefix.isEmpty() ? toAtomicString(attributes[i].localname) : attrPrefix + ":" + toString(attributes[i].localname);
 
-        QualifiedName parsedName = anyName;
+        QualifiedName parsedName = anyQName();
         if (!Element::parseAttributeName(parsedName, attrURI, attrQName, ec))
             return;
 

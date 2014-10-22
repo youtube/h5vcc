@@ -263,7 +263,11 @@ private:
     T*  fPtr;
 };
 
+#if !defined(__LB_SHELL__)
 template <size_t N, typename T> class SK_API SkAutoSTMalloc : SkNoncopyable {
+#else
+template <size_t N, typename T> class SkAutoSTMalloc : SkNoncopyable {
+#endif
 public:
     SkAutoSTMalloc(size_t count) {
         if (count <= N) {

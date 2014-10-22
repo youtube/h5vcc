@@ -43,6 +43,12 @@
 #include "uenumimp.h"
 #include "ucln_cmn.h"
 
+#if defined(__LB_XB360__)
+// TODO(iffy): This is a result of windows.h being included somehow. We need to
+// audit where windows.h is being included from and remove it.
+# undef IGNORE
+#endif
+
 /* Format of cnvalias.icu -----------------------------------------------------
  *
  * cnvalias.icu is a binary, memory-mappable form of convrtrs.txt.

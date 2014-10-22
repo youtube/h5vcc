@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
-# Copyright (C) 2012 Google Inc. All rights reserved.
+# Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -29,7 +29,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""
+"""Convert binary files to source arrays.
+
 This script takes all of the files in a given directory (and all of its
 subdirectories) and concatenates them for access at byte arrays in a c++
 header file.
@@ -43,15 +44,16 @@ that maps between filenames and the embedded file.
 All generated symbols will be placed under the user-provided namespace.
 """
 
-import mimetypes
 import os
 import sys
 
-def get_variable_name_from_path(file_path):
-  # Get rid of non-variable name friendly characters
-  return file_path.replace('.', '_').replace('/','_')
 
-def write_file_data_to_header(input_file, output_file):
+def GetVariableNameFromPath(file_path):
+  # Get rid of non-variable name friendly characters
+  return file_path.replace('.', '_').replace('/', '_')
+
+
+def WriteFileDataToHeader(input_file, output_file):
   """Concatenates a single file into the output file."""
   with file(input_file) as f:
     # Treat all files as binary arrays
@@ -59,88 +61,107 @@ def write_file_data_to_header(input_file, output_file):
 
     current_length = 0
     c = f.read(1)
-    if (c):
+    if c:
       while True:
         output_file.write('0x%02x' % ord(c))
-        current_length = current_length + 1
+        current_length += 1
 
         c = f.read(1)
-        if (not c):
+        if not c:
           break
         else:
           output_file.write(', ')
 
         # wrap lines
-        if (current_length > 200):
+        if current_length > 200:
           current_length = 0
           output_file.write('\n')
 
       output_file.write('};\n\n')
 
-def get_files_to_concatenate(input_directory):
-  """Returns a list of all files that we would like to concatenate relative
-  to the input directory."""
+
+def GetFilesToConcatenate(input_directory):
+  """Get list of files to concatenate.
+
+  Args:
+    input_directory: Directory to search for files.
+  Returns:
+    A list of all files that we would like to concatenate relative
+    to the input directory.
+
+  """
+
   file_list = []
-  for dirpath, dirname, files in os.walk(input_directory):
+  for dirpath, _, files in os.walk(input_directory):
     for input_file in files:
       file_list.append(
-        os.path.relpath(
-          os.path.join(dirpath, input_file),
-          input_directory))
+          os.path.relpath(
+              os.path.join(dirpath, input_file),
+              input_directory))
   return file_list
 
-def write_all_files_to_header(input_directory, files, output_file):
+
+def WriteAllFilesToHeader(input_directory, files, output_file):
   """Writes the content of all passed in files to the header file."""
+
   for path in files:
-    input_file_variable_name = get_variable_name_from_path(path)
-    output_file.write('const char %s[] =\n' % input_file_variable_name)
+    input_file_variable_name = GetVariableNameFromPath(path)
+    output_file.write('const unsigned char %s[] =\n' % input_file_variable_name)
 
-    write_file_data_to_header(os.path.join(input_directory, path), output_file)
+    WriteFileDataToHeader(os.path.join(input_directory, path), output_file)
 
-def generate_map_function(files, output_file):
-  """Generates a c++ function that populates a map (mapping filenames to the
-  embedded contents."""
+
+def GenerateMapFunction(files, output_file):
+  """Generate C++ containing a map.
+
+  Generates a c++ function that populates a map (mapping filenames to the
+  embedded contents.)
+
+  Args:
+    files: List of filenames in the map.
+    output_file: Name of c++ file to write out.
+  """
 
   # create struct and typedef used in function
   output_file.write(
-      "inline void GenerateMap(GeneratedResourceMap &out_map) {\n")
+      'inline void GenerateMap(GeneratedResourceMap &out_map) {\n')
 
   # os.walk gets dirpath, dirnames, filenames; we want just filenames, so [2]
   for path in files:
     # The lookup key will be the file path relative to the input directory
-    input_file_variable_name = get_variable_name_from_path(path)
-    output_file.write('  out_map["%s"] = FileContents(%s, sizeof(%s));\n' % (
-      path, input_file_variable_name, input_file_variable_name)
-    )
+    input_file_variable_name = GetVariableNameFromPath(path)
+    output_file.write('  out_map["%s"] = FileContents(%s, sizeof(%s));\n' %
+                      (path, input_file_variable_name, input_file_variable_name)
+                     )
 
   output_file.write('}\n\n')
 
 
 def main(namespace, input_directory, output_file_name):
   output_file = open(output_file_name, 'w')
-  include_guard = "_LB_GENERATED_" + namespace.upper() + "_H_"
-  output_file.write("// Copyright (c) Google Inc. 2012\n"
-                    "// All rights reserved.\n"
-                    "// This file is generated. Do not edit!\n"
-                    "#ifndef " + include_guard + "\n"
-                    "#define " + include_guard + "\n\n"
-                    "#include \"lb_generated_resources_types.h\"\n\n"
-                    "namespace " + namespace +" {\n")
+  include_guard = '_LB_GENERATED_' + namespace.upper() + '_H_'
+  output_file.write('// Copyright 2014 Google Inc. '
+                    'All Rights Reserved.\n'
+                    '// This file is generated. Do not edit!\n'
+                    '#ifndef ' + include_guard + '\n'
+                    '#define ' + include_guard + '\n\n'
+                    '#include \"lb_generated_resources_types.h\"\n\n'
+                    'namespace ' + namespace +' {\n')
 
-  files_to_concatenate = get_files_to_concatenate(input_directory)
-  write_all_files_to_header(input_directory,
-                            files_to_concatenate,
-                            output_file)
-  generate_map_function(files_to_concatenate, output_file)
+  files_to_concatenate = GetFilesToConcatenate(input_directory)
+  WriteAllFilesToHeader(input_directory,
+                        files_to_concatenate,
+                        output_file)
+  GenerateMapFunction(files_to_concatenate, output_file)
 
-  output_file.write("} // namespace " + namespace + "\n\n"
-                    "#endif // " + include_guard + "\n")
+  output_file.write('} // namespace ' + namespace + '\n\n'
+                    '#endif // ' + include_guard + '\n')
 
 
 if __name__ == '__main__':
-  if (len(sys.argv) != 4):
-    print ("usage:\n %s <namespace> <input directory> <output filepath>" % __file__)
+  if len(sys.argv) != 4:
+    print ('usage:\n %s <namespace> <input directory> <output filepath>' %
+           sys.argv[0])
     print __doc__
     sys.exit(1)
   main(sys.argv[1], sys.argv[2], sys.argv[3])
-

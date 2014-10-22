@@ -57,9 +57,11 @@ class GPU_EXPORT GpuScheduler
                gles2::GLES2Decoder* decoder);
 
   virtual ~GpuScheduler();
-
+#if defined(__LB_SHELL__)
+  void PutChanged(int32 put_offset_override);
+#else
   void PutChanged();
-
+#endif
   void SetPreemptByFlag(scoped_refptr<PreemptionFlag> flag) {
     preemption_flag_ = flag;
   }

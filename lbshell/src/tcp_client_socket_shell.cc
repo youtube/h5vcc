@@ -40,7 +40,13 @@
 #include <netinet/in.h>
 
 #include "lb_memory_manager.h"
-#include "lb_platform.h"
+#include "lb_network_helpers.h"
+
+#if defined(__LB_XB360__)
+# define CAST_OPTVAL(x) ((char *)(x))
+#else
+# define CAST_OPTVAL(x) (x)
+#endif
 
 namespace net {
 
@@ -49,11 +55,17 @@ namespace {
 const int kInvalidSocket = -1;
 const int kTCPKeepAliveSeconds = 45;
 
+#if defined(__LB_PS4__)
+const int kDefaultMsgFlags = MSG_NOSIGNAL | MSG_DONTWAIT;
+#else
+const int kDefaultMsgFlags = MSG_DONTWAIT;
+#endif
+
 // ps3 network code stores network error codes in thread-specific storage
 // this function gets that error and maps it to the internal chrome errors
 int MapLastNetworkError() {
   int last_error = LB::Platform::net_errno();
-  switch(last_error) {
+  switch (last_error) {
     // invalid socket number specified
     case LB_NET_EBADF:
       return ERR_INVALID_HANDLE;
@@ -106,7 +118,7 @@ int MapConnectError(int os_error) {
 
 bool SetTCPNoDelay(int fd, bool no_delay) {
   int on = no_delay ? 1 : 0;
-  int error = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &on,
+  int error = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, CAST_OPTVAL(&on),
       sizeof(on));
   return error == 0;
 }
@@ -114,7 +126,7 @@ bool SetTCPNoDelay(int fd, bool no_delay) {
 // SetTCPKeepAlive sets SO_KEEPALIVE.
 bool  SetTCPKeepAlive(int fd, bool enable, int delay) {
   int on = enable ? 1 : 0;
-  if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on))) {
+  if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, CAST_OPTVAL(&on), sizeof(on))) {
     DLOG(ERROR) << base::StringPrintf("Failed to set SO_KEEPALIVE on fd: %d",
                                       fd);
     return false;
@@ -123,9 +135,9 @@ bool  SetTCPKeepAlive(int fd, bool enable, int delay) {
 }
 
 bool SetTCPReceiveBufferSize(int fd, int32 size) {
-  DCHECK(size < 512 * 1024);
-  int rv = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int32));
-  DCHECK(rv == 0);
+  DCHECK_LT(size, 512 * 1024);
+  int rv = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, CAST_OPTVAL(&size), sizeof(size));
+  DCHECK_EQ(rv, 0);
   return (rv == 0);
 }
 
@@ -172,11 +184,12 @@ int CreateSocket(int family, int* socket) {
   return 0;
 }
 
-} // namespace
+}  // namespace
 
 //-----------------------------------------------------------------------------
 
-class TCPClientSocketShell::ReadDelegate : public base::steel::ObjectWatcher::Delegate {
+class TCPClientSocketShell::ReadDelegate
+    : public base::steel::ObjectWatcher::Delegate {
  public:
   explicit ReadDelegate(TCPClientSocketShell * socket) : socket_(socket) {}
   virtual ~ReadDelegate() {}
@@ -189,7 +202,8 @@ class TCPClientSocketShell::ReadDelegate : public base::steel::ObjectWatcher::De
   TCPClientSocketShell * socket_;
 };
 
-class TCPClientSocketShell::WriteDelegate : public base::steel::ObjectWatcher::Delegate {
+class TCPClientSocketShell::WriteDelegate
+    : public base::steel::ObjectWatcher::Delegate {
  public:
   explicit WriteDelegate(TCPClientSocketShell * socket) : socket_(socket) {}
   virtual ~WriteDelegate() {}
@@ -217,11 +231,11 @@ TCPClientSocketShell::TCPClientSocketShell(const AddressList& addresses,
       net_log_(BoundNetLog::Make(net_log, NetLog::SOURCE_SOCKET)),
       next_connect_state_(CONNECT_STATE_NONE),
       previously_disconnected_(true),
-      reader_(LB_NEW ReadDelegate(this)),
+      reader_(new ReadDelegate(this)),
       socket_(kInvalidSocket),
       waiting_read_(false),
       waiting_write_(false),
-      writer_(LB_NEW WriteDelegate(this)),
+      writer_(new WriteDelegate(this)),
       num_bytes_read_(0) {
   net_log_.BeginEvent(NetLog::TYPE_SOCKET_ALIVE,
                       source.ToEventParametersCallback());
@@ -322,7 +336,7 @@ int TCPClientSocketShell::DoConnect() {
   // returning no error is considered a fatal error condition in the other
   // tcp_client_socket_* implementations, so we follow that pattern
   int rv = connect(socket_, storage.addr, storage.addr_len);
-  DCHECK(rv < 0);
+  DCHECK_LT(rv, 0);
 
   rv = LB::Platform::net_errno();
   if (rv != LB_NET_EINPROGRESS)
@@ -330,7 +344,8 @@ int TCPClientSocketShell::DoConnect() {
 
   // poll() will report sockets that finish connecting as ready for _writes_
   // so we set up a write poll for these sockets
-  write_watcher_.StartWatching(socket_, base::MessagePumpShell::WATCH_WRITE, writer_);
+  write_watcher_.StartWatching(
+      socket_, base::MessagePumpShell::WATCH_WRITE, writer_);
   return ERR_IO_PENDING;
 }
 
@@ -348,7 +363,7 @@ int TCPClientSocketShell::DoConnectComplete(int result) {
   if (result == OK) {
     connect_time_micros_ = base::TimeTicks::Now() - connect_start_time_;
     use_history_.set_was_ever_connected();
-    return OK; // Done!
+    return OK;  // Done!
   }
 
   // ok, didn't work, clean up
@@ -425,7 +440,7 @@ bool TCPClientSocketShell::IsConnected() const {
 
   // Check if connection is alive.
   char c;
-  int rv = recv(socket_, &c, 1, MSG_PEEK | MSG_DONTWAIT);
+  int rv = recv(socket_, &c, 1, MSG_PEEK | kDefaultMsgFlags);
   if (rv == 0)
     return false;
   if (rv < 0 && LB::Platform::net_errno() != LB_NET_EWOULDBLOCK)
@@ -441,7 +456,7 @@ bool TCPClientSocketShell::IsConnectedAndIdle() const {
   // Check if connection is alive and we haven't received any data
   // unexpectedly.
   char c;
-  int rv = recv(socket_, &c, 1, MSG_PEEK | MSG_DONTWAIT);
+  int rv = recv(socket_, &c, 1, MSG_PEEK | kDefaultMsgFlags);
   // if 0, we got a TCP FIN.  If > 0, socket is not idle.
   if (rv >= 0)
     return false;
@@ -517,7 +532,7 @@ bool TCPClientSocketShell::GetSSLInfo(SSLInfo* ssl_info) {
 
 int TCPClientSocketShell::Read(IOBuffer* buf, int buf_len,
                                const CompletionCallback& callback) {
-  DCHECK(socket_ >= 0);
+  DCHECK_GE(socket_, 0);
   DCHECK(!waiting_connect());
   DCHECK(!waiting_read_);
   DCHECK_GT(buf_len, 0);
@@ -544,7 +559,8 @@ int TCPClientSocketShell::Read(IOBuffer* buf, int buf_len,
   read_buf_ = buf;
   read_buf_len_ = buf_len;
   read_callback_ = callback;
-  read_watcher_.StartWatching(socket_, base::MessagePumpShell::WATCH_READ, reader_);
+  read_watcher_.StartWatching(
+      socket_, base::MessagePumpShell::WATCH_READ, reader_);
   return ERR_IO_PENDING;
 }
 
@@ -584,7 +600,7 @@ void TCPClientSocketShell::DoReadCallback(int rv) {
 
 int TCPClientSocketShell::Write(IOBuffer* buf, int buf_len,
                                 const CompletionCallback& callback) {
-  DCHECK(socket_ >= 0);
+  DCHECK_GE(socket_, 0);
   DCHECK(!waiting_connect());
   DCHECK(!waiting_write_);
   DCHECK_GT(buf_len, 0);
@@ -595,14 +611,15 @@ int TCPClientSocketShell::Write(IOBuffer* buf, int buf_len,
   write_buf_ = buf;
   write_buf_len_ = buf_len;
 
-  int rv = send(socket_, buf->data(), buf_len, MSG_DONTWAIT);
+  int rv = send(socket_, buf->data(), buf_len, kDefaultMsgFlags);
   // did it happen right away?
   if (rv >= 0) {
     base::StatsCounter write_bytes("tcp.write_bytes");
     write_bytes.Add(rv);
     if (rv > 0)
       use_history_.set_was_used_to_convey_data();
-    net_log_.AddByteTransferEvent(NetLog::TYPE_SOCKET_BYTES_SENT, rv, buf->data());
+    net_log_.AddByteTransferEvent(
+        NetLog::TYPE_SOCKET_BYTES_SENT, rv, buf->data());
     return rv;
   }
 
@@ -614,7 +631,8 @@ int TCPClientSocketShell::Write(IOBuffer* buf, int buf_len,
   write_buf_ = buf;
   write_buf_len_ = buf_len;
   write_callback_ = callback;
-  write_watcher_.StartWatching(socket_, base::MessagePumpShell::WATCH_WRITE, writer_);
+  write_watcher_.StartWatching(
+      socket_, base::MessagePumpShell::WATCH_WRITE, writer_);
   // no bytes were written currently, we return the EWOULDBLOCK mapped
   // to standard network errors
   return ERR_IO_PENDING;
@@ -622,7 +640,7 @@ int TCPClientSocketShell::Write(IOBuffer* buf, int buf_len,
 
 void TCPClientSocketShell::DidCompleteWrite() {
   DCHECK(waiting_write_);
-  int nwrite = send(socket_, write_buf_->data(), write_buf_len_, MSG_DONTWAIT);
+  int nwrite = send(socket_, write_buf_->data(), write_buf_len_, kDefaultMsgFlags);
   int result;
   if (nwrite >= 0) {
     result = nwrite;
@@ -659,9 +677,10 @@ bool TCPClientSocketShell::SetReceiveBufferSize(int32 size) {
 
 bool TCPClientSocketShell::SetSendBufferSize(int32 size) {
   // 512K is OS-dependent limit for send buffers
-  DCHECK(size < 512 * 1024);
-  int rv = setsockopt(socket_, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int32));
-  DCHECK(rv == 0);
+  DCHECK_LT(size, 512 * 1024);
+  int rv = setsockopt(socket_, SOL_SOCKET, SO_SNDBUF, CAST_OPTVAL(&size),
+                      sizeof(size));
+  DCHECK_EQ(rv, 0);
   return (rv == 0);
 }
 

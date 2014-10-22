@@ -40,6 +40,9 @@
 /* Include platform-dependent definitions                                   */
 /* which are contained in the platform-specific file platform.h             */
 /*==========================================================================*/
+#ifdef __LB_SHELL__
+#error "Please include external/chromium/third_party/icu on LB_SHELL platforms"
+#endif
 
 #if defined(U_PALMOS)
 #   include "unicode/ppalmos.h"

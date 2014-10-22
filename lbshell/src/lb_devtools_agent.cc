@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+#if ENABLE_INSPECTOR
 
 #include "lb_devtools_agent.h"
 
@@ -48,10 +48,13 @@ class WebKitClientMessageLoopImpl
 LBDevToolsAgent::LBDevToolsAgent(const int connection_id,
                                  LBWebViewHost *host,
                                  LBHttpHandler *http_handler)
-    : connection_id_(connection_id), host_(host), http_handler_(http_handler) {
-  host_->main_message_loop()->PostTask(FROM_HERE, base::Bind(
-      &LBDevToolsAgent::InitializeTask, this));
+    : connection_id_(connection_id)
+    , host_(host)
+    , http_handler_(http_handler)
+    , detach_event_(false, false) {
   AddRef();
+  host_->webkit_message_loop()->PostTask(FROM_HERE, base::Bind(
+      &LBDevToolsAgent::InitializeTask, this));
 }
 
 LBDevToolsAgent::~LBDevToolsAgent() {
@@ -70,18 +73,20 @@ void LBDevToolsAgent::AttachTask() {
 }
 
 void LBDevToolsAgent::Attach() {
-  host_->main_message_loop()->PostTask(FROM_HERE, base::Bind(
+  host_->webkit_message_loop()->PostTask(FROM_HERE, base::Bind(
       &LBDevToolsAgent::AttachTask, this));
 }
 
 void LBDevToolsAgent::DetachTask() {
   // This must be done on the main message loop
   agent_->detach();
+  detach_event_.Signal();
 }
 
 void LBDevToolsAgent::Detach() {
-  host_->main_message_loop()->PostTask(FROM_HERE, base::Bind(
+  host_->webkit_message_loop()->PostTask(FROM_HERE, base::Bind(
       &LBDevToolsAgent::DetachTask, this));
+  detach_event_.Wait();
 }
 
 void LBDevToolsAgent::sendMessageToInspectorFrontend(
@@ -96,7 +101,7 @@ void LBDevToolsAgent::DispatchTask(const WebKit::WebString& data) {
 
 void LBDevToolsAgent::sendMessageToInspectorBackend(
     const WebKit::WebString& data) {
-  host_->main_message_loop()->PostTask(FROM_HERE, base::Bind(
+  host_->webkit_message_loop()->PostTask(FROM_HERE, base::Bind(
       &LBDevToolsAgent::DispatchTask, this, data));
 }
 
@@ -105,4 +110,4 @@ WebKit::WebDevToolsAgentClient::WebKitClientMessageLoop*
   return new WebKitClientMessageLoopImpl();
 }
 
-#endif // __LB_SHELL__ENABLE_CONSOLE__
+#endif  // ENABLE_INSPECTOR

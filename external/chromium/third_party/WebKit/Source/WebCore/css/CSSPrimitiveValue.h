@@ -318,8 +318,6 @@ public:
     PassRefPtr<CSSPrimitiveValue> cloneForCSSOM() const;
     void setCSSOMSafe() { m_isCSSOMSafe = true; }
 
-    void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     CSSPrimitiveValue(int ident);
     CSSPrimitiveValue(ClassType, unsigned color);

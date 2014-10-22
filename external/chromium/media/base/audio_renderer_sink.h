@@ -18,10 +18,10 @@ namespace media {
 // rendered audio.  An implementation is expected to
 // periodically call Render() on a callback object.
 
-class AudioRendererSink
+class MEDIA_EXPORT AudioRendererSink
     : public base::RefCountedThreadSafe<media::AudioRendererSink> {
  public:
-  class RenderCallback {
+  class MEDIA_EXPORT RenderCallback {
    public:
     // Attempts to completely fill all channels of |dest|, returns actual
     // number of frames filled.
@@ -40,7 +40,8 @@ class AudioRendererSink
     // full and will not be requesting additional data until some is consumed.
     virtual void SinkFull() = 0;
 
-#if defined(__LB_WIIU__)
+#if defined(__LB_LINUX__) || defined(__LB_WIIU__) || \
+    defined(__LB_ANDROID__) || defined(__LB_PS4__)
     // Callback from the sink to the renderer to indicate that it has not
     // enough data to continue playback without playing past the end of
     // buffered data.

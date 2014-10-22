@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "external/chromium/net/dial/dial_system_config.h"
+#include "net/dial/dial_system_config.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#include "external/chromium/base/logging.h"
+#include "base/logging.h"
 
-#include "lb_platform.h"
+#include "lb_network_helpers.h"
 
 namespace net {
 
@@ -20,8 +20,9 @@ const char* DialSystemConfig::kDefaultModelName = "Linux";
 // static
 std::string DialSystemConfig::GeneratePlatformUuid() {
   struct in_addr addr;
-  DCHECK_EQ(0, LB::Platform::GetLocalIpAddress(&addr));
+  int ip_address_error = LB::Platform::GetLocalIpAddress(&addr);
+  DCHECK_EQ(0, ip_address_error);
   return std::string(inet_ntoa(addr));
 }
 
-} // namespace net
+}  // namespace net

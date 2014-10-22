@@ -46,8 +46,6 @@ public:
 
     virtual bool requiresLayer() const = 0;
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 protected:
     void ensureLayer();
 

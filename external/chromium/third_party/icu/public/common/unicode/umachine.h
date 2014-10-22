@@ -40,11 +40,8 @@
 /* Include platform-dependent definitions                                   */
 /* which are contained in the platform-specific file platform.h             */
 /*==========================================================================*/
-#if defined(__LB_PS3__)
-#   include "unicode/pps3.h"
-#elif defined(__LB_BLUE__)
-#   include "unicode/pblue.h"
-#   include <inttypes.h>  // int8_t and so on
+#if defined(__LB_SHELL__)
+#   include "unicode/ptypes.h"
 #elif defined(U_PALMOS)
 #   include "unicode/ppalmos.h"
 #elif !defined(__MINGW32__) && (defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64))

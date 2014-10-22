@@ -57,6 +57,7 @@ const unsigned char kPngDataChunkType[4] = { 'I', 'D', 'A', 'T' };
 
 ResourceBundle* g_shared_instance_ = NULL;
 
+#if !defined(__LB_SHELL__)
 bool ShouldHighlightMissingScaledResources() {
   return CommandLine::ForCurrentProcess()->HasSwitch(
       switches::kHighlightMissingScaledResources);
@@ -104,9 +105,11 @@ bool DecodePNG(const unsigned char* buf,
   // Pass the data to the PNG decoder.
   return gfx::PNGCodec::Decode(buf, size, bitmap);
 }
+#endif
 
 }  // namespace
 
+#if !defined(__LB_SHELL__)
 // An ImageSkiaSource that loads bitmaps for the requested scale factor from
 // ResourceBundle on demand for a given |resource_id|. If the bitmap for the
 // requested scale factor does not exist, it will return the 1x bitmap scaled
@@ -129,7 +132,6 @@ class ResourceBundle::ResourceBundleImageSource : public gfx::ImageSkiaSource {
                                  &image, &fell_back_to_1x);
     if (!found)
       return gfx::ImageSkiaRep();
-#if !defined (__LB_SHELL__)
     if (fell_back_to_1x) {
       // GRIT fell back to the 100% image, so rescale it to the correct size.
       float scale = GetScaleFactorScale(scale_factor);
@@ -151,7 +153,6 @@ class ResourceBundle::ResourceBundleImageSource : public gfx::ImageSkiaSource {
         image = SkBitmapOperations::CreateBlendedBitmap(image, mask, 0.2);
       }
     }
-#endif
     return gfx::ImageSkiaRep(image, scale_factor);
   }
 
@@ -161,7 +162,6 @@ class ResourceBundle::ResourceBundleImageSource : public gfx::ImageSkiaSource {
 
 };
 
-#if !defined(__LB_SHELL__)
 // static
 std::string ResourceBundle::InitSharedInstanceWithLocale(
     const std::string& pref_locale, Delegate* delegate) {
@@ -362,7 +362,6 @@ std::string ResourceBundle::ReloadLocaleResources(
   UnloadLocaleResources();
   return LoadLocaleResources(pref_locale);
 }
-#endif
 
 gfx::ImageSkia* ResourceBundle::GetImageSkiaNamed(int resource_id) {
   const gfx::ImageSkia* image = GetImageNamed(resource_id).ToImageSkia();
@@ -419,14 +418,9 @@ gfx::Image& ResourceBundle::GetImageNamed(int resource_id) {
 }
 
 gfx::Image& ResourceBundle::GetNativeImageNamed(int resource_id) {
-#if !defined(__LB_SHELL__)
   return GetNativeImageNamed(resource_id, RTL_DISABLED);
-#else
-  static gfx::Image dummyImage = gfx::Image();
-  NOTIMPLEMENTED();
-  return dummyImage;
-#endif
 }
+#endif
 
 base::RefCountedStaticMemory* ResourceBundle::LoadDataResourceBytes(
     int resource_id) const {
@@ -558,19 +552,25 @@ void ResourceBundle::ReloadFonts() {
 
 ResourceBundle::ResourceBundle(Delegate* delegate)
     : delegate_(delegate),
+#if !defined(__LB_SHELL__)
       images_and_fonts_lock_(new base::Lock),
+#endif
       locale_resources_data_lock_(new base::Lock),
       max_scale_factor_(SCALE_FACTOR_100P) {
 }
 
 ResourceBundle::~ResourceBundle() {
+#if !defined(__LB_SHELL__)
   FreeImages();
+#endif
   UnloadLocaleResources();
 }
 
+#if !defined(__LB_SHELL__)
 void ResourceBundle::FreeImages() {
   images_.clear();
 }
+#endif
 
 void ResourceBundle::AddDataPackFromPathInternal(const FilePath& path,
                                                  ScaleFactor scale_factor,
@@ -658,7 +658,6 @@ void ResourceBundle::LoadFontsIfNecessary() {
     }
   }
 }
-#endif
 
 bool ResourceBundle::LoadBitmap(const ResourceHandle& data_handle,
                                 int resource_id,
@@ -725,5 +724,6 @@ gfx::Image& ResourceBundle::GetEmptyImage() {
   }
   return empty_image_;
 }
+#endif
 
 }  // namespace ui

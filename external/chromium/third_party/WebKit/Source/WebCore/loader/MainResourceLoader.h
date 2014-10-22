@@ -75,8 +75,6 @@ public:
     unsigned long identifier() const;
     bool isLoadingMultipartContent() const { return m_loadingMultipartContent; }
 
-    void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     explicit MainResourceLoader(DocumentLoader*);
 

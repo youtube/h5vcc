@@ -226,6 +226,10 @@ WTF_EXPORT_PRIVATE void WTFInstallReportBacktraceOnCrashHook();
 #undef ASSERT
 #endif
 
+#if defined(__LB_WIIU__)
+#undef ASSERT
+#endif
+
 #if ASSERT_DISABLED
 
 #define ASSERT(assertion) ((void)0)

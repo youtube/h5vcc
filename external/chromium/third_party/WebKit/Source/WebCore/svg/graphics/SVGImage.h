@@ -61,8 +61,6 @@ public:
     virtual bool hasRelativeWidth() const;
     virtual bool hasRelativeHeight() const;
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 private:
     friend class SVGImageChromeClient;
     virtual ~SVGImage();

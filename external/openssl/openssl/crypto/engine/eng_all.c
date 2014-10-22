@@ -70,7 +70,7 @@ void ENGINE_load_builtin_engines(void)
 	 * *no* builtin implementations). */
 	ENGINE_load_openssl();
 #endif
-#if !defined(OPENSSL_NO_HW) && (defined(__OpenBSD__) || defined(__FreeBSD__) || defined(HAVE_CRYPTODEV))
+#if !defined(OPENSSL_NO_HW) && (defined(__OpenBSD__) || defined(__FreeBSD__) || defined(HAVE_CRYPTODEV)) && !defined(__LB_PS4__)
 	ENGINE_load_cryptodev();
 #endif
 #ifndef OPENSSL_NO_RSAX
@@ -123,7 +123,7 @@ void ENGINE_load_builtin_engines(void)
 	ENGINE_register_all_complete();
 	}
 
-#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(HAVE_CRYPTODEV)
+#if (defined(__OpenBSD__) || defined(__FreeBSD__) || defined(HAVE_CRYPTODEV)) && !defined(__LB_PS4__)
 void ENGINE_setup_bsd_cryptodev(void) {
 	static int bsd_cryptodev_default_loaded = 0;
 	if (!bsd_cryptodev_default_loaded) {

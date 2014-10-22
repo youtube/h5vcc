@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <wtf/UnusedParam.h>
 #include <wtf/VMTags.h>
+#include "../../Platform/chromium/public/WebCommon.h"
 
 namespace WTF {
 
@@ -75,7 +76,7 @@ public:
     static T* reallocateCommitted(T*, size_t oldSize, size_t newSize, Usage = UnknownUsage, bool writable = true, bool executable = false);
 
 #if defined (__LB_SHELL__)
-    static size_t getCurrentBytesAllocated();
+    WEBKIT_EXPORT static size_t getCurrentBytesAllocated();
 #endif
 };
 

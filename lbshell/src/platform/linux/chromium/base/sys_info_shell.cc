@@ -38,4 +38,4 @@ int64 SysInfo::AmountOfFreeDiskSpace(const FilePath& path) {
   return static_cast<int64>(stats.f_bavail) * stats.f_frsize;
 }
 
-} // namespace base
+}  // namespace base

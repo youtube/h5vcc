@@ -5,6 +5,7 @@
 #include "base/compiler_specific.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/synchronization/lock.h"
+#include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "base/threading/thread_collision_warner.h"
@@ -148,30 +149,37 @@ TEST(ThreadCollisionTest, MTBookCriticalSectionTest) {
 
   class QueueUser : public base::DelegateSimpleThread::Delegate {
    public:
-    explicit QueueUser(NonThreadSafeQueue& queue)
-        : queue_(queue) {}
+    explicit QueueUser(NonThreadSafeQueue& queue, base::WaitableEvent *event)
+        : queue_(queue),
+          event_(event) { }
 
     virtual void Run() OVERRIDE {
+      event_->Wait();
       queue_.push(0);
       queue_.pop();
     }
 
    private:
     NonThreadSafeQueue& queue_;
+    base::WaitableEvent *event_;
   };
 
+  base::WaitableEvent event(true, false);
   AssertReporter* local_reporter = new AssertReporter();
 
   NonThreadSafeQueue queue(local_reporter);
 
-  QueueUser queue_user_a(queue);
-  QueueUser queue_user_b(queue);
+  QueueUser queue_user_a(queue, &event);
+  QueueUser queue_user_b(queue, &event);
 
   base::DelegateSimpleThread thread_a(&queue_user_a, "queue_user_thread_a");
   base::DelegateSimpleThread thread_b(&queue_user_b, "queue_user_thread_b");
 
   thread_a.Start();
   thread_b.Start();
+
+  // Make sure both threads are started at the same time.
+  event.Signal();
 
   thread_a.Join();
   thread_b.Join();

@@ -293,6 +293,17 @@ sub GenerateHeader
     $headerIncludes{"wtf/HashMap.h"} = 1;
     $headerIncludes{"v8.h"} = 1;
 
+    # Make an early pass over attributes to include headers for supplemental custom getters.
+    foreach my $attribute (@{$interface->attributes}) {
+        my $attrExt = $attribute->signature->extendedAttributes;
+        if (($attrExt->{"V8CustomGetter"} || $attrExt->{"CustomGetter"} ||
+             $attrExt->{"V8Custom"} || $attrExt->{"Custom"}) &&
+             $attrExt->{"ImplementedBy"}) {
+            my $implementedBy = $attrExt->{"ImplementedBy"};
+            $headerIncludes{"bindings/V8${implementedBy}.h"} = 1;
+        }
+    }
+
     my $headerClassInclude = GetHeaderClassInclude($interfaceName);
     $headerIncludes{$headerClassInclude} = 1 if $headerClassInclude ne "";
 
@@ -2329,7 +2340,7 @@ sub GenerateSingleBatchedAttribute
     }
 
     # An accessor can be installed on the proto
-    if ($attrExt->{"V8OnProto"}) {
+    if ($attrExt->{"V8OnProto"} || $attribute->isStatic) {
         $on_proto = "1 /* on proto */";
     }
 

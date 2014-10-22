@@ -42,6 +42,10 @@ class RenderLayerCompositor;
 class CustomFilterGlobalContext;
 #endif
 
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+class ObjectPositionReporter;
+#endif
+
 class RenderView : public RenderBlock {
 public:
     RenderView(Node*, FrameView*);
@@ -283,8 +287,6 @@ private:
     friend class LayoutStateMaintainer;
     friend class LayoutStateDisabler;
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 protected:
     FrameView* m_frameView;
 
@@ -335,6 +337,10 @@ private:
     RenderQuote* m_renderQuoteHead;
     unsigned m_renderCounterCount;
     RenderViewLayoutPhase m_layoutPhase;
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    OwnPtr<ObjectPositionReporter> m_positionReporter;
+#endif
 };
 
 inline RenderView* toRenderView(RenderObject* object)

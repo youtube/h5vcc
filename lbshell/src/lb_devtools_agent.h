@@ -25,9 +25,10 @@
 #ifndef SRC_LB_DEVTOOLS_AGENT_H_
 #define SRC_LB_DEVTOOLS_AGENT_H_
 
-#if defined(__LB_SHELL__ENABLE_CONSOLE__)
+#if ENABLE_INSPECTOR
 
 #include "base/memory/ref_counted.h"
+#include "base/synchronization/waitable_event.h"
 #include "third_party/WebKit/Source/WebKit/chromium/public/WebDevToolsAgentClient.h"
 
 #include "lb_memory_manager.h"
@@ -54,7 +55,7 @@ class LBDevToolsAgent
   // WebDevToolsAgentClient implementation.
   virtual void sendMessageToInspectorFrontend(
       const WebKit::WebString& data) OVERRIDE;
-  virtual inline int hostIdentifier() OVERRIDE { return 1; }
+  virtual int hostIdentifier() OVERRIDE { return 1; }
 
   virtual WebKit::WebDevToolsAgentClient::WebKitClientMessageLoop*
       createClientMessageLoop() OVERRIDE;
@@ -77,7 +78,8 @@ class LBDevToolsAgent
   WebKit::WebDevToolsAgent *agent_;
   LBWebViewHost *host_;
   LBHttpHandler *http_handler_;
+  base::WaitableEvent detach_event_;
 };
 
-#endif // __LB_SHELL__ENABLE_CONSOLE__
-#endif // SRC_LB_DEVTOOLS_AGENT_H_
+#endif  // ENABLE_INSPECTOR
+#endif  // SRC_LB_DEVTOOLS_AGENT_H_

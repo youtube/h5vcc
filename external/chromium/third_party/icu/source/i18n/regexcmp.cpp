@@ -9,6 +9,12 @@
 //  is used by the match finding engine.
 //
 
+#if defined(__LB_XB360__)
+// TODO(iffy): Remove this once winsockx.h is no longer getting globally
+// included.
+# undef IN
+#endif
+
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS

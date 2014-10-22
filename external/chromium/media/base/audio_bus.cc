@@ -160,6 +160,21 @@ scoped_ptr<AudioBus> AudioBus::Create(const AudioParameters& params) {
       params.channels(), params.frames_per_buffer()));
 }
 
+#if defined(__LB_SHELL__)
+
+scoped_ptr<AudioBus> AudioBus::Create(int channels, int frames_per_channel,
+                                      int bytes_per_frame, bool interleaved) {
+  // AudioBus treats everything in float so we have to convert.
+  uint32 float_frame_per_channel =
+      frames_per_channel * bytes_per_frame / sizeof(float);
+  if (interleaved)
+    return Create(1, channels * float_frame_per_channel);
+
+  return Create(channels, float_frame_per_channel);
+}
+
+#endif  // defined(__LB_SHELL__)
+
 scoped_ptr<AudioBus> AudioBus::CreateWrapper(int channels) {
   return scoped_ptr<AudioBus>(new AudioBus(channels));
 }
@@ -294,6 +309,41 @@ void AudioBus::ToInterleavedPartial(int start_frame, int frames,
       return;
   }
 }
+
+#if defined(__LB_SHELL__)
+void AudioBus::FromInterleavedFloat(const float* source, int frames,
+                                    int audio_bus_offset) {
+  DCHECK_LE(frames + audio_bus_offset, this->frames());
+
+  while (frames > 0) {
+    for (int channel = 0; channel < channels(); ++channel) {
+      this->channel(channel)[audio_bus_offset] = *source;
+      ++source;
+    }
+    ++audio_bus_offset;
+    --frames;
+  }
+}
+
+void AudioBus::ToInterleavedFloat(
+    int frames, int audio_bus_offset, int extra_channels, float* dest) const {
+  DCHECK_LE(frames + audio_bus_offset, this->frames());
+  DCHECK_GE(extra_channels, 0);
+
+  while (frames > 0) {
+    for (int channel = 0; channel < channels(); ++channel) {
+      *dest = this->channel(channel)[audio_bus_offset];
+      ++dest;
+    }
+    for (int channel = 0; channel < extra_channels; ++channel) {
+      *dest = 0.f;
+      ++dest;
+    }
+    ++audio_bus_offset;
+    --frames;
+  }
+}
+#endif  // defined(__LB_SHELL__)
 
 void AudioBus::CopyTo(AudioBus* dest) const {
   CHECK_EQ(channels(), dest->channels());

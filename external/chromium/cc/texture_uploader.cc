@@ -226,7 +226,7 @@ void TextureUploader::uploadWithTexSubImage(const uint8* image,
     base::debug::Alias(&dest_offset_x);
     base::debug::Alias(&dest_offset_y);
     TRACE_EVENT0("cc", "TextureUploader::uploadWithTexSubImage");
-#if !defined (__LB_SHELL__)
+#if !defined (__LB_SHELL_HAS_TEX_SUB_IMAGE_SUB__)
     // Offset from image-rect to source-rect.
     gfx::Vector2d offset(source_rect.origin() - image_rect.origin());
 
@@ -267,7 +267,8 @@ void TextureUploader::uploadWithTexSubImage(const uint8* image,
                              pixel_source);
 #else
     gfx::Vector2d offset(source_rect.origin() - image_rect.origin());
-    m_context->texSubImageSub(dest_offset.x(),
+    m_context->texSubImageSub(format,
+                              dest_offset.x(),
                               dest_offset.y(),
                               source_rect.width(),
                               source_rect.height(),

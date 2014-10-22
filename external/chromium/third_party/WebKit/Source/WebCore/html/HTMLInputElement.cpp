@@ -1916,17 +1916,4 @@ bool HTMLInputElement::setupDateTimeChooserParameters(DateTimeChooserParameters&
 }
 #endif
 
-void HTMLInputElement::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    HTMLTextFormControlElement::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_name);
-    info.addMember(m_valueIfDirty);
-    info.addMember(m_suggestedValue);
-    info.addMember(m_inputType);
-#if ENABLE(DATALIST_ELEMENT)
-    info.addMember(m_listAttributeTargetObserver);
-#endif
-}
-
 } // namespace

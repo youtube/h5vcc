@@ -20,20 +20,24 @@
 
 #include <string>
 
+#include "base/bind.h"
 #include "base/file_path.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/time.h"
 #include "sql/connection.h"
 
-class LBSavegameSyncer {
+#include "lb_shell_export.h"
+
+class LB_SHELL_EXPORT LBSavegameSyncer {
  public:
   // Initializes the syncer.  Loads data asynchronously from the savegame
   // into memory.  Is done loading when WaitForLoad() returns.
   static void Init();
 
-  // Shuts down the syncer.  Writes data asynchronously from memory to the
-  // savegame.  Is done shutting down when WaitForFlush() returns.  Should
-  // only be called from the same thread as Init().
+  // Shuts down the syncer.  Does not explicitly sync data from memory.
+  // The shutdown process and any other operations in progress are guaranteed
+  // to be complete when WaitForShutdown() returns.  Should only be called
+  // from the same thread as Init().
   static void Shutdown();
 
   // Blocks until savegame data has been brought into memory.  Once this
@@ -44,10 +48,11 @@ class LBSavegameSyncer {
   // elapsed.  Once this returns true, it is safe to access connection().
   static bool TimedWaitForLoad(base::TimeDelta max_wait);
 
-  // Blocks until any in-memory data has been fully flushed to the savegame.
-  // Once this returns, it is safe to quit the application or to call Init()
-  // again.  Should only be called from the same thread as Init().
-  static void WaitForFlush();
+  // Blocks until any in-memory data has been fully flushed to the savegame
+  // and the syncer is completely shut down.  Once this returns, it is safe
+  // to quit the application or to call Init() again.  Should only be called
+  // from the same thread as Init().
+  static void WaitForShutdown();
 
   // Get the schema version for the given table.
   //
@@ -77,9 +82,9 @@ class LBSavegameSyncer {
   // Use sql::Statement to execute queries, as documented in sql/connection.h.
   static sql::Connection* connection();
 
-  // Force the in-memory database to flush to the savegame.  Block until
-  // finished.  Resets the flushed_ flag before returning.
-  static void ForceSync();
+  // Force the in-memory database to flush to the savegame.  If block is true,
+  // the function will block until the operation is complete.
+  static void ForceSync(bool block);
 
 #if !defined (__LB_SHELL__FOR_RELEASE__)
   // Prevent the savegame file from being written.
@@ -91,13 +96,6 @@ class LBSavegameSyncer {
   static void LoadFromFile(FilePath file) { load_from_file_ = file; }
 #endif
 
-  typedef void(*InternalCallback)();
-
-#if defined(__LB_WIIU__)
-  // A lock to prevent file IO when the app is in the background
-  static base::Lock background_lock_;
-#endif
-
  private:
   LBSavegameSyncer() {}
 
@@ -106,12 +104,20 @@ class LBSavegameSyncer {
   static void PlatformInit();
 
   // Platform-specific.  Shuts down any platform-specific savegame mechanisms.
-  // Should tolerate being called multiple times.  Should be fast.
+  // Should tolerate being called multiple times.  Must join any savegame
+  // operations in progress.
   static void PlatformShutdown();
 
   // Platform-specific.  Returns the file path for the on-disk database.
   // This may or may not be the final destination for this data.
   static FilePath GetFilePath();
+
+  // Platform-specific. Some platforms may require a temporary mounting of the
+  // save game API, in which case do something here.
+  static bool PlatformMountStart(bool readonly) WARN_UNUSED_RESULT;
+
+  // Platform-specific. Pair off a PlatformMountStart with a PlatformMountEnd.
+  static bool PlatformMountEnd() WARN_UNUSED_RESULT;
 
   // Creates an empty in-memory database.
   static void CreateInMemoryDatabase();
@@ -121,11 +127,11 @@ class LBSavegameSyncer {
 
   // Platform-specific.  Loads the savegame and writes the data to a file
   // at GetFilePath().  Asynchronous.
-  static void SavegameToFile(InternalCallback cb);
+  static void SavegameToFile(const base::Closure& cb);
 
   // Platform-specific.  Reads the file at GetFilePath() and writes the data
   // to the savegame.  Asynchronous.
-  static void FileToSavegame(InternalCallback cb);
+  static void FileToSavegame(const base::Closure& cb);
 
   // Clone the on-disk database at GetFilePath() into the in-memory database.
   static void FileToMemory();
@@ -133,15 +139,15 @@ class LBSavegameSyncer {
   // Clone the in-memory database into the on-disk database at GetFilePath().
   static void MemoryToFile();
 
-
   // Callback to complete the work of Init() after the async stuff is done.
   static void FinishInit();
 
-  // Callback to complete the work of Shutdown() after the async stuff is done.
-  static void FinishShutdown();
+  // Callback to complete the work of Init() after the virtual filesystem has
+  // been successfully deserialized.
+  static void FinishVfsLoad();
 
   // Callback to unblock ForceSync().
-  static void FinishForceSync();
+  static void FinishForceSync(bool caller_is_blocking);
 
 #if defined(__LB_SHELL__FORCE_LOGGING__)
   // For debugging.  Prints the contents of all in-memory tables.
@@ -157,14 +163,17 @@ class LBSavegameSyncer {
   // The in-memory database connection.  Explicitly thread-safe.
   static sql::Connection *connection_;
 
+  // The in-memory database will be initialized from, and flushed to this file.
+  static FilePath database_file_path_;
+
   // True as soon as Shutdown() is called.  Used to abort a load.
   static bool shutdown_;
 
   // A signal that the savegame has been loaded into memory.
   static base::WaitableEvent loaded_;
 
-  // A signal that the data in memory has been flushed to the savegame.
-  static base::WaitableEvent flushed_;
+  // A signal that a forced sync has been completed.
+  static base::WaitableEvent forced_sync_complete_;
 
 #if !defined(__LB_SHELL__FOR_RELEASE__)
   // Prevent the savegame from being written.

@@ -20,10 +20,6 @@
 #include "webkit/dom_storage/session_storage_database_adapter.h"
 #include "webkit/fileapi/file_system_util.h"
 
-#if defined(__LB_SHELL__)
-#include "lbshell/src/lb_local_storage_database_adapter.h"
-#endif
-
 using webkit_database::DatabaseUtil;
 
 namespace dom_storage {
@@ -58,6 +54,11 @@ GURL DomStorageArea::OriginFromDatabaseFileName(const FilePath& name) {
   return DatabaseUtil::GetOriginFromIdentifier(origin_id);
 }
 
+#if defined(__LB_SHELL__)
+DomStorageDatabaseAdapterFactory
+    DomStorageDatabaseAdapter::class_factory_ = NULL;
+#endif
+
 DomStorageArea::DomStorageArea(const GURL& origin, const FilePath& directory,
                                DomStorageTaskRunner* task_runner)
     : namespace_id_(kLocalStorageNamespaceId), origin_(origin),
@@ -71,7 +72,9 @@ DomStorageArea::DomStorageArea(const GURL& origin, const FilePath& directory,
   // Construct an ID that is backward-compatible with that of our original
   // localstorage implementation.
   std::string id = DatabaseFileNameFromOrigin(origin_).value();
-  backing_.reset(new LBLocalStorageDatabaseAdapter(id));
+  DomStorageDatabaseAdapter* dba =
+      DomStorageDatabaseAdapter::ClassFactory()(id);
+  backing_.reset(dba);
   is_initial_import_done_ = false;
 #else
   if (!directory.empty()) {
@@ -281,6 +284,11 @@ void DomStorageArea::Shutdown() {
       DomStorageTaskRunner::COMMIT_SEQUENCE,
       base::Bind(&DomStorageArea::ShutdownInCommitSequence, this));
   DCHECK(success);
+}
+
+void DomStorageArea::Flush() {
+  if (backing_.get())
+    OnCommitTimer();
 }
 
 void DomStorageArea::InitialImportIfNeeded() {

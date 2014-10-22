@@ -80,6 +80,8 @@ class WEBKIT_STORAGE_EXPORT DomStorageArea
   // no longer do anything.
   void Shutdown();
 
+  void Flush();
+
  private:
   friend class DomStorageAreaTest;
   FRIEND_TEST_ALL_PREFIXES(DomStorageAreaTest, DomStorageAreaBasics);

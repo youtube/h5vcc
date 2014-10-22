@@ -89,7 +89,7 @@ private:
 template <typename T>
 void* SkTileGridNextDatum(SkTDArray<void*>** tileData, SkTDArray<int>& tileIndices) {
     bool haveVal = false;
-    T* minVal;
+    T* minVal = NULL;
     int tileCount = tileIndices.count();
     // Find the next Datum
     for (int tile = 0; tile < tileCount; ++tile) {

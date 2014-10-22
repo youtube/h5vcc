@@ -102,7 +102,6 @@
 #include "UIEvent.h"
 #include "UIEventWithKeyState.h"
 #include "UserActionElementSet.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WheelEvent.h"
 #include "WindowEventContext.h"
 #include "XMLNames.h"
@@ -377,6 +376,15 @@ Node::StyleChange Node::diff(const RenderStyle* s1, const RenderStyle* s2, Docum
     // When the region thread has changed, we need to prepare a separate render region object.
     if ((s1 && s2) && (s1->regionThread() != s2->regionThread()))
         ch = Detach;
+
+#if ENABLE(LB_SHELL_CSS_EXTENSIONS)
+    // If the target screen changes we should update our renderer object
+    if ((s1 && s2) && (s1->h5vccTargetScreen() != s2->h5vccTargetScreen()))
+        ch = Detach;
+
+    if ((s1 && s2) && (s1->h5vccGesturable() != s2->h5vccGesturable()))
+        ch = Detach;
+#endif
 
     return ch;
 }
@@ -2600,19 +2608,6 @@ void Node::removedLastRef()
     m_deletionHasBegun = true;
 #endif
     delete this;
-}
-
-void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    TreeShared<Node, ContainerNode>::reportMemoryUsage(memoryObjectInfo);
-    ScriptWrappable::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_document);
-    info.addMember(m_next);
-    info.addMember(m_previous);
-    info.addMember(this->renderer());
-    if (hasRareData())
-        info.addMember(rareData());
 }
 
 void Node::textRects(Vector<IntRect>& rects) const

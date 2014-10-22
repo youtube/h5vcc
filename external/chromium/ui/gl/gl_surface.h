@@ -132,6 +132,15 @@ class GL_EXPORT GLSurface : public base::RefCounted<GLSurface> {
 
   static GLSurface* GetCurrent();
 
+#if defined(__LB_SHELL__)
+// On LBShell, the platform graphics API interface lives in LBGraphics*,
+// which is in lb_symbols and not accessible from here.  In the end, it
+// may make sense to move the graphics API interface glue code fully in
+// to its own module, but for now, we require LBShell to call in to this
+// code and provide a display and config pointer.
+static void InitializeDisplayAndConfig(void* display, void* config);
+#endif  // __LB_SHELL__
+
  protected:
   virtual ~GLSurface();
   static bool InitializeOneOffInternal();

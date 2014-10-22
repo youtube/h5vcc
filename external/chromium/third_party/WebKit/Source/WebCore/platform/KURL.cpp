@@ -29,14 +29,12 @@
 
 #include "DecodeEscapeSequences.h"
 #include "MIMETypeRegistry.h"
-#include "PlatformMemoryInstrumentation.h"
 #include "TextEncoding.h"
 #include <stdio.h>
 #include <wtf/HashMap.h>
 #if !USE(WTFURL)
 #include <wtf/HexNumber.h>
 #endif
-#include <wtf/MemoryInstrumentationString.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -1926,18 +1924,6 @@ String mimeTypeFromURL(const KURL& url)
 
     // We don't use MIMETypeRegistry::getMIMETypeForPath() because it returns "application/octet-stream" upon failure
     return MIMETypeRegistry::getMIMETypeForExtension(extension);
-}
-
-void KURL::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this);
-#if USE(GOOGLEURL)
-    info.addMember(m_url);
-#elif USE(WTFURL)
-    info.addMember(m_urlImpl);
-#else // !USE(GOOGLEURL)
-    info.addMember(m_string);
-#endif
 }
 
 }

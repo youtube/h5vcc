@@ -147,6 +147,12 @@ class BASE_EXPORT CommandLine {
   // The program name is assumed to be the first item in the string.
   void ParseFromString(const std::wstring& command_line);
 #endif
+#if defined(__LB_XB360__)
+  // Convert the 360 command line string to argc/argv.
+  // Note: this doesn't handle quoted strings.
+  void ParseFromString(char *cmd_line);
+#endif
+
 
  private:
   // Disallow default constructor; a program name must be explicitly specified.

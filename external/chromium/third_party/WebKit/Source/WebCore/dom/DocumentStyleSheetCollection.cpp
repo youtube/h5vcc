@@ -47,9 +47,6 @@
 #include "StyleSheetContents.h"
 #include "StyleSheetList.h"
 #include "UserContentURLPattern.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationListHashSet.h>
-#include <wtf/MemoryInstrumentationVector.h>
 
 namespace WebCore {
 
@@ -495,21 +492,6 @@ bool DocumentStyleSheetCollection::updateActiveStyleSheets(UpdateFlag updateFlag
     m_document->notifySeamlessChildDocumentsOfStylesheetUpdate();
 
     return requiresFullStyleRecalc;
-}
-
-void DocumentStyleSheetCollection::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_pageUserSheet);
-    info.addMember(m_injectedUserStyleSheets);
-    info.addMember(m_injectedAuthorStyleSheets);
-    info.addMember(m_userStyleSheets);
-    info.addMember(m_authorStyleSheets);
-    info.addMember(m_activeAuthorStyleSheets);
-    info.addMember(m_styleSheetsForStyleSheetList);
-    info.addMember(m_styleSheetCandidateNodes);
-    info.addMember(m_preferredStylesheetSetName);
-    info.addMember(m_selectedStylesheetSetName);
 }
 
 }
